@@ -4,7 +4,7 @@ import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Ron Qwen Teacher Bridge")
+app = FastAPI(title="Ron Model Gateway")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://arkanws513-spec.github.io"],
@@ -13,84 +13,89 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-API_KEY = os.getenv("QWEN_API_KEY", "")
-UPSTREAM = os.getenv(
-    "QWEN_UPSTREAM",
-    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
-)
-MODEL = os.getenv("QWEN_MODEL", "qwen3-4b")
+QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
+QWEN_UPSTREAM = os.getenv("QWEN_UPSTREAM", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions")
+QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen3-4b")
+
+# Secondary provider: OpenRouter. The key stays on Railway, never in the browser.
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_UPSTREAM = os.getenv("OPENROUTER_UPSTREAM", "https://openrouter.ai/api/v1/chat/completions")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
+
+def error_response(message: str, status: int = 503):
+    return Response(
+        content=json.dumps({"error": {"message": message}}, ensure_ascii=False),
+        media_type="application/json",
+        status_code=status,
+    )
+
+async def call_provider(client, url, key, model, body, extra_headers=None):
+    if not key:
+        return None, "provider key is not configured"
+    payload = dict(body)
+    payload["model"] = model
+    payload["stream"] = False
+    payload.pop("enable_thinking", None)
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json", "Accept": "application/json"}
+    if extra_headers:
+        headers.update(extra_headers)
+    try:
+        response = await client.post(url, json=payload, headers=headers)
+        try:
+            data = response.json()
+        except Exception:
+            data = {"error": {"message": response.text[:2000]}}
+        if response.is_success:
+            return data, None
+        msg = data.get("error", {}).get("message") if isinstance(data, dict) else None
+        return None, msg or f"HTTP {response.status_code}"
+    except httpx.HTTPError as exc:
+        return None, f"network error: {exc}"
 
 @app.get("/")
 async def root():
-    return {"service": "ron-qwen-teacher", "model": MODEL, "status": "ok"}
+    providers = []
+    if QWEN_API_KEY: providers.append("qwen3")
+    if OPENROUTER_API_KEY: providers.append("openrouter")
+    return {"service": "ron-model-gateway", "providers": providers, "primary": "qwen3", "fallback": "openrouter" if OPENROUTER_API_KEY else None, "status": "ok"}
 
 @app.get("/health")
 async def health():
     return {
-        "ok": bool(API_KEY),
-        "model": MODEL,
-        "upstream_configured": bool(UPSTREAM),
-        "thinking_disabled": True,
+        "ok": bool(QWEN_API_KEY or OPENROUTER_API_KEY),
+        "qwen_configured": bool(QWEN_API_KEY),
+        "fallback_configured": bool(OPENROUTER_API_KEY),
+        "qwen_model": QWEN_MODEL,
+        "fallback_model": OPENROUTER_MODEL,
     }
 
 @app.post("/v1/chat/completions")
 async def chat(request: Request):
-    if not API_KEY:
-        return Response(
-            content=json.dumps(
-                {"error": {"message": "QWEN_API_KEY is not configured"}},
-                ensure_ascii=False,
-            ),
-            media_type="application/json",
-            status_code=503,
-        )
-
     try:
         body = await request.json()
     except Exception:
-        return Response(
-            content=json.dumps(
-                {"error": {"message": "invalid JSON request"}},
-                ensure_ascii=False,
-            ),
-            media_type="application/json",
-            status_code=400,
+        return error_response("invalid JSON request", 400)
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=15.0)) as client:
+        data, qwen_error = await call_provider(
+            client, QWEN_UPSTREAM, QWEN_API_KEY, QWEN_MODEL, body,
+            {"X-Provider": "qwen3"},
         )
+        if data is not None:
+            return Response(content=json.dumps(data, ensure_ascii=False), media_type="application/json", status_code=200)
 
-    # Ron needs the final answer, not an internal reasoning trace.
-    # Qwen remains a teacher/advisor; it does not own Ron's memory or identity.
-    body["model"] = MODEL
-    body["stream"] = False
-    body["enable_thinking"] = False
-
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-
-    try:
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(120.0, connect=15.0)
-        ) as client:
-            response = await client.post(UPSTREAM, json=body, headers=headers)
-    except httpx.HTTPError as exc:
-        return Response(
-            content=json.dumps(
-                {"error": {"message": f"upstream network error: {exc}"}},
-                ensure_ascii=False,
-            ),
-            media_type="application/json",
-            status_code=502,
+        # Qwen failed/unavailable: transparently try the secondary model.
+        fallback_body = dict(body)
+        data, fallback_error = await call_provider(
+            client, OPENROUTER_UPSTREAM, OPENROUTER_API_KEY, OPENROUTER_MODEL, fallback_body,
+            {"HTTP-Referer": "https://arkanws513-spec.github.io/Ron-0/", "X-Title": "Ron"},
         )
+        if data is not None:
+            return Response(content=json.dumps(data, ensure_ascii=False), media_type="application/json", status_code=200)
 
-    try:
-        data = response.json()
-    except Exception:
-        data = {"error": {"message": response.text[:2000]}}
-
-    return Response(
-        content=json.dumps(data, ensure_ascii=False),
-        media_type="application/json",
-        status_code=response.status_code,
+    return error_response(
+        "No language model is available. Qwen3 failed: "
+        + str(qwen_error)
+        + "; fallback failed: "
+        + str(fallback_error)
     )
