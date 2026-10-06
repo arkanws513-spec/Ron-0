@@ -1,9 +1,13 @@
 (() => {
 const S={chat:"ron-chat-v4",lessons:"ron-lessons-v4"},LEGACY={chat:"ron-chat-v3",lessons:"ron-lessons-v3"},$=id=>document.getElementById(id),chat=$("chat"),form=$("composer"),input=$("input"),send=$("send");
-const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},save=()=>{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-200)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))};
-let messages=read(S.chat,null),lessons=read(S.lessons,null);
-if(!messages)messages=read(LEGACY.chat,[{role:"ron",text:"مرحبًا. أنا رون. النواة المحلية تعمل، وذاكرتي محفوظة على هذا الجهاز."}]);
-if(!lessons)lessons=read(LEGACY.lessons,[]);
+const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const asMessages=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.role==="string"&&typeof x.text==="string"):[];
+const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&typeof x.text==="string"):[];
+let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null));
+const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-200)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch(err){console.error("Ron storage error",err)}};
+if(!messages.length){messages=asMessages(read(LEGACY.chat,[]));}
+if(!messages.length)messages=[{role:"ron",text:"مرحبًا. أنا رون. النواة المحلية تعمل، وذاكرتي محفوظة على هذا الجهاز."}];
+if(!lessons.length)lessons=asLessons(read(LEGACY.lessons,[]));
 const bubble=(role,text)=>{const e=document.createElement("article");e.className="message "+role;const b=document.createElement("b"),p=document.createElement("p");b.textContent=role==="ron"?"رون":"أنت";p.textContent=text;e.append(b,p);chat.appendChild(e);chat.scrollTop=chat.scrollHeight};
 const render=()=>{chat.replaceChildren();messages.forEach(m=>bubble(m.role,m.text))};
 const norm=s=>s.toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
@@ -73,7 +77,7 @@ const answer=t=>{
  const hit=lessons.slice().reverse().find(x=>x.text&&n.includes(norm(x.text).slice(0,Math.min(30,norm(x.text).length))));
  return hit?"أتذكر تعليمك: "+hit.text:"وصلتني رسالتك. النواة المحلية تعمل، وما زالت طبقة النموذج المتقدم قيد البناء.";
 };
-const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;setTimeout(()=>{const r=answer(t);messages.push({role:"ron",text:r});bubble("ron",r);save();send.disabled=false;input.focus()},100)};
+const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;setTimeout(()=>{try{const r=answer(t);messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save()}catch(err){console.error("Ron response error",err);const r="حدث خطأ مؤقت داخل النواة المحلية. أعد إرسال الرسالة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;input.focus()}},50)};
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("menu").addEventListener("click",()=>$("settings").classList.add("open"));$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));$("new-chat").addEventListener("click",()=>{messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];save();render();$("settings").classList.remove("open")});
 $("clear-data").addEventListener("click",()=>{if(confirm("مسح كل بيانات رون المحلية؟")){localStorage.clear();location.reload()}});
