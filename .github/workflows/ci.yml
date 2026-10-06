@@ -1,0 +1,27 @@
+name: Ron CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  repository-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Validate foundation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f docs/architecture.md
+          test -f .gitignore
+          test -d ron
+          test -d tests
+          echo "Ron-0 foundation is valid."
