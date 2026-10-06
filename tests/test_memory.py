@@ -7,7 +7,7 @@ def test_memory_recall_ranks_matching_items():
     store.remember(MemoryItem(key="name", content="اسم المستخدم زيريوس"))
     store.remember(MemoryItem(key="other", content="weather today"))
     hits = store.recall("ما اسم المستخدم؟", limit=2)
-    assert hits[0].key == "name"
+    assert hits[0].key == "name"\n\n\ndef test_arabic_tokens_are_retrievable():\n    store = InMemoryStore()\n    store.remember(MemoryItem(key="identity", content="اسمي زيريوس"))\n    assert store.recall("زيريوس", limit=1)[0].content == "اسمي زيريوس"
 
 
 def test_memory_rejects_empty_items():
