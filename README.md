@@ -4,29 +4,33 @@ Ron is a GitHub-first AI assistant project.
 
 ## Principles
 - GitHub is the source of truth.
-- Provider-agnostic model interfaces.
-- Explicit memory, tools, and self-improvement boundaries.
-- Tests and GitHub Actions before expansion.
-- No secrets committed to the repository.
+- Ron's identity, memory, tools, learning rules, and orchestration stay separate from the model.
+- A ready-made local brain can be plugged in without turning Ron into a cloud-provider product.
+- No cloud API is required by the architecture.
+- No secrets are committed to the repository.
+- Tests and GitHub Actions are required before expansion.
 
 ## Current foundation
 - Web shell for GitHub Pages.
-- Provider contracts.
-- Deterministic in-memory recall.
+- Provider contracts and a local HTTP model adapter.
+- Deterministic memory and natural-language fact learning.
 - Explicit tool registry.
 - Ron orchestration core.
 - Bounded, auditable self-improvement engine.
+- Local-brain knowledge transfer with provenance.
 - Automated CI and Pages deployment.
 
-## Self-improvement
-Ron can learn from explicit experiences, turn lessons into candidate skills, verify them against a baseline, promote only passing improvements, and roll back a previously promoted skill. This changes learned behavior/skills; it does not silently retrain or replace the base model.
+## Ready-made brain strategy
 
-See `docs/self-improvement.md` for the lifecycle and safety boundary.
+Ron does not need to build a useful language model entirely from zero before it
+can become capable. A compatible local model can provide the initial language
+capability while Ron owns the surrounding system: identity, memory, tools,
+learning, evaluation, and self-improvement.
+
+The brain is replaceable and model weights are not committed to this repository.
+
+See `docs/brain-architecture.md`.
 
 ## Architecture
-`UI → Conversation → Ron Core → Memory/Retrieval/Tools/Self-Improvement → Model Provider`
 
-The project is intentionally built in small verified layers so a failure is fixed before the next layer is added.
-
-## Development
-Python 3.11+ and pytest are used for the core. The public web shell is static and can be published with GitHub Pages.
+`UI → Conversation → Ron Core → Memory/Retrieval/Tools/Learning → Local Brain`
