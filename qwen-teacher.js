@@ -1,5 +1,5 @@
-/* Ron teacher bridge — Qwen3
- * Qwen is a teacher/reasoning component only. Ron owns identity, memory,
+/* Ron base-model bridge — Qwen3
+ * Qwen is Ron's base language/reasoning component. Ron owns identity, memory,
  * conversation state, policy and final decisions.
  */
 (() => {
@@ -38,7 +38,7 @@
     exportTrainingDataset(){return this.getTrainingExamples().filter(x=>x.status==="approved").map(x=>({messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}]}));},
     buildMessages(userMessage,ronContext="",history=[]){
       const system=[
-        "أنت Qwen، معلم ومكوّن تفكير مساعد لرون.",
+        "أنت Qwen، النموذج الأساسي للغة والاستدلال داخل رون.",
         "رون هو النواة الأساسية والمستقلة وصاحب القرار النهائي، وليس تابعًا لـ Qwen أو OpenAI أو Google أو أي جهة أخرى.",
         "افهم الرسالة الحالية بالاعتماد على سياق المحادثة والذاكرة المقدمة.",
         "حافظ على اتساق الأسماء والحقائق والموضوع الجاري، وافهم الأسئلة المختصرة مثل: طيب؟ وماذا عنه؟ بالرجوع إلى السياق.",
