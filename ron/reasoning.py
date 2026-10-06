@@ -183,6 +183,34 @@ class ReasoningEngine:
             unknowns=(),
         )
 
+    @classmethod
+    def answer_query(cls, text: str, result: ReasoningResult) -> str | None:
+        q=cls._norm(str(text).rstrip("؟? .،,"))
+        facts=list(result.facts)
+        m=re.match(r"^(?:ما هي|ما هو|ماهو|ايه|اي)\s+(.+?)\s+(.+)$", q)
+        if m:
+            relation_words={"عاصمة":"is","عاصمه":"is","يسبب":"causes","تسبب":"causes","يدعم":"supports","تدعم":"supports","قبل":"precedes","يسبق":"precedes","بعد":"follows","يتبع":"follows","يحتاج":"needs"}
+            relation=relation_words.get(m.group(1))
+            if relation:
+                obj=m.group(2)
+                matches=[f for f in facts if f.relation==relation and cls._norm(f.object)==obj]
+                if matches:
+                    return f"{matches[-1].subject} {m.group(1)} {matches[-1].object}."
+        m=re.match(r"^(?:هل|هل صحيح ان)\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج)\s+(.+)$", q)
+        if m:
+            rel={"يسبب":"causes","تسبب":"causes","يدعم":"supports","تدعم":"supports","قبل":"precedes","يسبق":"precedes","بعد":"follows","يتبع":"follows","يحتاج":"needs"}[m.group(2)]
+            key=(cls._norm(m.group(1)),rel,cls._norm(m.group(3)))
+            if any(cls.fact_key(f)==key for f in facts):
+                return "نعم، هذا مدعوم بالأدلة المتاحة."
+            if any(f.subject==m.group(1) and f.relation==rel and f.object!=m.group(3) for f in facts):
+                return "لا، توجد معلومة متعارضة مع ذلك."
+        m=re.match(r"^(?:ماذا|ما)\s+(?:الذي\s+)?(?:يسبب|تسبب)\s+(.+)$", q)
+        if m:
+            matches=[f.object for f in facts if f.relation=="causes" and cls._norm(f.subject)==m.group(1)]
+            if matches:
+                return "المعروف لدي: " + "، ".join(matches) + "."
+        return None
+
     def summarize(self, result: ReasoningResult) -> str:
         if not result.facts and not result.hypotheses:
             return "لا توجد أدلة كافية للاستدلال."
