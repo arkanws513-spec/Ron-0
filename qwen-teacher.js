@@ -13,7 +13,8 @@
     maxLessons: 80,
     maxHistory: 14,
     trainingStorageKey: "ron-training-candidates-v1",
-    maxTrainingExamples: 200
+    maxTrainingExamples: 200,
+    maxConcepts: 300
   });
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
@@ -26,6 +27,8 @@
     setEndpoint(url){write(CONFIG.endpointStorageKey,String(url||CONFIG.defaultEndpoint).trim())},
     getLessons(){const value=read(CONFIG.lessonsStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxLessons):[]},
     saveLesson(text){const value=String(text||"").trim();if(!value)return false;const lessons=this.getLessons().filter(x=>x.text!==value);lessons.push({text:value,at:new Date().toISOString(),source:CONFIG.model});write(CONFIG.lessonsStorageKey,lessons.slice(-CONFIG.maxLessons));return true},
+    getConcepts(){const value=read("ron-concepts-v1",{});return value&&typeof value==="object"?value:{}} ,
+    learnConcept(key,value,source="qwen3"){const k=String(key||"").trim(),v=String(value||"").trim();if(!k||!v)return false;const concepts=this.getConcepts();concepts[k]={value:v,source,at:new Date().toISOString()};const entries=Object.entries(concepts).slice(-CONFIG.maxConcepts);write("ron-concepts-v1",Object.fromEntries(entries));return true},
     getTrainingExamples(){const value=read(CONFIG.trainingStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxTrainingExamples):[]},
     setTrainingExampleStatus(index,status){
       const allowed=new Set(["candidate","approved","rejected"]);
@@ -45,6 +48,7 @@
     exportApprovedTrainingJSONL(){
       return this.exportTrainingDataset().map(x=>JSON.stringify(x)).join("\n");
     },
+    learnFromQwen(user,assistant,context=""){const u=String(user||"").trim(),a=String(assistant||"").trim();if(!u||!a)return false;this.recordTrainingExample(u,a,context,"candidate");return true},
     recordTrainingExample(user,assistant,context,status="candidate"){
       const u=String(user||"").trim(),a=String(assistant||"").trim();
       if(!u||!a)return false;
@@ -64,7 +68,9 @@
         "لا تدّع أنك عدّلت ذاكرة رون. إذا كان المستخدم يعلّم رون، أعطِ صياغة معرفة مفيدة يمكن لرون حفظها.",
         ronContext?"ذاكرة رون ذات الصلة:\n"+ronContext:""
       ].filter(Boolean).join("\n\n");
-      const messages=[{role:"system",content:system}];
+      const concepts=Object.entries(this.getConcepts()).slice(-40).map(([k,v])=>`- ${k}: ${v.value}`).join("\n");
+      const systemWithLearning=system+(concepts?"\n\nمعرفة متراكمة من رون:\n"+concepts:"");
+      const messages=[{role:"system",content:systemWithLearning}];
       messages.push(...normalizeMessages(history));
       messages.push({role:"user",content:String(userMessage||"")});
       return messages;
