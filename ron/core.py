@@ -8,6 +8,7 @@ from .memory import InMemoryStore
 from .self_improvement import Experience, SelfImprovementEngine
 from .session import Conversation
 from .tools import ToolRegistry
+from .understanding import UnderstandingEngine
 
 @dataclass
 class RonCore:
@@ -17,6 +18,7 @@ class RonCore:
     self_improvement:SelfImprovementEngine=field(default_factory=SelfImprovementEngine)
     conversation:Conversation=field(default_factory=lambda:Conversation(session_id="default"))
     max_context_messages:int=12
+    understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)
@@ -27,9 +29,17 @@ class RonCore:
         text=user_text.strip()
         if not text:
             return self._finish(text,"أنا رون. اكتب لي ما تريد.","ron-core",{"runtime":"ron-0","intent":"empty"})
+        previous_topic=None
+        for message in reversed(self.conversation.messages):
+            if message.role=="user" and message.content.strip():
+                previous_topic=message.content
+                break
         self.conversation.add("user",text)
-        topic=self.conversation.last_user_message() if self.conversation.last_user_message()!=text else None
-        intent=detect_intent(text,topic=topic)
+        if previous_topic==text:
+            previous_topic=None
+        intent_state=self.understanding.analyze(text,previous_user=previous_topic)
+        topic=intent_state.topic
+        intent=intent_state.intent or detect_intent(text,topic=topic)
         if intent is not None:
             if intent.name=="greeting":
                 return self._finish(text,"أهلًا بك. أنا رون.","ron-core",{"runtime":"ron-0","intent":intent.name})
@@ -55,10 +65,23 @@ class RonCore:
             messages=(Message(role="system",content=system_context),Message(role="user",content=text)),
             metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot())},
         )
-        response=self.provider.generate(request)
-        self.memory.remember(MemoryItem(key=f"turn:{len(getattr(self.memory,'items',{}))}",content=text,metadata={"kind":"conversation"}))
-        self.conversation.add("assistant",response.content)
-        return response
+        try:
+            response=self.provider.generate(request)
+        except Exception as exc:
+            response=ModelResponse(
+                content=self._interactive_fallback(text,intent_state),
+                model="ron-core-fallback",
+                metadata={**request.metadata,"runtime":"ron-0","fallback":True,"provider_error":type(exc).__name__},
+            )
+        self.memory.remember(MemoryItem(key=f"turn:{len(getattr(self.memory,'items',{}))}",content=text,metadata={"kind":"conversation","topic":topic or ""}))
+        return self._finish(text,response.content,response.model or "ron-core",response.metadata)
+
+    @staticmethod
+    def _interactive_fallback(text,understanding)->str:
+        topic=understanding.topic or text
+        if understanding.is_follow_up:
+            return f"وصلتني متابعتك. ما زلت أتعامل مع موضوعنا السابق: {topic}. قد لا يكون فهمي كاملًا بعد، لكنني موجود وسأواصل معك."
+        return f"وصلتني رسالتك. أفهم أن موضوعنا الآن هو: {topic}. قد أخطئ في الفهم، لكنني سأستمر في التفاعل بدل التوقف."
 
     @staticmethod
     def _facts_confirmation(facts)->str:
