@@ -44,3 +44,7 @@ class LocalBrain:
             user = next((m.content for m in reversed(request.messages) if m.role == "user"), "")
             self.transfer.capture(user, response.content, source=self.provider.model)
         return response
+
+    def generate(self, request: ModelRequest) -> ModelResponse:
+        """ModelProvider-compatible entry point for RonCore/ProviderRouter."""
+        return self.think(request, learn=True)
