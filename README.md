@@ -1,18 +1,26 @@
-# Ron-0
+# Ron-0 — رون
 
-Ron (رون) is an open-source AI assistant project built with GitHub as the source of truth.
+Ron is a GitHub-first AI assistant project.
 
 ## Principles
-- GitHub-first: source code, architecture, documentation, tests, and history live here.
-- Provider-agnostic: model providers are adapters, not the core.
-- Modular: memory, retrieval, planning, tools, and UI are replaceable modules.
-- Verifiable: capabilities should have tests and automated checks.
-- Secure by default: secrets never belong in source control.
+- GitHub is the source of truth.
+- Provider-agnostic model interfaces.
+- Explicit memory and tool boundaries.
+- Tests and GitHub Actions before expansion.
+- No secrets committed to the repository.
 
-## Initial architecture
-UI → Conversation Engine → Ron Core → Memory / Retrieval / Tools → Model Router → Provider Adapters
+## Current foundation
+- Web shell for GitHub Pages.
+- Provider contracts.
+- Deterministic in-memory recall.
+- Explicit tool registry.
+- Ron orchestration core.
+- Automated CI and Pages deployment.
 
-Ron-0 starts deliberately small. Stable interfaces come before providers and external services.
+## Architecture
+`UI → Conversation → Ron Core → Memory/Retrieval/Tools → Model Provider`
 
-## Status
-Foundation phase.
+The project is intentionally built in small verified layers so a failure is fixed before the next layer is added.
+
+## Development
+Python 3.11+ and pytest are used for the core. The public web shell is static and can be published with GitHub Pages.
