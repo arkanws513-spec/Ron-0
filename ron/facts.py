@@ -49,7 +49,7 @@ def extract_facts(text: str) -> list[ExtractedFact]:
     normalized = normalize_arabic(text)
 
     correction = re.match(
-        r"^اسمي\s+(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)(?:\s+فهذا\s+عمري)?\s*[.،,؛;؟?]*$",
+        r"^اسمي\s+(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?:\s+فهذا\s+عمري)?\s*[.،,؛;؟?]*$",
         normalized,
         re.I,
     )
