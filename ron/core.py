@@ -42,11 +42,6 @@ class RonCore:
         intent_state=self.understanding.analyze(text,previous_user=previous_topic)
         topic=intent_state.topic
         intent=intent_state.intent or detect_intent(text,topic=topic)
-        if intent is not None:
-            if intent.name=="greeting":
-                return self._finish(text,"أهلًا بك. أنا رون.","ron-core",{"runtime":"ron-0","intent":intent.name})
-            if intent.name=="assistant_identity":
-                return self._finish(text,"أنا رون، مساعد مستقل قيد التطوير.","ron-core",{"runtime":"ron-0","intent":intent.name})
         facts=extract_facts(text)
         if facts:
             for fact in facts:self.memory.remember(fact.memory)
