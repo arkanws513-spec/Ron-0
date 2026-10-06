@@ -1,0 +1,181 @@
+"""Ron internal reasoning engine: structured, auditable, provider-agnostic inference."""
+from __future__ import annotations
+from dataclasses import dataclass, field
+from enum import Enum
+import re
+from typing import Iterable
+
+class EvidenceKind(str, Enum):
+    FACT = "fact"
+    MEMORY = "memory"
+    USER = "user"
+    MODEL = "model"
+    INFERENCE = "inference"
+
+@dataclass(frozen=True)
+class Evidence:
+    content: str
+    kind: EvidenceKind = EvidenceKind.USER
+    confidence: float = 0.5
+    source: str = "unknown"
+
+@dataclass(frozen=True)
+class Fact:
+    subject: str
+    relation: str
+    object: str
+    confidence: float = 0.8
+    source: str = "unknown"
+
+@dataclass(frozen=True)
+class Rule:
+    name: str
+    premises: tuple[tuple[str, str, str], ...]
+    conclusion: tuple[str, str, str]
+    weight: float = 0.8
+
+@dataclass(frozen=True)
+class Hypothesis:
+    statement: str
+    confidence: float
+    evidence: tuple[str, ...] = ()
+
+@dataclass(frozen=True)
+class Inference:
+    rule: str
+    premises: tuple[str, ...]
+    conclusion: str
+    confidence: float
+
+@dataclass(frozen=True)
+class Contradiction:
+    left: str
+    right: str
+    reason: str
+
+@dataclass(frozen=True)
+class ReasoningResult:
+    facts: tuple[Fact, ...] = ()
+    inferences: tuple[Inference, ...] = ()
+    hypotheses: tuple[Hypothesis, ...] = ()
+    contradictions: tuple[Contradiction, ...] = ()
+    conclusions: tuple[str, ...] = ()
+    confidence: float = 0.0
+    unknowns: tuple[str, ...] = ()
+
+class ReasoningEngine:
+    """A deterministic first layer for deduction, contradiction detection and confidence.
+
+    It deliberately exposes structured results rather than private chain-of-thought.
+    External language models may propose evidence, but they do not own the result.
+    """
+
+    _TRIPLE = re.compile(r"^\\s*(.+?)\\s+(is|has|likes|hates|needs|causes|supports|precedes|follows)\\s+(.+?)\\s*$", re.I)
+
+    def __init__(self, rules: Iterable[Rule] | None = None, max_steps: int = 32) -> None:
+        self.rules = tuple(rules or self.default_rules())
+        self.max_steps = max(1, max_steps)
+
+    @staticmethod
+    def default_rules() -> tuple[Rule, ...]:
+        return (
+            Rule("transitive_precedes", (("?a", "precedes", "?b"), ("?b", "precedes", "?c")), ("?a", "precedes", "?c"), 0.92),
+            Rule("transitive_supports", (("?a", "supports", "?b"), ("?b", "supports", "?c")), ("?a", "supports", "?c"), 0.88),
+        )
+
+    @staticmethod
+    def _norm(value: str) -> str:
+        return re.sub(r"\\s+", " ", str(value).strip().lower())
+
+    @classmethod
+    def fact_key(cls, fact: Fact) -> tuple[str, str, str]:
+        return tuple(cls._norm(x) for x in (fact.subject, fact.relation, fact.object))
+
+    @classmethod
+    def parse_fact(cls, text: str, source: str = "user", confidence: float = 0.7) -> Fact | None:
+        match = cls._TRIPLE.match(str(text))
+        if not match:
+            return None
+        return Fact(match.group(1), match.group(2).lower(), match.group(3), max(0.0, min(1.0, confidence)), source)
+
+    @staticmethod
+    def _match(pattern: tuple[str, str, str], fact: Fact, bindings: dict[str, str]) -> dict[str, str] | None:
+        candidate = (fact.subject, fact.relation, fact.object)
+        out = dict(bindings)
+        for expected, actual in zip(pattern, candidate):
+            if expected.startswith("?"):
+                old = out.get(expected)
+                if old is not None and old != actual:
+                    return None
+                out[expected] = actual
+            elif expected.lower() != str(actual).lower():
+                return None
+        return out
+
+    def _apply_rule(self, rule: Rule, facts: list[Fact]) -> list[Inference]:
+        out: list[Inference] = []
+        def walk(i: int, bindings: dict[str, str], used: list[Fact]) -> None:
+            if len(out) >= self.max_steps:
+                return
+            if i == len(rule.premises):
+                rendered = tuple(bindings.get(x, x) for x in rule.conclusion)
+                conclusion = Fact(*rendered, confidence=min(rule.weight, *(f.confidence for f in used)), source=f"rule:{rule.name}")
+                out.append(Inference(rule.name, tuple(self.describe_fact(f) for f in used), self.describe_fact(conclusion), conclusion.confidence))
+                return
+            for fact in facts:
+                next_bindings = self._match(rule.premises[i], fact, bindings)
+                if next_bindings is not None:
+                    walk(i + 1, next_bindings, used + [fact])
+        walk(0, {}, [])
+        return out
+
+    @classmethod
+    def describe_fact(cls, fact: Fact) -> str:
+        return f"{fact.subject} {fact.relation} {fact.object}"
+
+    def reason(self, facts: Iterable[Fact] = (), hypotheses: Iterable[Hypothesis] = ()) -> ReasoningResult:
+        known = list(facts)
+        seen = {self.fact_key(f) for f in known}
+        inferences: list[Inference] = []
+        for _ in range(self.max_steps):
+            produced: list[Fact] = []
+            for rule in self.rules:
+                for inf in self._apply_rule(rule, known):
+                    parts = inf.conclusion.split(" ", 2)
+                    if len(parts) != 3:
+                        continue
+                    fact = Fact(parts[0], parts[1], parts[2], inf.confidence, f"rule:{inf.rule}")
+                    if self.fact_key(fact) not in seen:
+                        seen.add(self.fact_key(fact)); produced.append(fact); inferences.append(inf)
+                        if len(inferences) >= self.max_steps: break
+                if len(inferences) >= self.max_steps: break
+            if not produced: break
+            known.extend(produced)
+
+        contradictions: list[Contradiction] = []
+        for a in known:
+            for b in known:
+                if a.subject == b.subject and a.relation == b.relation and a.object != b.object:
+                    if a.relation in {"is", "has", "needs", "causes"}:
+                        contradictions.append(Contradiction(self.describe_fact(a), self.describe_fact(b), "same subject/relation with different object"))
+        conclusion_text = tuple(self.describe_fact(f) for f in known)
+        confs = [f.confidence for f in known]
+        result_conf = sum(confs) / len(confs) if confs else 0.0
+        return ReasoningResult(
+            facts=tuple(known),
+            inferences=tuple(inferences),
+            hypotheses=tuple(hypotheses),
+            contradictions=tuple(contradictions),
+            conclusions=conclusion_text,
+            confidence=min(1.0, result_conf),
+            unknowns=(),
+        )
+
+    def summarize(self, result: ReasoningResult) -> str:
+        if not result.facts and not result.hypotheses:
+            return "لا توجد أدلة كافية للاستدلال."
+        if result.contradictions:
+            return f"يوجد {len(result.contradictions)} تعارض يحتاج إلى مراجعة."
+        if result.inferences:
+            return f"تم الوصول إلى {len(result.inferences)} استنتاجات منظمة بدرجة ثقة تقريبية {result.confidence:.2f}."
+        return f"تم تحليل الأدلة المتاحة بدرجة ثقة تقريبية {result.confidence:.2f}."
