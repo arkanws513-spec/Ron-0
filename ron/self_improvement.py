@@ -1,8 +1,8 @@
 """Auditable, bounded self-improvement primitives for Ron.
 
-Ron can learn from recorded experience and promote a proposed skill only when
-verification shows an improvement. This module never overwrites production
-code or the base model by itself.
+The engine can learn experiences, propose skill changes, verify candidates with
+an independent evaluator, and promote only verified improvements. It never
+writes production source code or credentials.
 """
 from __future__ import annotations
 
@@ -12,8 +12,6 @@ from typing import Callable, Mapping
 
 @dataclass(frozen=True)
 class Experience:
-    """A verified observation that can be turned into a reusable skill."""
-
     task: str
     outcome: str
     lesson: str
@@ -30,8 +28,6 @@ class Skill:
 
 @dataclass(frozen=True)
 class ImprovementCandidate:
-    """A proposed replacement; it is inert until verification succeeds."""
-
     skill: Skill
     reason: str
 
@@ -53,6 +49,12 @@ class PromotionRecord:
     version: int
     evaluation: Evaluation
     status: str
+
+
+@dataclass(frozen=True)
+class ImprovementResult:
+    candidate: ImprovementCandidate
+    evaluation: Evaluation
 
 
 class SkillRegistry:
@@ -101,7 +103,7 @@ class SelfImprovementEngine:
         self.audit_log: list[PromotionRecord] = []
 
     def learn(self, experience: Experience) -> None:
-        """Record bounded experience; failed experiences remain useful evidence."""
+        """Record bounded experience; failures remain useful evidence."""
         self.experiences.append(experience)
         del self.experiences[:-self.max_experiences]
 
@@ -118,6 +120,20 @@ class SelfImprovementEngine:
             raise ValueError("proposer returned a different skill name")
         return candidate
 
+    def improve(
+        self,
+        experience: Experience,
+        skill_name: str,
+        proposer: Callable[[Experience], ImprovementCandidate],
+        evaluator: Callable[[ImprovementCandidate], Evaluation],
+    ) -> ImprovementResult:
+        """Run one complete bounded improvement cycle."""
+        self.learn(experience)
+        candidate = self.propose(experience, skill_name, proposer)
+        evaluation = evaluator(candidate)
+        self._record_and_promote(candidate, evaluation)
+        return ImprovementResult(candidate=candidate, evaluation=evaluation)
+
     def verify_and_promote(
         self,
         candidate: ImprovementCandidate,
@@ -130,6 +146,14 @@ class SelfImprovementEngine:
             candidate_score=candidate_score,
             tests_passed=tests_passed,
         )
+        self._record_and_promote(candidate, evaluation)
+        return evaluation
+
+    def _record_and_promote(
+        self,
+        candidate: ImprovementCandidate,
+        evaluation: Evaluation,
+    ) -> None:
         status = "promoted" if evaluation.improved else "rejected"
         if evaluation.improved:
             self.registry.promote(candidate.skill)
@@ -141,7 +165,6 @@ class SelfImprovementEngine:
                 status=status,
             )
         )
-        return evaluation
 
     def rollback(self, skill_name: str) -> Skill | None:
         return self.registry.rollback(skill_name)
