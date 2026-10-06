@@ -27,6 +27,24 @@
     getLessons(){const value=read(CONFIG.lessonsStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxLessons):[]},
     saveLesson(text){const value=String(text||"").trim();if(!value)return false;const lessons=this.getLessons().filter(x=>x.text!==value);lessons.push({text:value,at:new Date().toISOString(),source:CONFIG.model});write(CONFIG.lessonsStorageKey,lessons.slice(-CONFIG.maxLessons));return true},
     getTrainingExamples(){const value=read(CONFIG.trainingStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxTrainingExamples):[]},
+    setTrainingExampleStatus(index,status){
+      const allowed=new Set(["candidate","approved","rejected"]);
+      if(!allowed.has(status))return false;
+      const examples=this.getTrainingExamples();
+      if(!Number.isInteger(index)||!examples[index])return false;
+      examples[index]={...examples[index],status};
+      write(CONFIG.trainingStorageKey,examples);
+      return true;
+    },
+    exportTrainingCandidatesJSONL(){
+      return this.getTrainingExamples().map(x=>JSON.stringify({
+        messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}],
+        status:x.status,source:x.source,at:x.at
+      })).join("\n");
+    },
+    exportApprovedTrainingJSONL(){
+      return this.exportTrainingDataset().map(x=>JSON.stringify(x)).join("\n");
+    },
     recordTrainingExample(user,assistant,context,status="candidate"){
       const u=String(user||"").trim(),a=String(assistant||"").trim();
       if(!u||!a)return false;
@@ -38,7 +56,7 @@
     exportTrainingDataset(){return this.getTrainingExamples().filter(x=>x.status==="approved").map(x=>({messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}]}));},
     buildMessages(userMessage,ronContext="",history=[]){
       const system=[
-        "أنت Qwen، النموذج الأساسي للغة والاستدلال داخل رون.",
+        "أنت Qwen3، النموذج الأساسي للغة والاستدلال داخل رون.",
         "رون هو النواة الأساسية والمستقلة وصاحب القرار النهائي، وليس تابعًا لـ Qwen أو OpenAI أو Google أو أي جهة أخرى.",
         "افهم الرسالة الحالية بالاعتماد على سياق المحادثة والذاكرة المقدمة.",
         "حافظ على اتساق الأسماء والحقائق والموضوع الجاري، وافهم الأسئلة المختصرة مثل: طيب؟ وماذا عنه؟ بالرجوع إلى السياق.",
