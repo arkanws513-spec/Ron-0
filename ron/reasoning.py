@@ -70,7 +70,7 @@ class ReasoningEngine:
     External language models may propose evidence, but they do not own the result.
     """
 
-    _TRIPLE = re.compile(r"^\\s*(.+?)\\s+(is|has|likes|hates|needs|causes|supports|precedes|follows)\\s+(.+?)\\s*$", re.I)
+    _TRIPLE = re.compile(r"^\s*(.+?)\s+(is|has|likes|hates|needs|causes|supports|precedes|follows)\s+(.+?)\s*$", re.I)
 
     def __init__(self, rules: Iterable[Rule] | None = None, max_steps: int = 32) -> None:
         self.rules = tuple(rules or self.default_rules())
@@ -85,7 +85,7 @@ class ReasoningEngine:
 
     @staticmethod
     def _norm(value: str) -> str:
-        return re.sub(r"\\s+", " ", str(value).strip().lower())
+        return re.sub(r"\s+", " ", str(value).strip().lower())
 
     @classmethod
     def fact_key(cls, fact: Fact) -> tuple[str, str, str]:
