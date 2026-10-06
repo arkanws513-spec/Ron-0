@@ -180,7 +180,11 @@ class ReasoningEngine:
         # as a subject elsewhere (e.g. "ازدحام" -> "الازدحام").
         canonical = {}
         for f in known:
-            canonical.setdefault(self._norm(f.subject), f.subject)
+            key = self._norm(f.subject)
+            canonical.setdefault(key, f.subject)
+            # Treat Arabic definite articles as a surface-form variation for
+            # entity linking ("ازدحام" and "الازدحام").
+            canonical.setdefault(key.removeprefix("ال"), f.subject)
         conclusion_text = tuple(
             self.describe_fact(
                 Fact(f.subject, f.relation, canonical.get(self._norm(f.object), f.object), f.confidence, f.source)
