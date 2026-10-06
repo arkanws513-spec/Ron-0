@@ -1,7 +1,9 @@
 (() => {
-const S={chat:"ron-chat-v4",lessons:"ron-lessons-v4"},$=id=>document.getElementById(id),chat=$("chat"),form=$("composer"),input=$("input"),send=$("send");
+const S={chat:"ron-chat-v4",lessons:"ron-lessons-v4"},LEGACY={chat:"ron-chat-v3",lessons:"ron-lessons-v3"},$=id=>document.getElementById(id),chat=$("chat"),form=$("composer"),input=$("input"),send=$("send");
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},save=()=>{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-200)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))};
-let messages=read(S.chat,[{role:"ron",text:"مرحبًا. أنا رون. النواة المحلية تعمل، وذاكرتي محفوظة على هذا الجهاز."}]),lessons=read(S.lessons,[]);
+let messages=read(S.chat,null),lessons=read(S.lessons,null);
+if(!messages)messages=read(LEGACY.chat,[{role:"ron",text:"مرحبًا. أنا رون. النواة المحلية تعمل، وذاكرتي محفوظة على هذا الجهاز."}]);
+if(!lessons)lessons=read(LEGACY.lessons,[]);
 const bubble=(role,text)=>{const e=document.createElement("article");e.className="message "+role;const b=document.createElement("b"),p=document.createElement("p");b.textContent=role==="ron"?"رون":"أنت";p.textContent=text;e.append(b,p);chat.appendChild(e);chat.scrollTop=chat.scrollHeight};
 const render=()=>{chat.replaceChildren();messages.forEach(m=>bubble(m.role,m.text))};
 const norm=s=>s.toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
@@ -16,7 +18,13 @@ const extractFacts=t=>{
  m=n.match(/^(?:انا\s+)?اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
  if(!m)m=n.match(/^(?:اريدك\s+)?(?:ان\s+)?تعلم\s+(?:ان\s+)?اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
  if(!m)m=n.match(/^تعلم\s+ان\s+اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
- if(m){let value=cleanValue(m[1]);value=value.replace(/\s+(?:و)?عمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").trim();if(value)facts.push({key:"user.name",text:value});}
+ if(m){
+  let value=cleanValue(m[1]);
+  const correction=value.match(/^(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)\s*$/);
+  if(correction){value=cleanValue(correction[1]);const age=Number(correction[2]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
+  value=value.replace(/\s+(?:و)?عمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").replace(/\s+\d{1,3}\s*(?:عام|سنة|سنين)$/,"").trim();
+  if(value)facts.push({key:"user.name",text:value});
+}
  if(!facts.length){
   m=n.match(/^انا\s+(.+?)$/);
   if(m&&!/^(?:عمري|سني|احب|لا احب)\b/.test(m[1])){
@@ -69,6 +77,6 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("menu").addEventListener("click",()=>$("settings").classList.add("open"));$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));$("new-chat").addEventListener("click",()=>{messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];save();render();$("settings").classList.remove("open")});
 $("clear-data").addEventListener("click",()=>{if(confirm("مسح كل بيانات رون المحلية؟")){localStorage.clear();location.reload()}});
-$("export").addEventListener("click",()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({version:3,exportedAt:new Date().toISOString(),messages,lessons},null,2)],{type:"application/json"}));a.download="ron-backup.json";a.click()});
+$("export").addEventListener("click",()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({version:4,exportedAt:new Date().toISOString(),messages,lessons},null,2)],{type:"application/json"}));a.download="ron-backup.json";a.click()});
 $("import").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.messages)||!Array.isArray(d.lessons))throw 0;messages=d.messages;lessons=d.lessons;save();render();alert("تم استيراد ذاكرة رون.")}catch{alert("ملف النسخ الاحتياطي غير صالح.")}e.target.value=""});render();
 })();
