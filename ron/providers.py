@@ -132,3 +132,42 @@ class ProviderRouter:
 
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._providers))
+
+
+@dataclass(frozen=True)
+class Qwen3TeacherProvider:
+    """Qwen3 local teacher adapter.
+
+    Qwen3 is used only as an explicitly selected teacher. Ron remains the
+    owner of identity, memory, learning policy, and source code. Model weights
+    stay outside this repository and are loaded by the user's local runtime.
+    """
+
+    endpoint: str = "http://127.0.0.1:11434/v1/chat/completions"
+    model: str = "qwen3:1.7b"
+    timeout: float = 120.0
+
+    @classmethod
+    def from_environment(cls) -> "Qwen3TeacherProvider":
+        return cls(
+            endpoint=os.getenv("RON_TEACHER_ENDPOINT", "http://127.0.0.1:11434/v1/chat/completions"),
+            model=os.getenv("RON_TEACHER_MODEL", "qwen3:1.7b"),
+            timeout=float(os.getenv("RON_TEACHER_TIMEOUT", "120")),
+        )
+
+    def generate(self, request: ModelRequest) -> ModelResponse:
+        response = LocalHTTPModelProvider(
+            endpoint=self.endpoint,
+            model=self.model,
+            timeout=self.timeout,
+        ).generate(request)
+        return ModelResponse(
+            content=response.content,
+            model=response.model,
+            metadata={
+                **response.metadata,
+                "role": "teacher",
+                "teacher": "qwen3",
+                "transfer_target": "ron",
+            },
+        )
