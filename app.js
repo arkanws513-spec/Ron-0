@@ -165,37 +165,33 @@ const contextualTopic=()=>{
  if(hit)return hit;
  return null;
 };
-const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(!send.dataset)send.dataset={};send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{let r=answer(t);const local=String(r||"");const n=norm(t);const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);const followup=/^(طيب|طيب\s*؟|وبعدين|وماذا عنه|وماذا عنها|وهل|طب|طب\s*؟|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
-const needsTeacher=true; // Qwen3 is Ron's active base model; Ron retains identity, memory, learning policy, and final validation.
-if(!qwenEnabled()&&followup&&!localLessonAnswer(n)){
-  const topic=contextualTopic();
-  if(topic) r="أفهم أنك تريد متابعة الحديث عن: "+topic+"، لكن النواة المحلية تحتاج معلومة أكثر لتحديد ما تقصده بدقة.";
-}
-if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsTeacher){
- try{
-  const taught=await globalThis.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
-  if(taught?.ok&&taught.text){
-    if(learning){
-      r=String(r||"تم.");
-      r+= "\n\n🧠 اقتراح من النموذج الأساسي Qwen:\n"+taught.text;
-      globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),"explicit-learning");
-      globalThis.RonLearning?.addKnowledge?.({text:taught.text,source:"qwen3",confidence:.55,kind:"teacher-suggestion"});
-    }else{
-      r=taught.text;
-      globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),"candidate");
-      globalThis.RonLearning?.addExperience?.(t,taught.text,"qwen3-candidate",.45);
-    }
-  }else{
-    r=local;
-  }
- }catch(qwenError){
-  console.warn("Ron base model unavailable; continuing locally",qwenError);
-  r=browserReasoningAnswer(t)?.answer||local;
+const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
+ let r=answer(t);
+ const local=String(r||"").trim();
+ const n=norm(t);
+ const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);
+ const needsModel=!local||/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
+ if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsModel){
+   try{
+     const taught=await globalThis.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
+     if(taught?.ok&&taught.text){
+       r=taught.text;
+       globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),learning?"explicit-learning":"candidate");
+       globalThis.RonLearning?.addExperience?.(t,taught.text,"model-response",.55);
+       globalThis.RonLearning?.addKnowledge?.({text:taught.text,source:taught.model||"model",confidence:.55,kind:"response"});
+     }
+   }catch(error){console.warn("Model chain unavailable; using Ron local reasoning",error);}
  }
-}
-if(!String(r||"").trim()){r="لم أتمكن من تكوين إجابة موثوقة لهذه الرسالة بعد."; }
-if(String(r||"").trim()&&!learning&&!/^تعذر|^لم أتمكن/.test(String(r))) globalThis.RonLearning?.addExperience?.(t,String(r),"conversation",.5);
-messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="تعذر إكمال المعالجة لهذه الرسالة الآن. لا أريد اختلاق إجابة محفوظة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},4000+Math.floor(Math.random()*2001))};
+ if(!String(r||"").trim()){
+   const semantic=browserReasoningAnswer(t)?.answer;
+   if(semantic)r=semantic;
+ }
+ if(!String(r||"").trim()){
+   r="لا أملك محركًا لغويًا متاحًا الآن لتكوين رد جديد لهذه الرسالة. ذاكرة رون لم تتوقف، ويمكن متابعة المحادثة بعد عودة أحد محركات الاستدلال.";
+ }
+ if(String(r).trim()&&!learning&&!/^لا أملك محركًا/.test(String(r))) globalThis.RonLearning?.addExperience?.(t,String(r),"conversation",.5);
+ messages.push({role:"ron",text:String(r)});bubble("ron",String(r));save();saveCurrent();
+}catch(err){console.error("Ron response error",err);const fallback=browserReasoningAnswer(t)?.answer||"حدث خطأ في نواة المعالجة المحلية.";messages.push({role:"ron",text:fallback});bubble("ron",fallback)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},80)};
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("start-ron")?.addEventListener("click",()=>{localStorage.setItem(S.started,"1");$("startup").classList.add("hidden");$("main-app").classList.remove("hidden");input.focus()});if(localStorage.getItem(S.started)==="1"){$("startup").classList.add("hidden");$("main-app").classList.remove("hidden")};$("menu").addEventListener("click",()=>{renderHistory();$("settings").classList.add("open")});$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));const renderHistory=()=>{const box=$("history-list");if(!box)return;box.replaceChildren();if(!conversations.length){const e=document.createElement("div");e.className="history-empty";e.textContent="لا توجد محادثات محفوظة بعد.";box.appendChild(e);return}conversations.slice().reverse().forEach(x=>{const b=document.createElement("button");b.type="button";b.className="history-item";b.textContent=x.title||"محادثة";b.addEventListener("click",()=>{messages=asMessages(x.messages);globalThis.ronConversationId=x.id;save();render();$("settings").classList.remove("open")});box.appendChild(b)})};$("new-chat").addEventListener("click",()=>{saveCurrent();messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];globalThis.ronConversationId=makeId();save();render();$("settings").classList.remove("open")});$("history-btn")?.addEventListener("click",()=>{$("history-list")?.classList.toggle("open");renderHistory()});
 const qwenEnabledInput=$("qwen-enabled"),qwenEndpointInput=$("qwen-endpoint"),qwenSave=$("qwen-save"),qwenStatus=$("qwen-status");
