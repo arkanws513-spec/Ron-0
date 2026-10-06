@@ -35,3 +35,13 @@ def test_arabic_relations_and_causal_chain():
     assert any(f.subject == "القاهرة" and f.relation == "is" for f in result.facts)
     assert any("مصر causes الازدحام" in x for x in result.conclusions)
     assert any("مصر causes تأخرا" in x for x in result.conclusions)
+
+
+def test_semantic_query_uses_relations_not_token_similarity():
+    engine = ReasoningEngine()
+    result = engine.reason([
+        engine.parse_fact("القاهرة هي عاصمة مصر", confidence=.95),
+        engine.parse_fact("طيبة هي عاصمة مصر القديمة", confidence=.95),
+    ])
+    assert engine.answer_query("ما هي عاصمة مصر", result) == "القاهرة عاصمة مصر."
+    assert engine.answer_query("ما هي عاصمة مصر القديمة", result) == "طيبة عاصمة مصر القديمة."
