@@ -119,6 +119,12 @@ const answer=t=>{
  if(n.includes("كيف حالك"))return"أنا بخير وأعمل محليًا. أخبرني بما تريد أن نفعله.";
  const stopWords=new Set(["ما","ماذا","ماهي","ماهو","هي","هو","هل","من","في","عن","الى","هذا","هذه","ذلك","تلك","اي","اية","ايه","يا","رون","انا","ان","و","او","ال","هو","هي","الذي","التي","هل"]);
 const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
+const browserReasoningAnswer=(text)=>{
+ const engine=globalThis.RonReasoner;
+ if(!engine)return null;
+ const facts=engine.reason(engine.parseAll(lessons));
+ return engine.answer(text,facts);
+};
 const localLessonAnswer=n=>{
  const query=norm(n);
  const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+?)[؟?]?$/);
@@ -154,6 +160,8 @@ const contextualTopic=()=>{
  const value=String(recent.text).trim();
  return value.length>120?value.slice(0,120)+"…":value;
 };
+ const semantic=browserReasoningAnswer(n);
+ if(semantic?.answer)return semantic.answer;
  const hit=localLessonAnswer(n);
  if(hit)return hit;
  if(/^(كيف حالك|اخبارك|عامل ايه|عامل ايه)$/.test(n))return"أنا بخير وأعمل الآن. ويمكنني متابعة الحديث معك حتى لو لم يتوفر المعلم الخارجي.";
