@@ -7,14 +7,26 @@ const render=()=>{chat.replaceChildren();messages.forEach(m=>bubble(m.role,m.tex
 const norm=s=>s.toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
 const cleanValue=s=>s.replace(/^[\s.،,؛;:]+|[\s.!؟?،,؛;:]+$/g,"").trim();
 const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push({key,text,at:new Date().toISOString()});save()};
-const extractFact=t=>{
- const n=norm(t).replace(/^\.+\s*/,"");
- let m=n.match(/^(?:انا\s+)?اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
+const extractFacts=t=>{
+ const n=norm(t).replace(/^\.\s*/,"");
+ const facts=[];
+ let m=n.match(/(?:^|\s)(?:انا\s+)?(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?=\s|$)/);
+ if(!m)m=n.match(/(?:^|\s)(?:انا\s+)?(\d{1,3})\s*(?:عام|سنة|سنين)(?=\s|$)/);
+ if(m){const age=Number(m[1]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
+ m=n.match(/^(?:انا\s+)?اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
  if(!m)m=n.match(/^(?:اريدك\s+)?(?:ان\s+)?تعلم\s+(?:ان\s+)?اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
  if(!m)m=n.match(/^تعلم\s+ان\s+اسمي\s+(?:هو\s+)?(.+?)\s*[.!؟?،,؛;]*$/);
- if(m){const value=cleanValue(m[1]);if(value)return {key:"user.name",text:value};}
- return null;
+ if(m){let value=cleanValue(m[1]);value=value.replace(/\s+(?:و)?عمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").trim();if(value)facts.push({key:"user.name",text:value});}
+ if(!facts.length){
+  m=n.match(/^انا\s+(.+?)$/);
+  if(m&&!/^(?:عمري|سني|احب|لا احب)\b/.test(m[1])){
+   let value=cleanValue(m[1]).replace(/\s+وعمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").trim();
+   if(value)facts.push({key:"user.name",text:value});
+  }
+ }
+ return facts;
 };
+const extractFact=t=>extractFacts(t)[0]||null;
 const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n);
 const isNameQuestion=n=>n.includes("ما اسمي")||n.includes("ايه اسمي")||n.includes("اي اسمي")||n.includes("هل تتذكر اسمي");
 const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("ما هو اسمك")||n==="وانت"||n==="وانت؟";
@@ -36,10 +48,12 @@ const answer=t=>{
  }
  if(isRonNameQuestion(n))return "اسمي رون.";
  if(isRonNameStatement(n))return "صحيح. اسمي رون، وأنت صاحب الاسم الذي أخبرتني به.";
- if(fact){
-  saveFact(fact.key,fact.text);
-  if(fact.key==="user.age")return "تم. سأحفظ أن عمرك "+fact.text+" سنة.";
-  return "تم. سأحفظ أن اسمك "+fact.text+".";
+ if(facts.length){
+  facts.forEach(x=>saveFact(x.key,x.text));
+  const name=facts.find(x=>x.key==="user.name"),age=facts.find(x=>x.key==="user.age");
+  if(name&&age)return "تم. سأحفظ أن اسمك "+name.text+" وأن عمرك "+age.text+" سنة.";
+  if(age)return "تم. سأحفظ أن عمرك "+age.text+" سنة.";
+  return "تم. سأحفظ أن اسمك "+name.text+".";
  }
  if(isNameQuestion(n)){const x=lessons.find(x=>x.key==="user.name");return x?"اسمك "+x.text+".":"لم تخبرني باسمك بعد.";}
  if(isAgeQuestion(n)){const x=lessons.find(x=>x.key==="user.age");return x?"عمرك "+x.text+" سنة.":"لم تخبرني بعمرك بعد.";}
