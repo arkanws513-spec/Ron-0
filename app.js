@@ -171,8 +171,9 @@ if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsTeacher){
      r=String(r||"تم.");
      r+= "\n\n🧠 إضافة المعلم Qwen:\n"+taught.text;
    }else if(local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")) r=taught.text;
- }else if(needsTeacher&&local.includes("وصلتني رسالتك")&&taught?.reason){
-   r=local+"\n\n⚠️ لم تتوفر إجابة المعلم المتقدم حاليًا ("+taught.reason+").";
+ }else{
+   // Qwen is advisory only: keep Ron's local answer when the teacher is unavailable.
+   r=local;
  }
 }
 if(!String(r||"").trim()||String(r).includes("ما زالت طبقة النموذج المتقدم قيد البناء")){const u=understanding(t);const topic=u.topic||t;r="وصلتني رسالتك وفهمت أن موضوعنا الآن هو: "+topic+"."+(u.followUp?" أنت تكمل حديثنا السابق، وسأتعامل معها كمتابعة للسياق.":" سأتعامل معها كنقطة بداية وأتفاعل معها حتى لو كان فهمي غير كامل.");}messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="حدث خطأ مؤقت داخل النواة المحلية. أعد إرسال الرسالة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},4000+Math.floor(Math.random()*2001))};
