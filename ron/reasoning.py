@@ -71,6 +71,7 @@ class ReasoningEngine:
     """
 
     _TRIPLE = re.compile(r"^\s*(.+?)\s+(is|has|likes|hates|needs|causes|supports|precedes|follows)\s+(.+?)\s*$", re.I)
+    _ARABIC = ((re.compile(r"^(.+?)\s+(?:هي|هو)\s+(.+?)$"), "is"), (re.compile(r"^(.+?)\s+(?:يسبب|تسبب|يؤدي إلى|يؤدي الي)\s+(.+?)$"), "causes"), (re.compile(r"^(.+?)\s+(?:يدعم|تدعم)\s+(.+?)$"), "supports"), (re.compile(r"^(.+?)\s+(?:قبل|يسبق)\s+(.+?)$"), "precedes"), (re.compile(r"^(.+?)\s+(?:بعد|يتبع)\s+(.+?)$"), "follows"), (re.compile(r"^(.+?)\s+(?:يحتاج إلى|يحتاج الي|يحتاج)\s+(.+?)$"), "needs"))
 
     def __init__(self, rules: Iterable[Rule] | None = None, max_steps: int = 32) -> None:
         self.rules = tuple(rules or self.default_rules())
@@ -81,6 +82,7 @@ class ReasoningEngine:
         return (
             Rule("transitive_precedes", (("?a", "precedes", "?b"), ("?b", "precedes", "?c")), ("?a", "precedes", "?c"), 0.92),
             Rule("transitive_supports", (("?a", "supports", "?b"), ("?b", "supports", "?c")), ("?a", "supports", "?c"), 0.88),
+            Rule("causal_chain", (("?a", "causes", "?b"), ("?b", "causes", "?c")), ("?a", "causes", "?c"), 0.84),
         )
 
     @staticmethod
@@ -93,10 +95,20 @@ class ReasoningEngine:
 
     @classmethod
     def parse_fact(cls, text: str, source: str = "user", confidence: float = 0.7) -> Fact | None:
-        match = cls._TRIPLE.match(str(text))
-        if not match:
-            return None
-        return Fact(match.group(1), match.group(2).lower(), match.group(3), max(0.0, min(1.0, confidence)), source)
+        value = str(text).strip().rstrip("؟?.,،؛;")
+        match = cls._TRIPLE.match(value)
+        if match:
+            return Fact(match.group(1).strip(), match.group(2).lower(), match.group(3).strip(), max(0.0, min(1.0, confidence)), source)
+        normalized = cls._norm(value).replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+        for pattern, relation in cls._ARABIC:
+            match = pattern.match(normalized)
+            if match:
+                return Fact(match.group(1).strip(), relation, match.group(2).strip(), max(0.0, min(1.0, confidence)), source)
+        return None
+
+    @classmethod
+    def parse_facts(cls, text: str, source: str = "user", confidence: float = 0.7) -> tuple[Fact, ...]:
+        return tuple(fact for part in re.split(r"[\n.!؟?؛;]+", str(text)) if (fact := cls.parse_fact(part, source, confidence)) is not None)
 
     @staticmethod
     def _match(pattern: tuple[str, str, str], fact: Fact, bindings: dict[str, str]) -> dict[str, str] | None:
