@@ -1,5 +1,27 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Ron — مساعد ذكاء اصطناعي GitHub-first"><title>Ron — رون</title><link rel="stylesheet" href="assets/style.css"></head>
-<body><main class="shell"><section class="card"><div class="mark">R</div><h1>رون</h1><p class="subtitle">مساعد ذكاء اصطناعي ذكي ومتقدم</p><p class="status"><span></span> النواة جاهزة</p><button id="start">ابدأ</button><p id="note" class="note">واجهة رون الأولية جاهزة.</p></section></main><script src="app.js"></script></body></html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Ron — مساعد ذكاء اصطناعي مستقل وGitHub-first">
+<title>Ron — رون</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark">R</div><div><strong>رون</strong><small>المساعد المحلي</small></div></div>
+    <div class="status"><span></span> يعمل محليًا</div>
+  </header>
+  <section class="chat" id="chat" aria-live="polite">
+    <div class="message ron"><b>رون</b><p>مرحبًا. أنا رون. هذه النسخة تعمل بدون مفتاح API، ويمكنك تعليمي وحفظ ما تعلّمني إياه على هذا الجهاز.</p></div>
+  </section>
+  <form class="composer" id="composer">
+    <textarea id="input" rows="1" placeholder="اكتب رسالة لرون..." autocomplete="off"></textarea>
+    <button id="send" type="submit">إرسال</button>
+  </form>
+  <div class="hint">هذه مرحلة النواة المحلية. النموذج الذكي الحقيقي سيُوصل بالنواة لاحقًا دون وضع أي مفتاح داخل الموقع.</div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
