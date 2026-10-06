@@ -36,7 +36,91 @@ class ExtractedFact:
     def memory(self) -> MemoryItem:
         return MemoryItem(key=self.key, content=self.value, metadata={"kind": self.kind, "source": "natural-language"})
 
+def extract_facts(text: str) -> list[ExtractedFact]:
+    facts: list[ExtractedFact] = []
+    normalized = normalize_arabic(text)
+
+    # Combined correction: "اسمي زيريوس الاول فقط اما 34 فهذا عمري"
+    correction = re.match(
+        r"^اسمي\s+(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)\s*(?:فهذا\s+عمري)?$",
+        normalized,
+        re.I,
+    )
+    if correction:
+        name = correction.group(1).strip(" .،,؛;؟؟")
+        age = int(correction.group(2))
+        if name:
+            facts.append(ExtractedFact("user.name", name, "name"))
+        if 1 <= age <= 120:
+            facts.append(ExtractedFact("user.age", str(age), "age"))
+        return facts
+
+    # Combined statement: "انا زيريوس وعمري 34 عام"
+    combined = re.match(
+        r"^انا\s+(.+?)\s+وعمري\s+(\d{1,3})\s*(?:عام|سنة|سنين)?$",
+        normalized,
+        re.I,
+    )
+    if combined:
+        name = combined.group(1).strip(" .،,؛;؟؟")
+        age = int(combined.group(2))
+        if name and not re.match(r"^(?:عمري|سني|احب|لا احب)\b", name):
+            facts.append(ExtractedFact("user.name", name, "name"))
+        if 1 <= age <= 120:
+            facts.append(ExtractedFact("user.age", str(age), "age"))
+        return facts
+
+    # Explicit name with an age suffix: "اسمي زيريوس 34 عام"
+    named_age = re.match(
+        r"^اسمي\s+(.+?)\s+(\d{1,3})\s*(?:عام|سنة|سنين)$",
+        normalized,
+        re.I,
+    )
+    if named_age:
+        name = named_age.group(1).strip(" .،,؛;؟؟")
+        age = int(named_age.group(2))
+        if name:
+            facts.append(ExtractedFact("user.name", name, "name"))
+        if 1 <= age <= 120:
+            facts.append(ExtractedFact("user.age", str(age), "age"))
+        return facts
+
+    for pattern in _AGE_PATTERNS:
+        match = pattern.match(text)
+        if match:
+            age = int(match.group(1))
+            if 1 <= age <= 120:
+                facts.append(ExtractedFact("user.age", str(age), "age"))
+                return facts
+
+    for pattern in _PREFERENCE_PATTERNS:
+        match = pattern.match(text)
+        if match:
+            value = match.group(1).strip(" .،,؛;؟؟")
+            if value:
+                facts.append(ExtractedFact("user.preference", value, "preference"))
+                return facts
+
+    for pattern in _NAME_PATTERNS:
+        match = pattern.match(text)
+        if match:
+            value = match.group(1).strip(" .،,؛;؟؟")
+            if value:
+                facts.append(ExtractedFact("user.name", value, "name"))
+                return facts
+
+    natural_name = re.match(r"^انا\s+(.+?)$", normalized, re.I)
+    if natural_name and not re.match(r"^(?:عمري|سني|احب|لا احب)\b", natural_name.group(1)):
+        value = natural_name.group(1).strip(" .،,؛;؟؟")
+        if value:
+            facts.append(ExtractedFact("user.name", value, "name"))
+    return facts
+
+
 def extract_fact(text: str) -> ExtractedFact | None:
+    facts = extract_facts(text)
+    return facts[0] if facts else None
+
     for pattern in _AGE_PATTERNS:
         match = pattern.match(text)
         if match:
