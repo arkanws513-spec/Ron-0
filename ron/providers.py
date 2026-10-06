@@ -136,7 +136,7 @@ class ProviderRouter:
 
 @dataclass(frozen=True)
 class Qwen3TeacherProvider:
-    """Qwen3 local teacher adapter.
+    """Qwen3 local base-model adapter.
 
     Qwen3 is used only as an explicitly selected teacher. Ron remains the
     owner of identity, memory, learning policy, and source code. Model weights
@@ -166,8 +166,11 @@ class Qwen3TeacherProvider:
             model=response.model,
             metadata={
                 **response.metadata,
-                "role": "teacher",
+                "role": "base-model",
                 "teacher": "qwen3",
                 "transfer_target": "ron",
             },
         )
+
+
+Qwen3BaseModelProvider = Qwen3TeacherProvider
