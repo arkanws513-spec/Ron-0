@@ -6,7 +6,8 @@ const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&type
 let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=window.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});window.ronConversationId=id;save()};const qwenEnabled=()=>window.RonQwenTeacher?.isEnabled?.()===true;
-const qwenContext=()=>{const local=lessons.slice(-12).map(x=>x.key+": "+x.text);const teacher=window.RonQwenTeacher?.getLessons?.()||[];return local.concat(teacher.slice(-8).map(x=>"teacher: "+x.text)).slice(-20).join("\n")};
+const qwenContext=()=>{const local=lessons.slice(-12).map(x=>x.key+": "+x.text);const teacher=window.RonQwenTeacher?.getLessons?.()||[];return local.concat(teacher.slice(-8).map(x=>"teacher: "+x.text)).slice(-20).join("
+")};
 if(!messages.length){messages=asMessages(read(LEGACY.chat,[]));}
 if(!messages.length)messages=[{role:"ron",text:"مرحبًا. أنا رون. النواة المحلية تعمل، وذاكرتي محفوظة على هذا الجهاز."}];
 if(!lessons.length)lessons=asLessons(read(LEGACY.lessons,[]));
@@ -55,13 +56,15 @@ const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s
 const isNameQuestion=n=>n.includes("ما اسمي")||n.includes("ايه اسمي")||n.includes("اي اسمي")||n.includes("هل تتذكر اسمي");
 const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("ما هو اسمك")||n==="وانت"||n==="وانت؟";
 const isBothNamesQuestion=n=>n.includes("ما اسمي وما اسمك")||n.includes("اسمي واسمك")||n.includes("ما اسمي واسمك");
-const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");\nconst isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
+const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");
+const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
 const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestion(n)&&isAgeQuestion(n));
 const teach=t=>{const x=t.replace(/^\s*عل[ّ]?م\s+رون\s*:\s*/i,"").trim();if(!x)return"اكتب المعلومة بعد «علّم رون:».";
  lessons.push({key:"lesson:"+Date.now(),text:x,at:new Date().toISOString()});save();return"تم حفظ التعليم في ذاكرة رون المحلية."};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),fact=facts[0]||null;
- if(/^عل[ّ]?م رون\s*:/.test(n))return teach(t);\n if(ronFacts.length){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
+ if(/^عل[ّ]?م رون\s*:/.test(n))return teach(t);
+ if(ronFacts.length){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
  if(isBothNamesQuestion(n)){
   const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
   return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+", "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
@@ -70,7 +73,8 @@ const answer=t=>{
   const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
   return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+"، "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
  }
- if(isRonNameQuestion(n)){const x=lessons.find(x=>x.key==="ron.name");return x?"اسمي "+x.text+".":"اسمي رون.";}\n if(isRonAgeQuestion(n)){const x=lessons.find(x=>x.key==="ron.age");return x?"عمري "+x.text+".":"لم أحدد عمرًا لنفسي بعد."; }
+ if(isRonNameQuestion(n)){const x=lessons.find(x=>x.key==="ron.name");return x?"اسمي "+x.text+".":"اسمي رون.";}
+ if(isRonAgeQuestion(n)){const x=lessons.find(x=>x.key==="ron.age");return x?"عمري "+x.text+".":"لم أحدد عمرًا لنفسي بعد."; }
  if(isRonNameStatement(n))return "صحيح. اسمي رون، وأنت صاحب الاسم الذي أخبرتني به.";
  if(facts.length){
   facts.forEach(x=>saveFact(x.key,x.text));
@@ -81,7 +85,10 @@ const answer=t=>{
  }
  if(isNameQuestion(n)){const x=lessons.find(x=>x.key==="user.name");return x?"اسمك "+x.text+".":"لم تخبرني باسمك بعد.";}
  if(isAgeQuestion(n)){const x=lessons.find(x=>x.key==="user.age");return x?"عمرك "+x.text+" سنة.":"لم تخبرني بعمرك بعد.";}
- if(n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته"))return lessons.length?"هذه آخر تعليماتي المحفوظة:\n\n"+lessons.slice(-10).map((x,i)=>i+1+". "+x.text).join("\n"):"لم تعلّمني شيئًا بعد.";
+ if(n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته"))return lessons.length?"هذه آخر تعليماتي المحفوظة:
+
+"+lessons.slice(-10).map((x,i)=>i+1+". "+x.text).join("
+"):"لم تعلّمني شيئًا بعد.";
  if(n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")){lessons=[];save();return"تم مسح الذاكرة التي علّمتني إياها."}
  if(/^(مرحبا|اهلا|السلام عليكم)(\s+رون)?/.test(n))return"أهلًا بك. أنا رون. كيف يمكنني مساعدتك؟";
  if(n.includes("من انت"))return"أنا رون، مشروع مساعد مستقل. اسمي رون.";
