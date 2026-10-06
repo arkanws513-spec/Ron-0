@@ -14,7 +14,7 @@ def test_hypothesis_scoring_prefers_supported_statement():
 
 def test_causal_chain():
     ok, confidence, path=AdvancedReasoner().causal_reason(
-        [CausalLink("A","B",.9),CausalLink("B","C",.8)],"A","C")
+        [CausalLink("A","B",.9),CausalLink("B","C",.8)],"A","C"
     )
     assert ok
     assert path==("A","B","C")
