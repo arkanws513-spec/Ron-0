@@ -62,6 +62,10 @@ class RonCore:
             if parsed is not None:
                 reasoning_facts.append(parsed)
         reasoning_result=self.reasoning.reason(reasoning_facts)
+        semantic_answer=self.reasoning.answer_query(text,reasoning_result)
+        if semantic_answer is not None:
+            self.memory.remember(MemoryItem(key=f"turn:{len(getattr(self.memory,'items',{}))}",content=text,metadata={"kind":"conversation","topic":topic or ""}))
+            return self._finish(text,semantic_answer,"ron-reasoning",{"runtime":"ron-0","reasoning_answer":True,"confidence":reasoning_result.confidence})
         reasoning_summary=self.reasoning.summarize(reasoning_result)
         evidence=tuple(WeightedEvidence(self.reasoning.describe_fact(f), f.confidence, f.confidence, f.source) for f in reasoning_result.facts)
         causal_links=tuple(CausalLink(f.subject, f.object, f.confidence, (self.reasoning.describe_fact(f),)) for f in reasoning_result.facts if f.relation=="causes")
