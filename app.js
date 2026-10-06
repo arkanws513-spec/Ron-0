@@ -6,7 +6,13 @@ const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&type
 let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=window.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});window.ronConversationId=id;save()};const qwenEnabled=()=>window.RonQwenTeacher?.isEnabled?.()===true;
-const qwenContext=()=>{const local=lessons.slice(-12).map(x=>x.key+": "+x.text);const teacher=window.RonQwenTeacher?.getLessons?.()||[];return local.concat(teacher.slice(-8).map(x=>"teacher: "+x.text)).slice(-20).join("\n")};
+const qwenContext=()=>{
+ const local=lessons.slice(-18).map(x=>x.key+": "+x.text);
+ const teacher=window.RonQwenTeacher?.getLessons?.()||[];
+ const recent=lessons.slice(-8).map(x=>x.text);
+ return local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),recent.map(x=>"recent: "+x)).slice(-30).join("\n");
+};
+const conversationHistory=()=>messages.slice(-14).map(m=>({role:m.role==="ron"?"assistant":"user",content:String(m.text||"")}));
 if(!messages.length){messages=asMessages(read(LEGACY.chat,[]));}
 if(!messages.length)messages=[{role:"ron",text:"مرحبًا. أنا رون. النواة المحلية تعمل، وذاكرتي محفوظة على هذا الجهاز."}];
 if(!lessons.length)lessons=asLessons(read(LEGACY.lessons,[]));
@@ -89,23 +95,47 @@ const answer=t=>{
  if(/^(مرحبا|اهلا|السلام عليكم)(\s+رون)?/.test(n))return"أهلًا بك. أنا رون. كيف يمكنني مساعدتك؟";
  if(n.includes("من انت"))return"أنا رون، مشروع مساعد مستقل. اسمي رون.";
  if(n.includes("كيف حالك"))return"أنا بخير وأعمل محليًا. أخبرني بما تريد أن نفعله.";
- const stopWords=new Set(["ما","ماذا","ماهي","ماهي","ماهو","ما","هي","هو","هل","من","في","عن","الى","إلى","هذا","هذه","ذلك","تلك","اي","أي","اية","ايه","يا","رون","انا","أن","ان","و","أو","او","ال","عاصمة"]);
-const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=3&&!stopWords.has(w));
+ const stopWords=new Set(["ما","ماذا","ماهي","ماهو","هي","هو","هل","من","في","عن","الى","هذا","هذه","ذلك","تلك","اي","اية","ايه","يا","رون","انا","ان","و","او","ال","هو","هي","الذي","التي","هل"]);
+const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
 const localLessonAnswer=n=>{
- const q=new Set(tokens(n)); if(!q.size)return null;
- let best=null,bestScore=0;
- lessons.slice().reverse().forEach(x=>{
-   const lt=tokens(x.text||""); const score=lt.reduce((sum,w)=>sum+(q.has(w)?1:0),0);
-   if(score>bestScore){bestScore=score;best=x;}
+ const query=norm(n);
+ const q=tokens(query); if(!q.length)return null;
+ let best=null,bestScore=0,bestIndex=-1;
+ lessons.forEach((x,index)=>{
+   const text=norm(x.text||"");
+   const lt=tokens(text);
+   let score=0;
+   if(text===query)score+=20;
+   if(text.includes(query)&&query.length>=4)score+=18;
+   for(let size=Math.min(6,q.length);size>=2;size--){
+     for(let i=0;i<=q.length-size;i++){
+       const phrase=q.slice(i,i+size).join(" ");
+       if(phrase&&text.includes(phrase))score+=size*4;
+     }
+   }
+   score+=q.reduce((sum,w)=>sum+(lt.includes(w)?1:0),0);
+   if(x.key.startsWith("lesson:"))score+=0.2;
+   if(score>bestScore||(score===bestScore&&index>bestIndex)){bestScore=score;best=x;bestIndex=index;}
  });
- return best&&bestScore>=1?"أتذكر تعليمك: "+best.text:null;
+ return best&&bestScore>=2?"أتذكر تعليمك: "+best.text:null;
+};
+const contextualTopic=()=>{
+ const recent=messages.slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5);
+ if(!recent)return null;
+ const value=String(recent.text).trim();
+ return value.length>120?value.slice(0,120)+"…":value;
 };
  const hit=localLessonAnswer(n);
  return hit||"وصلتني رسالتك. النواة المحلية تعمل، وما زالت طبقة النموذج المتقدم قيد البناء.";
 };
-const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;setTimeout(async()=>{try{let r=answer(t);const local=String(r||"");const n=norm(t);const simple=/^(مرحبا|اهلا|السلام عليكم)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n);const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);const needsTeacher=!simple&&(learning||local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")||/[؟?]/.test(t)||t.length>18);
+const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;setTimeout(async()=>{try{let r=answer(t);const local=String(r||"");const n=norm(t);const simple=/^(مرحبا|اهلا|السلام عليكم)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n);const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);const followup=/^(طيب|طيب\s*؟|وبعدين|وماذا عنه|وماذا عنها|وهل|طب|طب\s*؟|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
+const needsTeacher=!simple&&(learning||followup||local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")||/[؟?]/.test(t)||t.length>18);
+if(!qwenEnabled()&&followup&&!localLessonAnswer(n)){
+  const topic=contextualTopic();
+  if(topic) r="أفهم أنك تريد متابعة الحديث عن: "+topic+"، لكن النواة المحلية تحتاج معلومة أكثر لتحديد ما تقصده بدقة.";
+}
 if(qwenEnabled()&&window.RonQwenTeacher&&needsTeacher){
- const taught=await window.RonQwenTeacher.ask(t,qwenContext());
+ const taught=await window.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
  if(taught?.ok&&taught.text){
    window.RonQwenTeacher.saveLesson(taught.text);
    if(learning){
