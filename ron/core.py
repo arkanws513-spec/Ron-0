@@ -28,7 +28,8 @@ class RonCore:
         if not text:
             return self._finish(text,"أنا رون. اكتب لي ما تريد.","ron-core",{"runtime":"ron-0","intent":"empty"})
         self.conversation.add("user",text)
-        intent=detect_intent(text)
+        topic=self.conversation.last_user_message() if self.conversation.last_user_message()!=text else None
+        intent=detect_intent(text,topic=topic)
         if intent is not None:
             if intent.name=="greeting":
                 return self._finish(text,"أهلًا بك. أنا رون.","ron-core",{"runtime":"ron-0","intent":intent.name})
@@ -42,8 +43,8 @@ class RonCore:
         if remembered_answer is not None:
             return self._finish(text,remembered_answer,"ron-memory",{"runtime":"ron-0","memory_read":True})
         memories=self.memory.recall(text,limit=5)
-        memory_text="\n".join(f"- {item.content}" for item in memories)
-        recent=self.conversation.history()[-self.max_context_messages:]
+        related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories\n        memory_text="\n".join(f"- {item.content}" for item in related)
+        recent=self.conversation.short_history()[-self.max_context_messages:]
         history_text="\n".join(f"{m.role}: {m.content}" for m in recent)
         system_context=(
             "أنت رون. استخدم الذاكرة وسياق المحادثة عند الحاجة، ولا تخترع معلومات غير موجودة.\n"
@@ -52,7 +53,7 @@ class RonCore:
         )
         request=ModelRequest(
             messages=(Message(role="system",content=system_context),Message(role="user",content=text)),
-            metadata={"runtime":"ron-0","memory_hits":len(memories),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot())},
+            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot())},
         )
         response=self.provider.generate(request)
         self.memory.remember(MemoryItem(key=f"turn:{len(getattr(self.memory,'items',{}))}",content=text,metadata={"kind":"conversation"}))
