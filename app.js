@@ -89,10 +89,34 @@ const answer=t=>{
  if(/^(مرحبا|اهلا|السلام عليكم)(\s+رون)?/.test(n))return"أهلًا بك. أنا رون. كيف يمكنني مساعدتك؟";
  if(n.includes("من انت"))return"أنا رون، مشروع مساعد مستقل. اسمي رون.";
  if(n.includes("كيف حالك"))return"أنا بخير وأعمل محليًا. أخبرني بما تريد أن نفعله.";
- const hit=lessons.slice().reverse().find(x=>x.text&&n.includes(norm(x.text).slice(0,Math.min(30,norm(x.text).length))));
- return hit?"أتذكر تعليمك: "+hit.text:"وصلتني رسالتك. النواة المحلية تعمل، وما زالت طبقة النموذج المتقدم قيد البناء.";
+ const stopWords=new Set(["ما","ماذا","ماهي","ماهي","ماهو","ما","هي","هو","هل","من","في","عن","الى","إلى","هذا","هذه","ذلك","تلك","اي","أي","اية","ايه","يا","رون","انا","أن","ان","و","أو","او","ال","عاصمة"]);
+const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=3&&!stopWords.has(w));
+const localLessonAnswer=n=>{
+ const q=new Set(tokens(n)); if(!q.size)return null;
+ let best=null,bestScore=0;
+ lessons.slice().reverse().forEach(x=>{
+   const lt=tokens(x.text||""); const score=lt.reduce((sum,w)=>sum+(q.has(w)?1:0),0);
+   if(score>bestScore){bestScore=score;best=x;}
+ });
+ return best&&bestScore>=1?"أتذكر تعليمك: "+best.text:null;
 };
-const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;setTimeout(async()=>{try{let r=answer(t);const local=String(r||"");const n=norm(t);const simple=/^(مرحبا|اهلا|السلام عليكم)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n);const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*:/.test(n);const needsTeacher=!simple&&(learning||local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")||/[؟?]/.test(t)||t.length>18);if(qwenEnabled()&&window.RonQwenTeacher&&needsTeacher){const taught=await window.RonQwenTeacher.ask(t,qwenContext());if(taught?.ok&&taught.text){window.RonQwenTeacher.saveLesson(taught.text);if(local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك"))r=taught.text;}}messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="حدث خطأ مؤقت داخل النواة المحلية. أعد إرسال الرسالة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;input.focus?.()}},50)};
+ const hit=localLessonAnswer(n);
+ return hit||"وصلتني رسالتك. النواة المحلية تعمل، وما زالت طبقة النموذج المتقدم قيد البناء.";
+};
+const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;setTimeout(async()=>{try{let r=answer(t);const local=String(r||"");const n=norm(t);const simple=/^(مرحبا|اهلا|السلام عليكم)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n);const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*:/.test(n);const needsTeacher=!simple&&(learning||local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")||/[؟?]/.test(t)||t.length>18);
+if(qwenEnabled()&&window.RonQwenTeacher&&needsTeacher){
+ const taught=await window.RonQwenTeacher.ask(t,qwenContext());
+ if(taught?.ok&&taught.text){
+   window.RonQwenTeacher.saveLesson(taught.text);
+   if(learning){
+     r=String(r||"تم.");
+     r+= "\n\n🧠 إضافة المعلم Qwen:\n"+taught.text;
+   }else if(local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")) r=taught.text;
+ }else if(needsTeacher&&local.includes("وصلتني رسالتك")&&taught?.reason){
+   r=local+"\n\n⚠️ لم تتوفر إجابة المعلم المتقدم حاليًا ("+taught.reason+").";
+ }
+}
+messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="حدث خطأ مؤقت داخل النواة المحلية. أعد إرسال الرسالة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;input.focus?.()}},50)};
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("start-ron")?.addEventListener("click",()=>{localStorage.setItem(S.started,"1");$("startup").classList.add("hidden");$("main-app").classList.remove("hidden");input.focus()});if(localStorage.getItem(S.started)==="1"){$("startup").classList.add("hidden");$("main-app").classList.remove("hidden")};$("menu").addEventListener("click",()=>{renderHistory();$("settings").classList.add("open")});$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));const renderHistory=()=>{const box=$("history-list");if(!box)return;box.replaceChildren();if(!conversations.length){const e=document.createElement("div");e.className="history-empty";e.textContent="لا توجد محادثات محفوظة بعد.";box.appendChild(e);return}conversations.slice().reverse().forEach(x=>{const b=document.createElement("button");b.type="button";b.className="history-item";b.textContent=x.title||"محادثة";b.addEventListener("click",()=>{messages=asMessages(x.messages);window.ronConversationId=x.id;save();render();$("settings").classList.remove("open")});box.appendChild(b)})};$("new-chat").addEventListener("click",()=>{saveCurrent();messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];window.ronConversationId=makeId();save();render();$("settings").classList.remove("open")});$("history-btn")?.addEventListener("click",()=>{$("history-list")?.classList.toggle("open");renderHistory()});
 const qwenEnabledInput=$("qwen-enabled"),qwenEndpointInput=$("qwen-endpoint"),qwenSave=$("qwen-save"),qwenStatus=$("qwen-status");
