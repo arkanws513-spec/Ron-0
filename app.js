@@ -48,7 +48,7 @@ const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestio
 const teach=t=>{const x=t.replace(/^\s*عل[ّ]?م\s+رون\s*:\s*/i,"").trim();if(!x)return"اكتب المعلومة بعد «علّم رون:».";
  lessons.push({key:"lesson:"+Date.now(),text:x,at:new Date().toISOString()});save();return"تم حفظ التعليم في ذاكرة رون المحلية."};
 const answer=t=>{
- const n=norm(t),fact=extractFact(t);
+ const n=norm(t),facts=extractFacts(t),fact=facts[0]||null;
  if(/^عل[ّ]?م رون\s*:/.test(n))return teach(t);
  if(isBothNamesQuestion(n)){
   const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
