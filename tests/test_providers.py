@@ -46,3 +46,12 @@ def test_local_http_provider_builds_openai_compatible_request(monkeypatch):
     assert response.metadata["external_api_required"] is False
     assert captured["body"]["model"] == "test-model"
     assert captured["body"]["messages"][0]["content"] == "مرحبا"
+
+
+def test_qwen3_teacher_is_explicit_and_local(monkeypatch):
+    from ron.providers import Qwen3TeacherProvider
+
+    monkeypatch.setenv("RON_TEACHER_MODEL", "qwen3:1.7b")
+    teacher = Qwen3TeacherProvider.from_environment()
+    assert teacher.model == "qwen3:1.7b"
+    assert teacher.endpoint.startswith("http://127.0.0.1:")
