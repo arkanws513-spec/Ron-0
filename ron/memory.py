@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from .contracts import MemoryItem
 
-_TOKEN_RE = re.compile(r"[\\w\\u0600-\\u06ff]+", re.UNICODE)
+_TOKEN_RE = re.compile(r"[\w\u0600-\u06ff]+", re.UNICODE)
 
 
 def _tokens(text: str) -> set[str]:
