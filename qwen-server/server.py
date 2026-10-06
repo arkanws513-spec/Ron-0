@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
@@ -53,4 +53,4 @@ async def chat(request: Request):
     except Exception:
         data = {"error": {"message": response.text[:2000]}}
 
-    return data
+    return Response(content=__import__("json").dumps(data, ensure_ascii=False), media_type="application/json", status_code=response.status_code)
