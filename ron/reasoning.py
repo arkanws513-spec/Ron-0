@@ -116,18 +116,27 @@ class ReasoningEngine:
     def parse_facts(cls, text: str, source: str = "user", confidence: float = 0.7) -> tuple[Fact, ...]:
         return tuple(fact for part in re.split(r"[\n.!؟?؛;]+", str(text)) if (fact := cls.parse_fact(part, source, confidence)) is not None)
 
-    @staticmethod
-    def _match(pattern: tuple[str, str, str], fact: Fact, bindings: dict[str, str]) -> dict[str, str] | None:
+    @classmethod
+    def _entity_norm(cls, value: str) -> str:
+        value = cls._norm(value)
+        return value.removeprefix("ال")
+
+    @classmethod
+    def _match(cls, pattern: tuple[str, str, str], fact: Fact, bindings: dict[str, str]) -> dict[str, str] | None:
         candidate = (fact.subject, fact.relation, fact.object)
         out = dict(bindings)
-        for expected, actual in zip(pattern, candidate):
+        for index, (expected, actual) in enumerate(zip(pattern, candidate)):
             if expected.startswith("?"):
                 old = out.get(expected)
-                if old is not None and old != actual:
-                    return None
+                if old is not None:
+                    same = cls._entity_norm(old) == cls._entity_norm(actual) if index != 1 else old.lower() == str(actual).lower()
+                    if not same:
+                        return None
                 out[expected] = actual
-            elif expected.lower() != str(actual).lower():
-                return None
+            else:
+                same = expected.lower() == str(actual).lower() if index == 1 else cls._entity_norm(expected) == cls._entity_norm(actual)
+                if not same:
+                    return None
         return out
 
     def _apply_rule(self, rule: Rule, facts: list[Fact]) -> list[Inference]:
