@@ -6,11 +6,17 @@ const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&type
 let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const qwenEnabled=()=>globalThis.RonQwenTeacher?.isEnabled?.()===true;
-const qwenContext=()=>{
+const analyzeIntent=text=>{const n=norm(text);if(/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع)$/.test(n))return "follow_up";if(/^(مرحبا|اهلا|السلام عليكم)/.test(n))return "greeting";if(isNameQuestion(n)||isAgeQuestion(n))return "profile";if(/^(ليه|لماذا|ازاي|كيف|ماذا|ما هو|ما هي|هل|هل يمكن|عايز|اريد|ممكن)/.test(n))return "question";if(/\?$/.test(String(text).trim())||/[؟?]/.test(text))return "question";if(/^عل[ّ]?م رون/.test(n))return "learning";return "statement";};
+const topicTokens=text=>tokens(String(text||"")).filter(x=>x.length>2);
+const topicOf=()=>{const recent=messages.slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5&&!/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع)\s*[؟?]?$/.test(norm(m.text)));return recent?String(recent.text).trim():null;};
+const resolveFollowUp=text=>{const n=norm(text);if(!/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع)(\s*[؟?])?$/.test(n))return null;return topicOf();};
+const relatedMemories=topic=>{if(!topic)return [];const q=new Set(topicTokens(topic));return lessons.map((x,i)=>{const t=new Set(topicTokens(x.text));let score=0;q.forEach(w=>{if(t.has(w))score++});if(x.key.startsWith("lesson:"))score+=0.1;return {x,score,i};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||b.i-a.i).slice(0,8).map(x=>x.x);};
+const understanding= text=>{const intent=analyzeIntent(text),follow=resolveFollowUp(text),topic=follow||topicOf()||String(text||"").trim(),related=relatedMemories(topic);return {intent,topic,shortHistory:messages.slice(-12).map(m=>(m.role==="ron"?"رون: ":"المستخدم: ")+m.text),longMemory:related.map(x=>x.key+": "+x.text),followUp:!!follow};};
+const qwenContext=()=>{const u=understanding(messages.filter(m=>m.role==="user").at(-1)?.text||"");const structured=["النية: "+u.intent,"موضوع الحديث: "+u.topic,"متابعة لسياق سابق: "+(u.followUp?"نعم":"لا"),"الذاكرة المرتبطة: "+(u.longMemory.join(" | ")||"لا توجد")].join("\n");
  const local=lessons.slice(-18).map(x=>x.key+": "+x.text);
  const teacher=globalThis.RonQwenTeacher?.getLessons?.()||[];
  const recent=lessons.slice(-8).map(x=>x.text);
- return local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),recent.map(x=>"recent: "+x)).slice(-30).join("\n");
+ return structured+"\n"+local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),recent.map(x=>"recent: "+x)).slice(-30).join("\n");
 };
 const conversationHistory=()=>messages.slice(-14).map(m=>({role:m.role==="ron"?"assistant":"user",content:String(m.text||"")}));
 if(!messages.length){messages=asMessages(read(LEGACY.chat,[]));}
