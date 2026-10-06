@@ -37,10 +37,17 @@ const extractFacts=t=>{
   value=value.replace(/\s+(?:و)?عمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").replace(/\s+\d{1,3}\s*(?:عام|سنة|سنين)$/,"").trim();
   if(value)facts.push({key:"user.name",text:value});
 }
- if(!facts.length){
+ if(!facts.some(x=>x.key==="user.name")){
+  m=n.match(/^انا\s+(.+?)\s+وعمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/);
+  if(m){
+   const value=cleanValue(m[1]);
+   if(value&&!/^(?:عمري|سني|احب|لا احب)\b/.test(value))facts.push({key:"user.name",text:value});
+  }
+ }
+ if(!facts.some(x=>x.key==="user.name")){
   m=n.match(/^انا\s+(.+?)$/);
   if(m&&!/^(?:عمري|سني|احب|لا احب)\b/.test(m[1])){
-   let value=cleanValue(m[1]).replace(/\s+وعمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").trim();
+   const value=cleanValue(m[1]);
    if(value)facts.push({key:"user.name",text:value});
   }
  }
