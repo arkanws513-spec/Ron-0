@@ -69,7 +69,9 @@
         ronContext?"ذاكرة رون ذات الصلة:\n"+ronContext:""
       ].filter(Boolean).join("\n\n");
       const concepts=Object.entries(this.getConcepts()).slice(-40).map(([k,v])=>`- ${k}: ${v.value}`).join("\n");
-      const systemWithLearning=system+(concepts?"\n\nمعرفة متراكمة من رون:\n"+concepts:"");
+      const learned=globalThis.RonLearning?.search?.(userMessage,12)||[];
+      const learnedText=learned.map(x=>`- ${x.text} (confidence ${Number(x.confidence??.5).toFixed(2)})`).join("\n");
+      const systemWithLearning=system+(concepts?"\n\nمعرفة متراكمة من رون:\n"+concepts:"")+(learnedText?"\n\nمعرفة مسترجعة من ذاكرة التعلّم:\n"+learnedText:"");
       const messages=[{role:"system",content:systemWithLearning}];
       messages.push(...normalizeMessages(history));
       messages.push({role:"user",content:String(userMessage||"")});
