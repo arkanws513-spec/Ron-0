@@ -78,7 +78,16 @@ const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك
 const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
 const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestion(n)&&isAgeQuestion(n));
 const teach=t=>{let x=String(t||"").trim().replace(/^\s*عل[ّ]?م\s+رون\s*(?::|،|,|-)?\s*/i,"").trim().replace(/^ان\s+/i,"").trim();if(!x)return"اكتب المعلومة بعد «علّم رون:».";
- lessons.push({key:"lesson:"+Date.now(),text:x,at:new Date().toISOString()});save();return"تم حفظ التعليم في ذاكرة رون المحلية."};
+ const normalized=norm(x).replace(/[.،,؛;؟?]+$/,"").trim();
+ const m=normalized.match(/^(.+?)\s+(?:هي|هو)\s+(?:عاصمة|عاصمه)\s+(.+)$/);
+ if(m){
+  const subject=cleanValue(m[1]),object=cleanValue(m[2]);
+  lessons=lessons.filter(item=>!(item.kind==="relation"&&item.relation==="capital_of"&&norm(item.object)===norm(object)));
+  lessons.push({key:"fact:capital:"+Date.now(),text:x,kind:"relation",relation:"capital_of",subject,object,at:new Date().toISOString()});
+ }else{
+  lessons.push({key:"lesson:"+Date.now(),text:x,kind:"lesson",at:new Date().toISOString()});
+ }
+ save();return"تم حفظ التعليم في ذاكرة رون المحلية.";};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
@@ -112,6 +121,13 @@ const answer=t=>{
 const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
 const localLessonAnswer=n=>{
  const query=norm(n);
+ const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+?)[؟?]?$/);
+ if(capitalMatch){
+  const place=cleanValue(capitalMatch[1]);
+  const candidates=lessons.filter(x=>x.kind==="relation"&&x.relation==="capital_of"&&norm(x.object)===norm(place));
+  const best=candidates[candidates.length-1];
+  if(best)return best.subject+" هي عاصمة "+best.object+".";
+ }
  const q=tokens(query); if(!q.length)return null;
  let best=null,bestScore=0,bestIndex=-1;
  lessons.forEach((x,index)=>{
