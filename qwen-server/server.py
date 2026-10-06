@@ -17,10 +17,15 @@ QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
 QWEN_UPSTREAM = os.getenv("QWEN_UPSTREAM", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions")
 QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen3-4b")
 
-# Secondary provider: OpenRouter. The key stays on Railway, never in the browser.
+# Gemini is Ron's second teacher/engine. The key stays on Railway.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_UPSTREAM = os.getenv("GEMINI_UPSTREAM", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+
+# Optional third provider. The key stays on Railway.
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_UPSTREAM = os.getenv("OPENROUTER_UPSTREAM", "https://openrouter.ai/api/v1/chat/completions")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "")
 
 def error_response(message: str, status: int = 503):
     return Response(
@@ -30,23 +35,32 @@ def error_response(message: str, status: int = 503):
     )
 
 async def call_provider(client, url, key, model, body, extra_headers=None):
-    if not key:
-        return None, "provider key is not configured"
+    if not key or not model:
+        return None, "provider is not configured"
+
     payload = dict(body)
     payload["model"] = model
     payload["stream"] = False
     payload.pop("enable_thinking", None)
-    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json", "Accept": "application/json"}
+
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
     if extra_headers:
         headers.update(extra_headers)
+
     try:
         response = await client.post(url, json=payload, headers=headers)
         try:
             data = response.json()
         except Exception:
             data = {"error": {"message": response.text[:2000]}}
+
         if response.is_success:
             return data, None
+
         msg = data.get("error", {}).get("message") if isinstance(data, dict) else None
         return None, msg or f"HTTP {response.status_code}"
     except httpx.HTTPError as exc:
@@ -55,18 +69,31 @@ async def call_provider(client, url, key, model, body, extra_headers=None):
 @app.get("/")
 async def root():
     providers = []
-    if QWEN_API_KEY: providers.append("qwen3")
-    if OPENROUTER_API_KEY: providers.append("openrouter")
-    return {"service": "ron-model-gateway", "providers": providers, "primary": "qwen3", "fallback": "openrouter" if OPENROUTER_API_KEY else None, "status": "ok"}
+    if QWEN_API_KEY:
+        providers.append("qwen3")
+    if GEMINI_API_KEY:
+        providers.append("gemini")
+    if OPENROUTER_API_KEY and OPENROUTER_MODEL:
+        providers.append("openrouter")
+
+    return {
+        "service": "ron-model-gateway",
+        "providers": providers,
+        "primary": "qwen3",
+        "fallback_chain": ["gemini", "openrouter"],
+        "status": "ok",
+    }
 
 @app.get("/health")
 async def health():
     return {
-        "ok": bool(QWEN_API_KEY or OPENROUTER_API_KEY),
+        "ok": bool(QWEN_API_KEY or GEMINI_API_KEY or (OPENROUTER_API_KEY and OPENROUTER_MODEL)),
         "qwen_configured": bool(QWEN_API_KEY),
-        "fallback_configured": bool(OPENROUTER_API_KEY),
+        "gemini_configured": bool(GEMINI_API_KEY),
+        "openrouter_configured": bool(OPENROUTER_API_KEY and OPENROUTER_MODEL),
         "qwen_model": QWEN_MODEL,
-        "fallback_model": OPENROUTER_MODEL,
+        "gemini_model": GEMINI_MODEL,
+        "openrouter_model": OPENROUTER_MODEL or None,
     }
 
 @app.post("/v1/chat/completions")
@@ -76,26 +103,32 @@ async def chat(request: Request):
     except Exception:
         return error_response("invalid JSON request", 400)
 
+    errors = []
+
     async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=15.0)) as client:
-        data, qwen_error = await call_provider(
+        data, err = await call_provider(
             client, QWEN_UPSTREAM, QWEN_API_KEY, QWEN_MODEL, body,
             {"X-Provider": "qwen3"},
         )
         if data is not None:
             return Response(content=json.dumps(data, ensure_ascii=False), media_type="application/json", status_code=200)
+        errors.append("Qwen3: " + str(err))
 
-        # Qwen failed/unavailable: transparently try the secondary model.
-        fallback_body = dict(body)
-        data, fallback_error = await call_provider(
-            client, OPENROUTER_UPSTREAM, OPENROUTER_API_KEY, OPENROUTER_MODEL, fallback_body,
+        # If Qwen is unavailable, Gemini becomes the active engine.
+        data, err = await call_provider(
+            client, GEMINI_UPSTREAM, GEMINI_API_KEY, GEMINI_MODEL, body,
+        )
+        if data is not None:
+            return Response(content=json.dumps(data, ensure_ascii=False), media_type="application/json", status_code=200)
+        errors.append("Gemini: " + str(err))
+
+        # Optional final fallback.
+        data, err = await call_provider(
+            client, OPENROUTER_UPSTREAM, OPENROUTER_API_KEY, OPENROUTER_MODEL, body,
             {"HTTP-Referer": "https://arkanws513-spec.github.io/Ron-0/", "X-Title": "Ron"},
         )
         if data is not None:
             return Response(content=json.dumps(data, ensure_ascii=False), media_type="application/json", status_code=200)
+        errors.append("OpenRouter: " + str(err))
 
-    return error_response(
-        "No language model is available. Qwen3 failed: "
-        + str(qwen_error)
-        + "; fallback failed: "
-        + str(fallback_error)
-    )
+    return error_response("No language model is available. " + " | ".join(errors))
