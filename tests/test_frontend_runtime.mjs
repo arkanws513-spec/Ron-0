@@ -10,6 +10,7 @@ for (const id of ids) {
     id, value: "", disabled: false, scrollTop: 0, scrollHeight: 0, style: {},
     children: [], className: "", textContent: "",
     append(...items){ this.children.push(...items); },
+    appendChild(item){ this.children.push(item); },
     replaceChildren(...items){ this.children = [...items]; },
     addEventListener(type, fn){ listeners.set(id + ":" + type, fn); },
     classList: { add(){}, remove(){} }
