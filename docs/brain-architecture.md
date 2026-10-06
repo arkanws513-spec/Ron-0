@@ -1,40 +1,35 @@
-# Ron local brain architecture
+# Ron + Qwen base-model architecture
 
-Ron owns its identity, memory, tools, learning rules, and source code. A local
-language model is only a replaceable **brain component**.
+Ron owns identity, memory, tools, learning policy, evaluation, and source code. Qwen3 is the initial **base language/reasoning model**, not Ron's owner.
 
-`User → Ron Core → Memory/Tools/Learning → Local Brain`
+User → Ron Core → context/memory/reasoning → Qwen3 base model → Ron validation → response
 
-No cloud AI provider is required.
+## What changed
 
-## Ready-made brain
+The browser bridge now treats Qwen as the base model for substantive turns. If Qwen is unavailable, Ron falls back to its local reasoning layer rather than exposing provider errors.
 
-Ron already exposes a local OpenAI-compatible adapter in `ron/providers.py`.
-Any compatible model running on the same machine can be selected through
-`RON_MODEL_ENDPOINT`, `RON_MODEL_NAME`, and `RON_MODEL_TIMEOUT`.
-
-## Qwen3 teacher
-
-Ron can also use a locally running Qwen3 model as an **explicit teacher**.
-The default teacher target is `qwen3:1.7b` through a local OpenAI-compatible
-endpoint. Configure it with `RON_TEACHER_ENDPOINT`, `RON_TEACHER_MODEL`, and
-`RON_TEACHER_TIMEOUT`. The teacher generates examples; Ron stores the examples
-with provenance and decides what can be promoted. Qwen3 does not become Ron,
-and Ron does not depend on a Qwen cloud service.
-
-Model weights are deliberately not committed to Git history.
+Qwen answers are **not automatically written into Ron's long-term memory**. They are recorded separately as training candidates. Explicit user teaching is also recorded with provenance, but promotion into a future model dataset is a separate approval step.
 
 ## Knowledge transfer
 
-`ron/brain.py` records teacher responses as Ron-owned examples with provenance.
-This is knowledge transfer, not magical copying of another model's internal
-weights.
+`ron/distillation.py` implements the controlled transfer boundary:
 
-The next training layer can use these examples for evaluation/fine-tuning. Any
-weight update must pass Ron's evaluation gate before promotion.
+1. collect a Qwen-generated example;
+2. keep it marked as `candidate`;
+3. approve only examples that pass Ron's evaluation/curation rules;
+4. export approved examples as chat-training JSONL;
+5. later fine-tune a Qwen base checkpoint into a Ron-specific model.
 
-## Ownership boundary
+This is real training-data transfer, not copying Qwen's internal weights.
 
-Ron remains GitHub-first and user-controlled. A third-party model, if used,
-remains subject to its own license; it does not become the owner of Ron.
-Provider selection is explicit and cloud providers are not hard-coded.
+## Independence path
+
+Qwen3 base → Ron Core + curated examples → Ron-specific fine-tuned model → optional Qwen removal
+
+Removing Qwen later will not delete Ron's source, memory, identity, tools, or approved training data. General capabilities encoded only in Qwen's weights do not automatically migrate; they must be learned through actual training/fine-tuning.
+
+## Model weights
+
+Model weights are deliberately not committed to Git history. The adapter is provider-agnostic and can point at a local OpenAI-compatible runtime.
+
+Qwen3's official project documents SFT, LoRA, and Q-LoRA workflows, so the approved dataset produced here is designed to become training input rather than being treated as permanent memory.
