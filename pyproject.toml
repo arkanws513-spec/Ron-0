@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Provider-agnostic foundation for Ron AI assistant"
 requires-python = ">=3.11"
 
+[tool.setuptools.packages.find]
+include = ["ron*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
