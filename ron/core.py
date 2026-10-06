@@ -10,6 +10,7 @@ from .session import Conversation
 from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
+from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
 
 @dataclass
 class RonCore:
@@ -21,6 +22,7 @@ class RonCore:
     max_context_messages:int=12
     understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
     reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
+    advanced_reasoning:AdvancedReasoner=field(default_factory=AdvancedReasoner)
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)
@@ -61,6 +63,18 @@ class RonCore:
                 reasoning_facts.append(parsed)
         reasoning_result=self.reasoning.reason(reasoning_facts)
         reasoning_summary=self.reasoning.summarize(reasoning_result)
+        evidence=tuple(WeightedEvidence(self.reasoning.describe_fact(f), f.confidence, f.confidence, f.source) for f in reasoning_result.facts)
+        causal_links=tuple(CausalLink(f.subject, f.object, f.confidence, (self.reasoning.describe_fact(f),)) for f in reasoning_result.facts if f.relation=="causes")
+        advanced_confidence=self.advanced_reasoning.combine_independent_confidences(e.support for e in evidence)
+        if causal_links and topic:
+            causal_notes=[]
+            for link in causal_links:
+                ok, confidence, path=self.advanced_reasoning.causal_reason(causal_links, link.cause, link.effect)
+                if ok:
+                    causal_notes.append(f"{link.cause} -> {link.effect} ({confidence:.2f})")
+            if causal_notes:
+                reasoning_summary += "\nالعلاقات السببية المكتشفة: " + "؛ ".join(causal_notes[:6])
+        reasoning_summary += f"\nتجميع ثقة الأدلة المستقلة: {advanced_confidence:.2f}"
         memory_text="\n".join(f"- {item.content}" for item in related)
         recent=self.conversation.short_history()[-self.max_context_messages:]
         history_text="\n".join(f"{m.role}: {m.content}" for m in recent)
@@ -73,7 +87,7 @@ class RonCore:
         )
         request=ModelRequest(
             messages=(Message(role="system",content=system_context),Message(role="user",content=text)),
-            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence}},
+            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
         )
         try:
             response=self.provider.generate(request)
