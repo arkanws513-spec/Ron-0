@@ -18,17 +18,31 @@ const extractFact=t=>{
 const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n);
 const isNameQuestion=n=>n.includes("ما اسمي")||n.includes("ايه اسمي")||n.includes("اي اسمي")||n.includes("هل تتذكر اسمي");
 const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("ما هو اسمك")||n==="وانت"||n==="وانت؟";
-const isBothNamesQuestion=n=>n.includes("ما اسمي وما اسمك")||n.includes("اسمي واسمك");
+const isBothNamesQuestion=n=>n.includes("ما اسمي وما اسمك")||n.includes("اسمي واسمك")||n.includes("ما اسمي واسمك");
+const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
+const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestion(n)&&isAgeQuestion(n));
 const teach=t=>{const x=t.replace(/^\s*عل[ّ]?م\s+رون\s*:\s*/i,"").trim();if(!x)return"اكتب المعلومة بعد «علّم رون:».";
  lessons.push({key:"lesson:"+Date.now(),text:x,at:new Date().toISOString()});save();return"تم حفظ التعليم في ذاكرة رون المحلية."};
 const answer=t=>{
  const n=norm(t),fact=extractFact(t);
  if(/^عل[ّ]?م رون\s*:/.test(n))return teach(t);
- if(isBothNamesQuestion(n))return "اسمك زيريوس، واسمي رون.";
+ if(isBothNamesQuestion(n)){
+  const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
+  return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+", "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
+ }
+ if(isProfileQuestion(n)){
+  const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
+  return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+"، "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
+ }
  if(isRonNameQuestion(n))return "اسمي رون.";
- if(isRonNameStatement(n))return "صحيح. اسمي رون، وأنت زيريوس إذا كان هذا هو الاسم الذي أخبرتني به.";
- if(fact){saveFact(fact.key,fact.text);return "تم. سأحفظ أن اسمك "+fact.text+".";}
+ if(isRonNameStatement(n))return "صحيح. اسمي رون، وأنت صاحب الاسم الذي أخبرتني به.";
+ if(fact){
+  saveFact(fact.key,fact.text);
+  if(fact.key==="user.age")return "تم. سأحفظ أن عمرك "+fact.text+" سنة.";
+  return "تم. سأحفظ أن اسمك "+fact.text+".";
+ }
  if(isNameQuestion(n)){const x=lessons.find(x=>x.key==="user.name");return x?"اسمك "+x.text+".":"لم تخبرني باسمك بعد.";}
+ if(isAgeQuestion(n)){const x=lessons.find(x=>x.key==="user.age");return x?"عمرك "+x.text+" سنة.":"لم تخبرني بعمرك بعد.";}
  if(n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته"))return lessons.length?"هذه آخر تعليماتي المحفوظة:\n\n"+lessons.slice(-10).map((x,i)=>i+1+". "+x.text).join("\n"):"لم تعلّمني شيئًا بعد.";
  if(n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")){lessons=[];save();return"تم مسح الذاكرة التي علّمتني إياها."}
  if(/^(مرحبا|اهلا|السلام عليكم)(\s+رون)?/.test(n))return"أهلًا بك. أنا رون. كيف يمكنني مساعدتك؟";
