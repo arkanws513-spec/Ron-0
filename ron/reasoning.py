@@ -87,7 +87,13 @@ class ReasoningEngine:
 
     @staticmethod
     def _norm(value: str) -> str:
-        return re.sub(r"\s+", " ", str(value).strip().lower())
+        value = str(value).strip().lower()
+        # Normalize common Arabic diacritics/tanween and terminal accusative
+        # forms so "ازدحاما" and "ازدحام" represent the same concept.
+        value = re.sub(r"[\u064B-\u065F\u0670]", "", value)
+        value = re.sub(r"\s+", " ", value)
+        value = re.sub(r"([\u0621-\u063A\u0641-\u064A]+)ا$", r"\1", value)
+        return value
 
     @classmethod
     def fact_key(cls, fact: Fact) -> tuple[str, str, str]:
