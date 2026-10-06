@@ -22,3 +22,16 @@ def test_hypotheses_are_separate_from_facts():
     result = ReasoningEngine().reason([], [h])
     assert result.hypotheses[0] == h
     assert result.facts == ()
+
+
+def test_arabic_relations_and_causal_chain():
+    engine = ReasoningEngine()
+    facts = [
+        engine.parse_fact("القاهرة هي عاصمة مصر", confidence=.95),
+        engine.parse_fact("مصر تسبب ازدحاما", confidence=.7),
+        engine.parse_fact("الازدحام يسبب تأخرا", confidence=.8),
+    ]
+    result = engine.reason([f for f in facts if f is not None])
+    assert any(f.subject == "القاهرة" and f.relation == "is" for f in result.facts)
+    assert any("مصر causes الازدحام" in x for x in result.conclusions)
+    assert any("مصر causes تأخرا" in x for x in result.conclusions)
