@@ -16,8 +16,9 @@ const understanding= text=>{const intent=analyzeIntent(text),follow=resolveFollo
 const qwenContext=()=>{const u=understanding(messages.filter(m=>m.role==="user").at(-1)?.text||"");const structured=["النية: "+u.intent,"موضوع الحديث: "+u.topic,"متابعة لسياق سابق: "+(u.followUp?"نعم":"لا"),"الذاكرة المرتبطة: "+(u.longMemory.join(" | ")||"لا توجد")].join("\n");
  const local=lessons.slice(-18).map(x=>x.key+": "+x.text);
  const teacher=globalThis.RonQwenTeacher?.getLessons?.()||[];
+ const learned=globalThis.RonLearning?.search?.(u.topic,10)||[];
  const recent=lessons.slice(-8).map(x=>x.text);
- return structured+"\n"+local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),recent.map(x=>"recent: "+x)).slice(-30).join("\n");
+ return structured+"\n"+local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),learned.map(x=>"learned: "+x.text),recent.map(x=>"recent: "+x)).slice(-36).join("\n");
 };
 const conversationHistory=()=>messages.slice(-14).map(m=>({role:m.role==="ron"?"assistant":"user",content:String(m.text||"")}));
 if(!messages.length){messages=asMessages(read(LEGACY.chat,[]));}
@@ -178,9 +179,11 @@ if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsTeacher){
       r=String(r||"تم.");
       r+= "\n\n🧠 اقتراح من النموذج الأساسي Qwen:\n"+taught.text;
       globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),"explicit-learning");
+      globalThis.RonLearning?.addKnowledge?.({text:taught.text,source:"qwen3",confidence:.55,kind:"teacher-suggestion"});
     }else{
       r=taught.text;
       globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),"candidate");
+      globalThis.RonLearning?.addExperience?.(t,taught.text,"qwen3-candidate",.45);
     }
   }else{
     r=local;
@@ -190,7 +193,9 @@ if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsTeacher){
   r=browserReasoningAnswer(t)?.answer||local;
  }
 }
-if(!String(r||"").trim()){r="لم أتمكن من تكوين إجابة موثوقة لهذه الرسالة بعد."; }messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="تعذر إكمال المعالجة لهذه الرسالة الآن. لا أريد اختلاق إجابة محفوظة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},4000+Math.floor(Math.random()*2001))};
+if(!String(r||"").trim()){r="لم أتمكن من تكوين إجابة موثوقة لهذه الرسالة بعد."; }
+if(String(r||"").trim()&&!learning&&!/^تعذر|^لم أتمكن/.test(String(r))) globalThis.RonLearning?.addExperience?.(t,String(r),"conversation",.5);
+messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="تعذر إكمال المعالجة لهذه الرسالة الآن. لا أريد اختلاق إجابة محفوظة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},4000+Math.floor(Math.random()*2001))};
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("start-ron")?.addEventListener("click",()=>{localStorage.setItem(S.started,"1");$("startup").classList.add("hidden");$("main-app").classList.remove("hidden");input.focus()});if(localStorage.getItem(S.started)==="1"){$("startup").classList.add("hidden");$("main-app").classList.remove("hidden")};$("menu").addEventListener("click",()=>{renderHistory();$("settings").classList.add("open")});$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));const renderHistory=()=>{const box=$("history-list");if(!box)return;box.replaceChildren();if(!conversations.length){const e=document.createElement("div");e.className="history-empty";e.textContent="لا توجد محادثات محفوظة بعد.";box.appendChild(e);return}conversations.slice().reverse().forEach(x=>{const b=document.createElement("button");b.type="button";b.className="history-item";b.textContent=x.title||"محادثة";b.addEventListener("click",()=>{messages=asMessages(x.messages);globalThis.ronConversationId=x.id;save();render();$("settings").classList.remove("open")});box.appendChild(b)})};$("new-chat").addEventListener("click",()=>{saveCurrent();messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];globalThis.ronConversationId=makeId();save();render();$("settings").classList.remove("open")});$("history-btn")?.addEventListener("click",()=>{$("history-list")?.classList.toggle("open");renderHistory()});
 const qwenEnabledInput=$("qwen-enabled"),qwenEndpointInput=$("qwen-endpoint"),qwenSave=$("qwen-save"),qwenStatus=$("qwen-status");
