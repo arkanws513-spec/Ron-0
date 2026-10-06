@@ -1,11 +1,12 @@
 /* Ron teacher bridge — Qwen3-4B
- * Qwen is an optional teacher/model provider. Ron remains the owner of identity,
- * local memory, policy and final decisions. No API key is embedded here.
+ * Qwen is a teacher component only. Ron owns identity, local memory,
+ * policy and final decisions. No API key is embedded in the browser.
  */
 (() => {
   const CONFIG = Object.freeze({
     model: "Qwen/Qwen3-4B",
     role: "teacher",
+    defaultEndpoint: "https://ron-qwen-teacher-production.up.railway.app/v1/chat/completions",
     endpointStorageKey: "ron-qwen-endpoint-v1",
     enabledStorageKey: "ron-qwen-enabled-v1",
     lessonsStorageKey: "ron-qwen-lessons-v1",
@@ -15,10 +16,10 @@
   const write = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
   window.RonQwenTeacher = Object.freeze({
     config: CONFIG,
-    isEnabled() { return read(CONFIG.enabledStorageKey, false) === true; },
+    isEnabled() { return read(CONFIG.enabledStorageKey, true) === true; },
     setEnabled(value) { write(CONFIG.enabledStorageKey, Boolean(value)); },
-    getEndpoint() { return String(read(CONFIG.endpointStorageKey, "")).trim(); },
-    setEndpoint(url) { write(CONFIG.endpointStorageKey, String(url || "").trim()); },
+    getEndpoint() { return String(read(CONFIG.endpointStorageKey, CONFIG.defaultEndpoint)).trim(); },
+    setEndpoint(url) { write(CONFIG.endpointStorageKey, String(url || CONFIG.defaultEndpoint).trim()); },
     getLessons() {
       const v = read(CONFIG.lessonsStorageKey, []);
       return Array.isArray(v) ? v.slice(-CONFIG.maxLessons) : [];
@@ -58,7 +59,7 @@
         const data = await response.json();
         const text = data?.choices?.[0]?.message?.content || data?.output_text || data?.response || "";
         return text ? { ok: true, text: String(text), model: CONFIG.model } : { ok: false, reason: "empty" };
-      } catch (error) {
+      } catch {
         return { ok: false, reason: "network" };
       }
     }
