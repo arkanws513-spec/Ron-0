@@ -13,6 +13,15 @@ Ron already exposes a local OpenAI-compatible adapter in `ron/providers.py`.
 Any compatible model running on the same machine can be selected through
 `RON_MODEL_ENDPOINT`, `RON_MODEL_NAME`, and `RON_MODEL_TIMEOUT`.
 
+## Qwen3 teacher
+
+Ron can also use a locally running Qwen3 model as an **explicit teacher**.
+The default teacher target is `qwen3:1.7b` through a local OpenAI-compatible
+endpoint. Configure it with `RON_TEACHER_ENDPOINT`, `RON_TEACHER_MODEL`, and
+`RON_TEACHER_TIMEOUT`. The teacher generates examples; Ron stores the examples
+with provenance and decides what can be promoted. Qwen3 does not become Ron,
+and Ron does not depend on a Qwen cloud service.
+
 Model weights are deliberately not committed to Git history.
 
 ## Knowledge transfer
