@@ -5,13 +5,15 @@
 (() => {
   const CONFIG = Object.freeze({
     model: "qwen3-4b",
-    role: "teacher",
+    role: "base-model",
     defaultEndpoint: "https://ron-qwen-teacher-production.up.railway.app/v1/chat/completions",
     endpointStorageKey: "ron-qwen-endpoint-v2",
     enabledStorageKey: "ron-qwen-enabled-v2",
     lessonsStorageKey: "ron-qwen-lessons-v2",
     maxLessons: 80,
-    maxHistory: 14
+    maxHistory: 14,
+    trainingStorageKey: "ron-training-candidates-v1",
+    maxTrainingExamples: 200
   });
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
@@ -24,6 +26,16 @@
     setEndpoint(url){write(CONFIG.endpointStorageKey,String(url||CONFIG.defaultEndpoint).trim())},
     getLessons(){const value=read(CONFIG.lessonsStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxLessons):[]},
     saveLesson(text){const value=String(text||"").trim();if(!value)return false;const lessons=this.getLessons().filter(x=>x.text!==value);lessons.push({text:value,at:new Date().toISOString(),source:CONFIG.model});write(CONFIG.lessonsStorageKey,lessons.slice(-CONFIG.maxLessons));return true},
+    getTrainingExamples(){const value=read(CONFIG.trainingStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxTrainingExamples):[]},
+    recordTrainingExample(user,assistant,context,status="candidate"){
+      const u=String(user||"").trim(),a=String(assistant||"").trim();
+      if(!u||!a)return false;
+      const examples=this.getTrainingExamples().filter(x=>!(x.user===u&&x.assistant===a));
+      examples.push({user:u,assistant:a,context:String(context||""),status,source:CONFIG.model,at:new Date().toISOString()});
+      write(CONFIG.trainingStorageKey,examples.slice(-CONFIG.maxTrainingExamples));
+      return true;
+    },
+    exportTrainingDataset(){return this.getTrainingExamples().filter(x=>x.status==="approved").map(x=>({messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}]}));},
     buildMessages(userMessage,ronContext="",history=[]){
       const system=[
         "أنت Qwen، معلم ومكوّن تفكير مساعد لرون.",
