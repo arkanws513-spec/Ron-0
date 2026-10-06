@@ -28,7 +28,7 @@ jobs:
           python -m pip install -e . pytest
       - name: Run tests
         run: python -m pytest
-      - name: Validate repository
+      - name: Check JavaScript syntax\n        run: node --check app.js\n      - name: Validate repository
         shell: bash
         run: |
           set -euo pipefail
