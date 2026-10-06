@@ -14,12 +14,17 @@ class LocalTeachingProvider:
 
     def generate(self, request: ModelRequest) -> ModelResponse:
         user = next((m.content for m in reversed(request.messages) if m.role == "user"), "")
+        metadata = {"mode": "local", "external_api_required": False}
         if not user.strip():
-            return ModelResponse(content="أنا رون. علّمني ما تريد أن أتعلمه.", model=self.name)
+            return ModelResponse(
+                content="أنا رون. علّمني ما تريد أن أتعلمه.",
+                model=self.name,
+                metadata=metadata,
+            )
         return ModelResponse(
             content=f"سمعتك: {user}\nأنا في وضع التعلم المحلي. يمكنك تعليمي وتصحيح إجاباتي.",
             model=self.name,
-            metadata={"mode": "local", "external_api_required": False},
+            metadata=metadata,
         )
 
 class ProviderRouter:
