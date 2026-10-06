@@ -2,7 +2,7 @@
 from __future__ import annotations
 import re
 from dataclasses import dataclass, field
-_TOKEN_RE=re.compile(r"[\\w\\u0600-\\u06ff]+|[^\\s\\w]",re.UNICODE)
+_TOKEN_RE=re.compile(r"[\w\u0600-\u06ff]+|[^\s\w]",re.UNICODE)
 @dataclass
 class Vocabulary:
     token_to_id: dict[str,int]=field(default_factory=lambda:{"<pad>":0,"<unk>":1,"<bos>":2,"<eos>":3})
