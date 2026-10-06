@@ -10,8 +10,8 @@ _ARABIC_DIACRITICS = re.compile(r"[ًٌٍَُِّْـ]")
 _SPACES = re.compile(r"\s+")
 
 _NAME_PATTERNS = (
-    re.compile(r"^\s*(?:اسمي|انا اسمي|أنا اسمي)\s+(.+?)\s*$", re.I),
-    re.compile(r"^\s*اريدك(?: أن| ان)?\s+تعلم\s+أن\s+اسمي\s+هو\s+(.+?)\s*$", re.I),
+    re.compile(r"^\s*(?:اسمي|انا اسمي)\s+(.+?)\s*$", re.I),
+    re.compile(r"^\s*اريدك(?: أن| ان)?\s+تعلم\s+(?:أن|ان)\s+اسمي\s+هو\s+(.+?)\s*$", re.I),
 )
 _PREFERENCE_PATTERNS = (
     re.compile(r"^\s*(?:انا|أنا)\s+(?:احب|أحب)\s+(.+?)\s*$", re.I),
@@ -46,17 +46,17 @@ class ExtractedFact:
 
 
 def extract_facts(text: str) -> list[ExtractedFact]:
-    facts: list[ExtractedFact] = []
     normalized = normalize_arabic(text)
 
     correction = re.match(
-        r"^اسمي\s+(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)\s*(?:فهذا\s+عمري)?$",
+        r"^اسمي\s+(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)(?:\s+فهذا\s+عمري)?\s*[.،,؛;؟?]*$",
         normalized,
         re.I,
     )
     if correction:
         name = correction.group(1).strip(" .،,؛;؟؟")
         age = int(correction.group(2))
+        facts: list[ExtractedFact] = []
         if name:
             facts.append(ExtractedFact("user.name", name, "name"))
         if 1 <= age <= 120:
@@ -64,13 +64,14 @@ def extract_facts(text: str) -> list[ExtractedFact]:
         return facts
 
     combined = re.match(
-        r"^انا\s+(.+?)\s+وعمري\s+(\d{1,3})\s*(?:عام|سنة|سنين)?$",
+        r"^انا\s+(.+?)\s+وعمري\s+(\d{1,3})\s*(?:عام|سنة|سنين)?\s*[.،,؛;؟?]*$",
         normalized,
         re.I,
     )
     if combined:
         name = combined.group(1).strip(" .،,؛;؟؟")
         age = int(combined.group(2))
+        facts = []
         if name and not re.match(r"^(?:عمري|سني|احب|لا احب)\b", name):
             facts.append(ExtractedFact("user.name", name, "name"))
         if 1 <= age <= 120:
@@ -78,13 +79,14 @@ def extract_facts(text: str) -> list[ExtractedFact]:
         return facts
 
     named_age = re.match(
-        r"^اسمي\s+(.+?)\s+(\d{1,3})\s*(?:عام|سنة|سنين)$",
+        r"^اسمي\s+(.+?)\s+(\d{1,3})\s*(?:عام|سنة|سنين)\s*[.،,؛;؟?]*$",
         normalized,
         re.I,
     )
     if named_age:
         name = named_age.group(1).strip(" .،,؛;؟؟")
         age = int(named_age.group(2))
+        facts = []
         if name:
             facts.append(ExtractedFact("user.name", name, "name"))
         if 1 <= age <= 120:
