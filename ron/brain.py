@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from .contracts import ModelRequest, ModelResponse
-from .providers import LocalHTTPModelProvider
+from .providers import LocalHTTPModelProvider, Qwen3TeacherProvider
 
 @dataclass(frozen=True)
 class TeachingExample:
@@ -48,3 +48,30 @@ class LocalBrain:
     def generate(self, request: ModelRequest) -> ModelResponse:
         """ModelProvider-compatible entry point for RonCore/ProviderRouter."""
         return self.think(request, learn=True)
+
+
+@dataclass
+class Qwen3Teacher:
+    """Optional local Qwen3 teacher that produces Ron-owned examples.
+
+    Teaching is explicit: this component never replaces Ron's identity or
+    provider automatically.
+    """
+    provider: Qwen3TeacherProvider = field(default_factory=Qwen3TeacherProvider.from_environment)
+    transfer: KnowledgeTransfer = field(default_factory=KnowledgeTransfer)
+
+    def teach(self, prompt: str, context: str = "") -> TeachingExample:
+        messages = []
+        if context.strip():
+            messages.append({"role": "system", "content": context.strip()})
+        messages.append({"role": "user", "content": prompt.strip()})
+        request = ModelRequest(
+            messages=tuple(
+                __import__("ron.contracts", fromlist=["Message"]).Message(
+                    role=item["role"], content=item["content"]
+                ) for item in messages
+            ),
+            metadata={"teacher": "qwen3", "purpose": "knowledge-transfer"},
+        )
+        response = self.provider.generate(request)
+        return self.transfer.capture(prompt, response.content, source=f"qwen3:{self.provider.model}")
