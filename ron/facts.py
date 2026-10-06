@@ -1,5 +1,6 @@
 """Conservative natural-language fact extraction and recall for Ron."""
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from .contracts import MemoryItem, MemoryStore
@@ -15,6 +16,11 @@ _PREFERENCE_PATTERNS = (
     re.compile(r"^\s*(?:انا|أنا)\s+(?:احب|أحب)\s+(.+?)\s*$", re.I),
     re.compile(r"^\s*(?:انا|أنا)\s+(?:لا احب|لا أحب)\s+(.+?)\s*$", re.I),
 )
+_AGE_PATTERNS = (
+    re.compile(r"^\s*(?:انا|أنا)\s+(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?\s*$", re.I),
+    re.compile(r"^\s*(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?\s*$", re.I),
+    re.compile(r"^\s*(?:انا|أنا)\s+(\d{1,3})\s*(?:عام|سنة|سنين)\s*$", re.I),
+)
 
 def normalize_arabic(text: str) -> str:
     text = _ARABIC_DIACRITICS.sub("", text)
@@ -28,33 +34,47 @@ class ExtractedFact:
     kind: str
     @property
     def memory(self) -> MemoryItem:
-        return MemoryItem(
-            key=self.key,
-            content=self.value,
-            metadata={"kind": self.kind, "source": "natural-language"},
-        )
+        return MemoryItem(key=self.key, content=self.value, metadata={"kind": self.kind, "source": "natural-language"})
 
 def extract_fact(text: str) -> ExtractedFact | None:
-    for pattern in _NAME_PATTERNS:
+    for pattern in _AGE_PATTERNS:
         match = pattern.match(text)
         if match:
-            value = match.group(1).strip(" .،,؛;؟?")
-            if value:
-                return ExtractedFact("user.name", value, "name")
+            age = int(match.group(1))
+            if 1 <= age <= 120:
+                return ExtractedFact("user.age", str(age), "age")
     for pattern in _PREFERENCE_PATTERNS:
         match = pattern.match(text)
         if match:
-            value = match.group(1).strip(" .،,؛;؟?")
+            value = match.group(1).strip(" .،,؛;؟؟")
             if value:
                 return ExtractedFact("user.preference", value, "preference")
+    for pattern in _NAME_PATTERNS:
+        match = pattern.match(text)
+        if match:
+            value = match.group(1).strip(" .،,؛;؟؟")
+            if value:
+                return ExtractedFact("user.name", value, "name")
     return None
 
 def answer_fact_question(text: str, memory: MemoryStore) -> str | None:
     normalized = normalize_arabic(text)
-    if any(phrase in normalized for phrase in ("ما اسمي", "ايه اسمي", "ما هو اسمي", "هل تتذكر اسمي")):
-        hits = memory.recall("user.name", limit=1)
+    name_q = any(p in normalized for p in ("ما اسمي", "ايه اسمي", "اي اسمي", "ما هو اسمي", "هل تتذكر اسمي"))
+    age_q = any(p in normalized for p in ("كم عمري", "ما عمري", "ما هو عمري", "عندي كام سنة", "هل تتذكر عمري"))
+    if name_q and age_q:
+        names, ages = memory.recall("user.name", 1), memory.recall("user.age", 1)
+        name, age = (names[0].content if names else None), (ages[0].content if ages else None)
+        if name and age: return f"اسمك {name}، وعمرك {age} سنة."
+        if name: return f"اسمك {name}، ولم تخبرني بعمرك بعد."
+        if age: return f"عمرك {age} سنة، ولم تخبرني باسمك بعد."
+        return "لم تخبرني باسمك أو عمرك بعد."
+    if name_q:
+        hits = memory.recall("user.name", 1)
         return f"اسمك {hits[0].content}." if hits else "لم تخبرني باسمك بعد."
-    if any(phrase in normalized for phrase in ("ماذا احب", "ما الذي احبه", "ايه اللي بحبه", "هل تتذكر ما احب")):
-        hits = memory.recall("user.preference", limit=5)
-        return "أتذكر أنك تحب: " + "، ".join(item.content for item in hits) + "." if hits else "لم تخبرني بتفضيلاتك بعد."
+    if age_q:
+        hits = memory.recall("user.age", 1)
+        return f"عمرك {hits[0].content} سنة." if hits else "لم تخبرني بعمرك بعد."
+    if any(p in normalized for p in ("ماذا احب", "ما الذي احبه", "ايه اللي بحبه", "هل تتذكر ما احب")):
+        hits = memory.recall("user.preference", 5)
+        return "أتذكر أنك تحب: " + "، ".join(x.content for x in hits) + "." if hits else "لم تخبرني بتفضيلاتك بعد."
     return None
