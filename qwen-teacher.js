@@ -57,8 +57,10 @@
         });
         if (!response.ok) return { ok: false, reason: "http-" + response.status };
         const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content || data?.output_text || data?.response || "";
-        return text ? { ok: true, text: String(text), model: CONFIG.model } : { ok: false, reason: "empty" };
+        const raw = data?.choices?.[0]?.message?.content ?? data?.output_text ?? data?.response ?? "";
+        const text = Array.isArray(raw) ? raw.map(x => typeof x === "string" ? x : (x?.text || x?.content || "")).join("").trim() : String(raw || "").trim();
+        const apiError = data?.error?.message || data?.message || "";
+        return text ? { ok: true, text, model: CONFIG.model } : { ok: false, reason: apiError ? "upstream: " + apiError : "empty" };
       } catch {
         return { ok: false, reason: "network" };
       }
