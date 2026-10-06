@@ -1,14 +1,11 @@
-"""Ron orchestration core: memory -> context -> model -> verified learning."""
+"""Ron orchestration core: intent -> memory -> context -> model -> learning."""
 from __future__ import annotations
-
 from dataclasses import dataclass, field
-
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_fact
 from .memory import InMemoryStore
 from .self_improvement import Experience, SelfImprovementEngine
 from .tools import ToolRegistry
-
 
 @dataclass
 class RonCore:
@@ -18,7 +15,15 @@ class RonCore:
     self_improvement: SelfImprovementEngine = field(default_factory=SelfImprovementEngine)
 
     def respond(self, user_text: str) -> ModelResponse:
-        fact = extract_fact(user_text)
+        text = user_text.strip()
+        if not text:
+            return ModelResponse(
+                content="أنا رون. اكتب لي ما تريد.",
+                model="ron-core",
+                metadata={"runtime": "ron-0", "intent": "empty"},
+            )
+
+        fact = extract_fact(text)
         if fact is not None:
             self.memory.remember(fact.memory)
             return ModelResponse(
@@ -27,7 +32,7 @@ class RonCore:
                 metadata={"runtime": "ron-0", "memory_write": True, "fact_kind": fact.kind},
             )
 
-        remembered_answer = answer_fact_question(user_text, self.memory)
+        remembered_answer = answer_fact_question(text, self.memory)
         if remembered_answer is not None:
             return ModelResponse(
                 content=remembered_answer,
@@ -35,10 +40,17 @@ class RonCore:
                 metadata={"runtime": "ron-0", "memory_read": True},
             )
 
-        memories = self.memory.recall(user_text, limit=5)
-        context = tuple(Message(role="memory", content=item.content) for item in memories)
+        memories = self.memory.recall(text, limit=5)
+        memory_text = "\n".join(f"- {item.content}" for item in memories)
+        system_context = (
+            "أنت رون. استخدم الذاكرة التالية عند الحاجة، ولا تخترع معلومات غير موجودة.\n"
+            + (memory_text if memory_text else "- لا توجد ذكريات مرتبطة.")
+        )
         request = ModelRequest(
-            messages=context + (Message(role="user", content=user_text),),
+            messages=(
+                Message(role="system", content=system_context),
+                Message(role="user", content=text),
+            ),
             metadata={
                 "runtime": "ron-0",
                 "memory_hits": len(memories),
@@ -50,7 +62,7 @@ class RonCore:
         self.memory.remember(
             MemoryItem(
                 key=f"turn:{len(getattr(self.memory, 'items', {}))}",
-                content=user_text,
+                content=text,
                 metadata={"kind": "conversation"},
             )
         )
