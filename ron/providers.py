@@ -1,20 +1,30 @@
 """Model-provider abstractions for Ron.
 
-Ron can run with a deterministic local fallback. External providers are optional
-and must be injected explicitly; credentials never belong in source control.
+Ron defaults to a deterministic local provider. Real model adapters can be
+injected later without changing the core, and credentials stay outside source.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 from .contracts import ModelRequest, ModelResponse
 
+
 @dataclass(frozen=True)
 class LocalTeachingProvider:
-    """A tiny deterministic provider used before a real model is connected."""
+    """Deterministic offline provider used as a safe fallback."""
+
     name: str = "ron-local"
 
     def generate(self, request: ModelRequest) -> ModelResponse:
-        user = next((m.content for m in reversed(request.messages) if m.role == "user"), "")
-        metadata = {"mode": "local", "external_api_required": False}
+        user = next(
+            (message.content for message in reversed(request.messages) if message.role == "user"),
+            "",
+        )
+        metadata = {
+            "mode": "local",
+            "external_api_required": False,
+            "provider": self.name,
+        }
         if not user.strip():
             return ModelResponse(
                 content="أنا رون. علّمني ما تريد أن أتعلمه.",
@@ -27,9 +37,13 @@ class LocalTeachingProvider:
             metadata=metadata,
         )
 
+
 class ProviderRouter:
-    """Select an explicitly registered provider without exposing credentials."""
+    """Resolve only explicitly registered providers."""
+
     def __init__(self, default: str = "local") -> None:
+        if not default.strip():
+            raise ValueError("default provider cannot be empty")
         self._providers: dict[str, object] = {}
         self.default = default
 
@@ -45,3 +59,6 @@ class ProviderRouter:
         if selected not in self._providers:
             raise KeyError(f"unknown provider: {selected}")
         return self._providers[selected]
+
+    def names(self) -> tuple[str, ...]:
+        return tuple(sorted(self._providers))
