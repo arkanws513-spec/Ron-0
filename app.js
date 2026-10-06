@@ -179,16 +179,19 @@ if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsTeacher){
  try{
   const taught=await globalThis.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
   if(taught?.ok&&taught.text){
-    globalThis.RonQwenTeacher.saveLesson(taught.text);
     if(learning){
       r=String(r||"تم.");
-      r+= "\n\n🧠 إضافة المعلم Qwen:\n"+taught.text;
-    }else if(local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")) r=taught.text;
+      r+= "\n\n🧠 اقتراح من النموذج الأساسي Qwen:\n"+taught.text;
+      globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),"explicit-learning");
+    }else{
+      r=taught.text;
+      globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),"candidate");
+    }
   }else{
     r=local;
   }
  }catch(qwenError){
-  console.warn("Ron teacher unavailable; continuing locally",qwenError);
+  console.warn("Ron base model unavailable; continuing locally",qwenError);
   r=local;
  }
 }
