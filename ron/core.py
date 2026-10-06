@@ -65,7 +65,8 @@ class RonCore:
             if parsed is not None:
                 reasoning_facts.append(parsed)
         reasoning_result=self.reasoning.reason(reasoning_facts)
-        reasoning_summary=self.reasoning.summarize(reasoning_result)\n        memory_text="\n".join(f"- {item.content}" for item in related)
+        reasoning_summary=self.reasoning.summarize(reasoning_result)
+        memory_text="\n".join(f"- {item.content}" for item in related)
         recent=self.conversation.short_history()[-self.max_context_messages:]
         history_text="\n".join(f"{m.role}: {m.content}" for m in recent)
         system_context=(
