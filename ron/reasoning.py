@@ -176,7 +176,17 @@ class ReasoningEngine:
                 if a.subject == b.subject and a.relation == b.relation and a.object != b.object:
                     if a.relation in {"is", "has", "needs", "causes"}:
                         contradictions.append(Contradiction(self.describe_fact(a), self.describe_fact(b), "same subject/relation with different object"))
-        conclusion_text = tuple(self.describe_fact(f) for f in known)
+        # Prefer canonical entity names when a causal object is also represented
+        # as a subject elsewhere (e.g. "ازدحام" -> "الازدحام").
+        canonical = {}
+        for f in known:
+            canonical.setdefault(self._norm(f.subject), f.subject)
+        conclusion_text = tuple(
+            self.describe_fact(
+                Fact(f.subject, f.relation, canonical.get(self._norm(f.object), f.object), f.confidence, f.source)
+            )
+            for f in known
+        )
         confs = [f.confidence for f in known]
         result_conf = sum(confs) / len(confs) if confs else 0.0
         return ReasoningResult(
@@ -198,10 +208,11 @@ class ReasoningEngine:
             relation_words={"عاصمة":"is","عاصمه":"is","يسبب":"causes","تسبب":"causes","يدعم":"supports","تدعم":"supports","قبل":"precedes","يسبق":"precedes","بعد":"follows","يتبع":"follows","يحتاج":"needs"}
             relation=relation_words.get(m.group(1))
             if relation:
-                obj=m.group(2)
+                requested=f"{m.group(1)} {m.group(2)}"
+                obj=cls._norm(requested)
                 matches=[f for f in facts if f.relation==relation and cls._norm(f.object)==obj]
                 if matches:
-                    return f"{matches[-1].subject} {m.group(1)} {matches[-1].object}."
+                    return f"{matches[-1].subject} {requested}."
         m=re.match(r"^(?:هل|هل صحيح ان)\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج)\s+(.+)$", q)
         if m:
             rel={"يسبب":"causes","تسبب":"causes","يدعم":"supports","تدعم":"supports","قبل":"precedes","يسبق":"precedes","بعد":"follows","يتبع":"follows","يحتاج":"needs"}[m.group(2)]
