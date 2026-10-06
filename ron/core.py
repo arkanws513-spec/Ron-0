@@ -9,6 +9,7 @@ from .self_improvement import Experience, SelfImprovementEngine
 from .session import Conversation
 from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
+from .reasoning import ReasoningEngine
 
 @dataclass
 class RonCore:
@@ -19,6 +20,7 @@ class RonCore:
     conversation:Conversation=field(default_factory=lambda:Conversation(session_id="default"))
     max_context_messages:int=12
     understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
+    reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)
@@ -53,17 +55,29 @@ class RonCore:
         if remembered_answer is not None:
             return self._finish(text,remembered_answer,"ron-memory",{"runtime":"ron-0","memory_read":True})
         memories=self.memory.recall(text,limit=5)
-        related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories\n        memory_text="\n".join(f"- {item.content}" for item in related)
+        related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories
+        reasoning_facts=[]
+        current_fact=self.reasoning.parse_fact(text,source="user",confidence=intent_state.confidence or 0.5)
+        if current_fact is not None:
+            reasoning_facts.append(current_fact)
+        for item in related:
+            parsed=self.reasoning.parse_fact(item.content,source=item.key,confidence=float(item.metadata.get("confidence",0.6)))
+            if parsed is not None:
+                reasoning_facts.append(parsed)
+        reasoning_result=self.reasoning.reason(reasoning_facts)
+        reasoning_summary=self.reasoning.summarize(reasoning_result)\n        memory_text="\n".join(f"- {item.content}" for item in related)
         recent=self.conversation.short_history()[-self.max_context_messages:]
         history_text="\n".join(f"{m.role}: {m.content}" for m in recent)
         system_context=(
             "أنت رون. استخدم الذاكرة وسياق المحادثة عند الحاجة، ولا تخترع معلومات غير موجودة.\n"
             "الذاكرة ذات الصلة:\n"+(memory_text if memory_text else "- لا توجد ذكريات مرتبطة.")+
-            "\n\nسياق المحادثة الأخير:\n"+(history_text if history_text else "- لا يوجد سياق.")
+            "\n\nسياق المحادثة الأخير:\n"+(history_text if history_text else "- لا يوجد سياق.")+
+            "\n\nحالة الاستدلال الداخلية:\n"+reasoning_summary+
+            "\nملاحظة: هذه خلاصة استدلال منظمة وليست سلسلة التفكير الداخلية."
         )
         request=ModelRequest(
             messages=(Message(role="system",content=system_context),Message(role="user",content=text)),
-            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot())},
+            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence}},
         )
         try:
             response=self.provider.generate(request)
