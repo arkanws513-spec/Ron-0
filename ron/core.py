@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_fact
+from .intent import detect_intent
 from .memory import InMemoryStore
 from .self_improvement import Experience, SelfImprovementEngine
 from .tools import ToolRegistry
@@ -22,6 +23,13 @@ class RonCore:
                 model="ron-core",
                 metadata={"runtime": "ron-0", "intent": "empty"},
             )
+
+        intent = detect_intent(text)
+        if intent is not None:
+            if intent.name == "greeting":
+                return ModelResponse(content="أهلًا بك. أنا رون.", model="ron-core", metadata={"runtime": "ron-0", "intent": intent.name})
+            if intent.name == "assistant_identity":
+                return ModelResponse(content="أنا رون، مساعد مستقل قيد التطوير.", model="ron-core", metadata={"runtime": "ron-0", "intent": intent.name})
 
         fact = extract_fact(text)
         if fact is not None:
