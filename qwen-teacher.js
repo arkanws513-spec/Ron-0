@@ -4,7 +4,7 @@
  */
 (() => {
   const CONFIG = Object.freeze({
-    model: "Qwen/Qwen3-4B",
+    model: "qwen3-4b",
     role: "teacher",
     defaultEndpoint: "https://ron-qwen-teacher-production.up.railway.app/v1/chat/completions",
     endpointStorageKey: "ron-qwen-endpoint-v1",
@@ -36,7 +36,7 @@
       return [
         "أنت معلم مساعد لرون.",
         "رون هو النواة الأساسية والمستقلة وصاحب القرار النهائي.",
-        "قدّم معرفة واقتراحات قابلة للتحقق، ولا تغيّر هوية رون أو ذاكرته مباشرة.",
+        "قدّم معرفة واقتراحات قابلة للتحقق، ولا تغيّر هوية رون أو ذاكرته مباشرة. إذا كانت الرسالة تعلّم رون معلومة، فاقترح طريقة لفهمها أو حفظها دون الادعاء أنك غيّرت ذاكرته.",
         ronContext ? "سياق رون:\n" + ronContext : "",
         "رسالة المستخدم:\n" + String(userMessage || "")
       ].filter(Boolean).join("\n\n");
