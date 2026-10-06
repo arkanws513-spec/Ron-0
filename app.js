@@ -155,7 +155,11 @@ const contextualTopic=()=>{
  return value.length>120?value.slice(0,120)+"…":value;
 };
  const hit=localLessonAnswer(n);
- return hit||"وصلتني رسالتك. النواة المحلية تعمل، وما زالت طبقة النموذج المتقدم قيد البناء.";
+ if(hit)return hit;
+ if(/^(كيف حالك|اخبارك|عامل ايه|عامل ايه)$/.test(n))return"أنا بخير وأعمل الآن. ويمكنني متابعة الحديث معك حتى لو لم يتوفر المعلم الخارجي.";
+ if(/^(ماذا اعمل|ماذا يمكنني ان افعل|كيف تستطيع مساعدتي|كيف يمكنني مساعدتك)/.test(n))return"أستطيع مساعدتك في فهم المعلومات التي تعلمني إياها، تذكرها، ربطها ببعضها، وتحليل الأسئلة خطوة بخطوة.";
+ if(/^(لماذا|ليه|ازاي|كيف|ماذا|ما هو|ما هي|هل|هل يمكن|ممكن|عايز|اريد)/.test(n))return"سأحاول الإجابة اعتمادًا على ما أعرفه وما علّمتني إياه. وإذا لم تكن لدي معلومة كافية فسأخبرك بذلك بدل اختلاق إجابة.";
+ return"وصلتني رسالتك. النواة المحلية تعمل، وسأستمر في التفاعل حتى إذا لم يتوفر المعلم الخارجي.";
 };
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";send.disabled=true;send.classList?.add("thinking");send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";setTimeout(async()=>{try{let r=answer(t);const local=String(r||"");const n=norm(t);const simple=/^(مرحبا|اهلا|السلام عليكم)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n);const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);const followup=/^(طيب|طيب\s*؟|وبعدين|وماذا عنه|وماذا عنها|وهل|طب|طب\s*؟|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
 const needsTeacher=!simple; // Qwen may advise on every substantive turn, while Ron remains the owner of memory, identity, and final response.
@@ -164,19 +168,23 @@ if(!qwenEnabled()&&followup&&!localLessonAnswer(n)){
   if(topic) r="أفهم أنك تريد متابعة الحديث عن: "+topic+"، لكن النواة المحلية تحتاج معلومة أكثر لتحديد ما تقصده بدقة.";
 }
 if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsTeacher){
- const taught=await globalThis.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
- if(taught?.ok&&taught.text){
-   globalThis.RonQwenTeacher.saveLesson(taught.text);
-   if(learning){
-     r=String(r||"تم.");
-     r+= "\n\n🧠 إضافة المعلم Qwen:\n"+taught.text;
-   }else if(local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")) r=taught.text;
- }else{
-   // Qwen is advisory only: keep Ron's local answer when the teacher is unavailable.
-   r=local;
+ try{
+  const taught=await globalThis.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
+  if(taught?.ok&&taught.text){
+    globalThis.RonQwenTeacher.saveLesson(taught.text);
+    if(learning){
+      r=String(r||"تم.");
+      r+= "\n\n🧠 إضافة المعلم Qwen:\n"+taught.text;
+    }else if(local.includes("النواة المحلية تعمل")||local.includes("وصلتني رسالتك")) r=taught.text;
+  }else{
+    r=local;
+  }
+ }catch(qwenError){
+  console.warn("Ron teacher unavailable; continuing locally",qwenError);
+  r=local;
  }
 }
-if(!String(r||"").trim()||String(r).includes("ما زالت طبقة النموذج المتقدم قيد البناء")){const u=understanding(t);const topic=u.topic||t;r="وصلتني رسالتك وفهمت أن موضوعنا الآن هو: "+topic+"."+(u.followUp?" أنت تكمل حديثنا السابق، وسأتعامل معها كمتابعة للسياق.":" سأتعامل معها كنقطة بداية وأتفاعل معها حتى لو كان فهمي غير كامل.");}messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="حدث خطأ مؤقت داخل النواة المحلية. أعد إرسال الرسالة.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},4000+Math.floor(Math.random()*2001))};
+if(!String(r||"").trim()||String(r).includes("ما زالت طبقة النموذج المتقدم قيد البناء")){const u=understanding(t);const topic=u.topic||t;r="وصلتني رسالتك وفهمت أن موضوعنا الآن هو: "+topic+"."+(u.followUp?" أنت تكمل حديثنا السابق، وسأتعامل معها كمتابعة للسياق.":" سأتعامل معها كنقطة بداية وأتفاعل معها حتى لو كان فهمي غير كامل.");}messages.push({role:"ron",text:String(r||"حدث خطأ غير متوقع.")});bubble("ron",String(r||"حدث خطأ غير متوقع."));save();saveCurrent()}catch(err){console.error("Ron response error",err);const r="وصلتني رسالتك، لكن حدث خلل في جزء من المعالجة. سأستمر معك اعتمادًا على النواة المحلية.";messages.push({role:"ron",text:r});bubble("ron",r)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},4000+Math.floor(Math.random()*2001))};
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("start-ron")?.addEventListener("click",()=>{localStorage.setItem(S.started,"1");$("startup").classList.add("hidden");$("main-app").classList.remove("hidden");input.focus()});if(localStorage.getItem(S.started)==="1"){$("startup").classList.add("hidden");$("main-app").classList.remove("hidden")};$("menu").addEventListener("click",()=>{renderHistory();$("settings").classList.add("open")});$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));const renderHistory=()=>{const box=$("history-list");if(!box)return;box.replaceChildren();if(!conversations.length){const e=document.createElement("div");e.className="history-empty";e.textContent="لا توجد محادثات محفوظة بعد.";box.appendChild(e);return}conversations.slice().reverse().forEach(x=>{const b=document.createElement("button");b.type="button";b.className="history-item";b.textContent=x.title||"محادثة";b.addEventListener("click",()=>{messages=asMessages(x.messages);globalThis.ronConversationId=x.id;save();render();$("settings").classList.remove("open")});box.appendChild(b)})};$("new-chat").addEventListener("click",()=>{saveCurrent();messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];globalThis.ronConversationId=makeId();save();render();$("settings").classList.remove("open")});$("history-btn")?.addEventListener("click",()=>{$("history-list")?.classList.toggle("open");renderHistory()});
 const qwenEnabledInput=$("qwen-enabled"),qwenEndpointInput=$("qwen-endpoint"),qwenSave=$("qwen-save"),qwenStatus=$("qwen-status");
