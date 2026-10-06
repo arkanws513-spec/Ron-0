@@ -119,7 +119,11 @@ class ReasoningEngine:
     @classmethod
     def _entity_norm(cls, value: str) -> str:
         value = cls._norm(value)
-        return value.removeprefix("ال")
+        # Definite article and terminal accusative are surface variations in
+        # Arabic entity references, so inference can connect "ازدحاماً",
+        # "ازدحاما", "ازدحام" and "الازدحام".
+        value = value.removeprefix("ال")
+        return cls._norm(value)
 
     @classmethod
     def _match(cls, pattern: tuple[str, str, str], fact: Fact, bindings: dict[str, str]) -> dict[str, str] | None:
