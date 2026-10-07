@@ -30,15 +30,12 @@ const topicOf=()=>{const recent=messages.slice().reverse().find(m=>m.role==="use
 const resolveFollowUp=text=>{const n=norm(text);if(!/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع)(\s*[؟?])?$/.test(n))return null;return topicOf();};
 const relatedMemories=topic=>{if(!topic)return [];const q=new Set(topicTokens(topic));return lessons.map((x,i)=>{const t=new Set(topicTokens(x.text));let score=0;q.forEach(w=>{if(t.has(w))score++});if(x.key.startsWith("lesson:"))score+=0.1;return {x,score,i};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||b.i-a.i).slice(0,8).map(x=>x.x);};
 const understanding= text=>{const intent=analyzeIntent(text),follow=resolveFollowUp(text),topic=follow||topicOf()||String(text||"").trim(),related=relatedMemories(topic);return {intent,topic,shortHistory:messages.slice(-12).map(m=>(m.role==="ron"?"رون: ":"المستخدم: ")+m.text),longMemory:related.map(x=>x.key+": "+x.text),followUp:!!follow};};
-const qwenContext=()=>{const u=understanding(messages.filter(m=>m.role==="user").at(-1)?.text||"");const structured=["النية: "+u.intent,"موضوع الحديث: "+u.topic,"متابعة لسياق سابق: "+(u.followUp?"نعم":"لا"),"الذاكرة المرتبطة: "+(u.longMemory.join(" | ")||"لا توجد")].join("
-");
+const qwenContext=()=>{const u=understanding(messages.filter(m=>m.role==="user").at(-1)?.text||"");const structured=["النية: "+u.intent,"موضوع الحديث: "+u.topic,"متابعة لسياق سابق: "+(u.followUp?"نعم":"لا"),"الذاكرة المرتبطة: "+(u.longMemory.join(" | ")||"لا توجد")].join("\n");
  const local=lessons.slice(-18).map(x=>x.key+": "+x.text);
  const teacher=globalThis.RonQwenTeacher?.getLessons?.()||[];
  const learned=globalThis.RonLearning?.search?.(u.topic,10)||[];
  const recent=lessons.slice(-8).map(x=>x.text);
- return structured+"
-"+local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),learned.map(x=>"learned: "+x.text),recent.map(x=>"recent: "+x)).slice(-36).join("
-");
+ return structured+"\n"+local.concat(teacher.slice(-10).map(x=>"teacher: "+x.text),learned.map(x=>"learned: "+x.text),recent.map(x=>"recent: "+x)).slice(-36).join("\n");
 };
 const conversationHistory=()=>messages.slice(-14).map(m=>({role:m.role==="ron"?"assistant":"user",content:String(m.text||"")}));
 if(!messages.length){messages=asMessages(read(LEGACY.chat,[]));}
@@ -166,8 +163,7 @@ const answer=t=>{
  if(isAgeQuestion(n)){const x=lessons.find(x=>x.key==="user.age");return x?"عمرك "+x.text+" سنة.":"لم تخبرني بعمرك بعد.";}
  if(n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته"))return lessons.length?"هذه آخر تعليماتي المحفوظة:
 
-"+lessons.slice(-10).map((x,i)=>i+1+". "+x.text).join("
-"):"لم تعلّمني شيئًا بعد.";
+"+lessons.slice(-10).map((x,i)=>i+1+". "+x.text).join("\n"):"لم تعلّمني شيئًا بعد.";
  if(n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")){lessons=[];save();return"تم مسح الذاكرة التي علّمتني إياها."}
  const stopWords=new Set(["ما","ماذا","ماهي","ماهو","هي","هو","هل","من","في","عن","الى","هذا","هذه","ذلك","تلك","اي","اية","ايه","يا","رون","انا","ان","و","او","ال","هو","هي","الذي","التي","هل"]);
 const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
