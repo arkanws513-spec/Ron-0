@@ -142,7 +142,7 @@ const answer=t=>{
 const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
 const localLessonAnswer=n=>{
  const query=norm(n);
- const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\\s+(?:عاصمة|عاصمه)\\s+(.+?)[؟?]?$/);
+ const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+?)[؟?]?$/);
  if(capitalMatch){
   const place=cleanValue(capitalMatch[1]);
   const candidates=lessons.filter(x=>x.kind==="relation"&&x.relation==="capital_of"&&norm(x.object)===norm(place));
