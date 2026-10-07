@@ -249,7 +249,7 @@ async def run_provider_chain(messages: list[dict[str, str]], temperature: float,
                 import asyncio
                 result = await asyncio.wait_for(
                     asyncio.to_thread(ask_qwen_sync, messages, temperature, max_tokens),
-                    timeout=float(os.getenv("RON_QWEN_TIMEOUT_SECONDS", "24")),
+                    timeout=float(os.getenv("RON_QWEN_TIMEOUT_SECONDS", "12")),
                 )
             elif provider == "deepseek":
                 result = await ask_deepseek(messages, temperature, max_tokens)
