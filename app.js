@@ -16,6 +16,8 @@ if(localStorage.getItem("ron-runtime-clean-v1")!=="1"){
   localStorage.setItem("ron-runtime-clean-v1","1");
   try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
 }
+const LEARNING_CLEAN="ron-learning-clean-v1";
+if(localStorage.getItem(LEARNING_CLEAN)!=="1"){try{const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");if(raw&&Array.isArray(raw.knowledge)){raw.knowledge=raw.knowledge.filter(x=>x&&x.kind!=="response");localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));}}catch{}localStorage.setItem(LEARNING_CLEAN,"1");}
 const FACTS_MIGRATION="ron-facts-migration-v1";
 if(localStorage.getItem(FACTS_MIGRATION)!=="1"){lessons=lessons.filter(x=>x.key!=="user.name"&&x.key!=="user.age");localStorage.setItem(FACTS_MIGRATION,"1");}
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
