@@ -41,11 +41,20 @@ function createRuleNLU(cfg=DEFAULTS){
    if(m)return[{type:'ask',s:key(m[2]),p:m[1],sd:m[2],pd:m[1],text:c}];
    return[{type:'unknown',text:c,question:true}];
   }
-  const re=new RegExp('(?:^|\\s)و?('+pers+')(ي|ك)(?:\\s+(?:هو|هي|انت|انا))?\\s+(\\S+(?:\\s+\\S+){0,'+String(cfg.valueTokens.default-1)+'})');
-  const frames=[]; m=re.exec(n);
-  while(m){
-   const o=key(m[3]); if(o&&!['انت','انا','هو','هي'].includes(o))frames.push({type:'assert',s:m[2]==='ي'?'$user':'$self',p:m[1],o,sd:'',pd:m[1],od:m[3]});
-   const from=m.index+m[0].length; const rest=n.slice(from); const z=re.exec(rest); if(!z)break; m={...z,index:from+z.index};
+  const frames=[];
+  const re=new RegExp('(?:^|\\\\s)و?('+pers+')(ي|ك)(?:\\\\s+(?:هو|هي|انت|انا))?\\\\s+','g');
+  let hit;
+  while((hit=re.exec(n))){
+   const valueStart=hit.index+hit[0].length;
+   const rest=n.slice(valueStart);
+   const next=new RegExp('\\\\s+و?(?:'+pers+')(?:ي|ك)(?:\\\\s|$)');
+   const stop=next.exec(rest);
+   const raw=(stop?rest.slice(0,stop.index):rest).trim();
+   const max=cfg.valueTokens[hit[1]] ?? cfg.valueTokens.default;
+   const parts=raw.split(/\\\\s+/).slice(0,max);
+   const o=key(parts.join(' '));
+   if(o&&!['انت','انا','هو','هي'].includes(o))frames.push({type:'assert',s:hit[2]==='ي'?'$user':'$self',p:hit[1],o,sd:'',pd:hit[1],od:parts.join(' ')});
+   if(stop)re.lastIndex=valueStart+stop.index;
   }
   if(frames.length)return frames;
   m=/^(\S+)\s+(.+?)\s+(?:هي|هو)\s+(.+)$/.exec(n);
