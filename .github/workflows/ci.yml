@@ -31,7 +31,7 @@ jobs:
       - name: Validate browser JavaScript
         run: node --check app.js
       - name: Smoke-test browser runtime
-        run: node --test tests/test_frontend_runtime.mjs
+        run: node --test tests/test_frontend_runtime.mjs tests/test_reasoner_runtime.mjs
       - name: Validate repository
         shell: bash
         run: |
