@@ -25,8 +25,8 @@ app.add_middleware(
 
 # Qwen is Ron's local open-weight base model. No Qwen API key is required.
 MODEL_ID = os.getenv("RON_QWEN_MODEL", "Qwen/Qwen3-0.6B")
-MAX_NEW_TOKENS = min(max(int(os.getenv("RON_MAX_NEW_TOKENS", "384")), 64), 768)
-MAX_INPUT_CHARS = min(max(int(os.getenv("RON_MAX_INPUT_CHARS", "24000")), 4000), 60000)
+MAX_NEW_TOKENS = min(max(int(os.getenv("RON_MAX_NEW_TOKENS", "192")), 64), 512)
+MAX_INPUT_CHARS = min(max(int(os.getenv("RON_MAX_INPUT_CHARS", "12000")), 4000), 40000)
 MODEL_THREADS = min(max(int(os.getenv("RON_MODEL_THREADS", str(min(os.cpu_count() or 2, 4)))), 1), 16)
 try:
     torch.set_num_threads(MODEL_THREADS)
@@ -72,12 +72,21 @@ def load_model():
         if MODEL_REVISION:
             kwargs["revision"] = MODEL_REVISION
         _tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, **kwargs)
-        _model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=True,
-            **kwargs,
-        )
+        dtype = torch.bfloat16 if getattr(torch, "cpu", None) is not None and torch.backends.cpu.is_bf16_supported() else torch.float32
+        try:
+            _model = AutoModelForCausalLM.from_pretrained(
+                MODEL_ID,
+                torch_dtype=dtype,
+                low_cpu_mem_usage=True,
+                **kwargs,
+            )
+        except Exception:
+            _model = AutoModelForCausalLM.from_pretrained(
+                MODEL_ID,
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=True,
+                **kwargs,
+            )
         _model.eval()
 
 
@@ -235,9 +244,13 @@ async def run_provider_chain(messages: list[dict[str, str]], temperature: float,
     for provider in PROVIDER_ORDER:
         try:
             if provider == "qwen":
-                # Keep the CPU model isolated from the async event loop.
+                # Keep the CPU model isolated from the async event loop and do not let
+                # a slow first-load/generation block the external fallback engines.
                 import asyncio
-                result = await asyncio.to_thread(ask_qwen_sync, messages, temperature, max_tokens)
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(ask_qwen_sync, messages, temperature, max_tokens),
+                    timeout=float(os.getenv("RON_QWEN_TIMEOUT_SECONDS", "24")),
+                )
             elif provider == "deepseek":
                 result = await ask_deepseek(messages, temperature, max_tokens)
             elif provider == "gemini":
