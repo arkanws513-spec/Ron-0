@@ -17,13 +17,15 @@
     maxConcepts: 300
   });
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
+  const DEFAULT_ENDPOINT=CONFIG.defaultEndpoint;
+  const endpointIsValid=url=>/^https:\/\/ron-qwen-teacher-production\.up\.railway\.app\/v1\/chat\/completions\/?$/.test(String(url||"").trim());
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
   const normalizeMessages=history=>Array.isArray(history)?history.filter(x=>x&&(x.role==="user"||x.role==="assistant")&&typeof x.content==="string").slice(-CONFIG.maxHistory):[];
   window.RonQwenTeacher=Object.freeze({
     config:CONFIG,
-    isEnabled(){return read(CONFIG.enabledStorageKey,true)===true},
+    isEnabled(){return read(CONFIG.enabledStorageKey,true)!==false},
     setEnabled(value){write(CONFIG.enabledStorageKey,Boolean(value))},
-    getEndpoint(){return String(read(CONFIG.endpointStorageKey,CONFIG.defaultEndpoint)).trim()},
+    getEndpoint(){const saved=String(read(CONFIG.endpointStorageKey,DEFAULT_ENDPOINT)).trim();return endpointIsValid(saved)?saved:DEFAULT_ENDPOINT},
     setEndpoint(url){write(CONFIG.endpointStorageKey,String(url||CONFIG.defaultEndpoint).trim())},
     getLessons(){const value=read(CONFIG.lessonsStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxLessons):[]},
     saveLesson(text){const value=String(text||"").trim();if(!value)return false;const lessons=this.getLessons().filter(x=>x.text!==value);lessons.push({text:value,at:new Date().toISOString(),source:CONFIG.model});write(CONFIG.lessonsStorageKey,lessons.slice(-CONFIG.maxLessons));return true},
@@ -69,7 +71,7 @@
       if(!this.isEnabled())return{ok:false,reason:"disabled"};
       const endpoint=this.getEndpoint();if(!endpoint)return{ok:false,reason:"no-endpoint"};
       try{
-        const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),30000);
+        const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),60000);
         const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},signal:controller.signal,body:JSON.stringify({model:CONFIG.model,messages:this.buildMessages(userMessage,ronContext,history),temperature:.35,stream:false})});
         clearTimeout(timeout);
         let data=null;try{data=await response.json()}catch{data=null}
