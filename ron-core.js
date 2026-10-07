@@ -42,16 +42,16 @@ function createRuleNLU(cfg=DEFAULTS){
    return[{type:'unknown',text:c,question:true}];
   }
   const frames=[];
-  const re=new RegExp('(?:^|\\\\s)و?('+pers+')(ي|ك)(?:\\\\s+(?:هو|هي|انت|انا))?\\\\s+','g');
+  const re=new RegExp('(?:^|\\s)و?('+pers+')(ي|ك)(?:\\s+(?:هو|هي|انت|انا))?\\s+','g');
   let hit;
   while((hit=re.exec(n))){
    const valueStart=hit.index+hit[0].length;
    const rest=n.slice(valueStart);
-   const next=new RegExp('\\\\s+و?(?:'+pers+')(?:ي|ك)(?:\\\\s|$)');
+   const next=new RegExp('\\s+و?(?:'+pers+')(?:ي|ك)(?:\\s|$)');
    const stop=next.exec(rest);
    const raw=(stop?rest.slice(0,stop.index):rest).trim();
    const max=cfg.valueTokens[hit[1]] ?? cfg.valueTokens.default;
-   const parts=raw.split(/\\\\s+/).slice(0,max);
+   const parts=raw.split(/\\s+/).slice(0,max);
    const o=key(parts.join(' '));
    if(o&&!['انت','انا','هو','هي'].includes(o))frames.push({type:'assert',s:hit[2]==='ي'?'$user':'$self',p:hit[1],o,sd:'',pd:hit[1],od:parts.join(' ')});
    if(stop)re.lastIndex=valueStart+stop.index;
@@ -155,6 +155,7 @@ class RonCore{
  async runSearch(q){let timer;const timeout=new Promise(r=>timer=setTimeout(()=>r(null),this.cfg.searchTimeoutMs));try{return await Promise.race([Promise.resolve().then(()=>this.searchTool(q)),timeout]);}catch{return null;}finally{clearTimeout(timer);}}
 }
 
-if(typeof module!=='undefined'&&module.exports)module.exports={RonCore,FactStore,Reasoner,createRuleNLU,DEFAULT_RULES,MemoryAdapter,JsonFileAdapter,LocalStorageAdapter,clean,normalize,key,arithmetic,evaluateResult};\nif(typeof globalThis!=='undefined'){globalThis.RonCore=RonCore;globalThis.RonCoreAdapters={MemoryAdapter,JsonFileAdapter,LocalStorageAdapter};}
+if(typeof module!=='undefined'&&module.exports)module.exports={RonCore,FactStore,Reasoner,createRuleNLU,DEFAULT_RULES,MemoryAdapter,JsonFileAdapter,LocalStorageAdapter,clean,normalize,key,arithmetic,evaluateResult};
+if(typeof globalThis!=='undefined'){globalThis.RonCore=RonCore;globalThis.RonCoreAdapters={MemoryAdapter,JsonFileAdapter,LocalStorageAdapter};}
 
 if(typeof require==='function'&&typeof module!=='undefined'&&require.main===module){const readline=require('readline');const core=new RonCore({adapter:new JsonFileAdapter(process.argv[2]||'./ron-data.json')});const rl=readline.createInterface({input:process.stdin,output:process.stdout,prompt:'أنت> '});console.log('رون جاهز. (Ctrl+C للخروج)');rl.prompt();(async()=>{for await(const line of rl){if(line.trim())console.log('رون> '+(await core.handle(line)).reply);rl.prompt();}})();}
