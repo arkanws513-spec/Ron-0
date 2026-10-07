@@ -14,7 +14,10 @@ const patterns=[
  [/^(.+?)\s+(يحتاج|يحتاج الى|يحتاج الي)\s+(.+)$/,"needs"],
  [/^(.+?)\s+(جزء من|ضمن|ينتمي الى)\s+(.+)$/,"part_of"]
 ];
-const parse=s=>{const original=clean(s),n=norm(original);for(const [p,r] of patterns){const m=n.match(p);if(m)return{subject:clean(m[1]),relation:r,object:clean(m[3]),surface:m[2],source:"local",confidence:.8,text:original,derived:false}}return null};
+const parse=s=>{const original=clean(s),n=norm(original);
+ let m=n.match(/^عاصمة\s+(.+?)\s+(?:هي|هو)\s+(.+)$/);if(m)return{subject:clean(m[2]),relation:"is",object:clean(m[1]),surface:"هي عاصمة",source:"local",confidence:.9,text:original,derived:false};
+ m=n.match(/^(.+?)\s+(?:هي|هو)\s+عاصمة\s+(.+)$/);if(m)return{subject:clean(m[1]),relation:"is",object:clean(m[2]),surface:"هي عاصمة",source:"local",confidence:.9,text:original,derived:false};
+ for(const [p,r] of patterns){m=n.match(p);if(m)return{subject:clean(m[1]),relation:r,object:clean(m[3]),surface:m[2],source:"local",confidence:.8,text:original,derived:false}}return null};
 const parseAll=items=>items.flatMap(x=>{const f=parse(x?.text||x);return f?[f]:[]});
 const key=f=>norm(f.subject)+"|"+f.relation+"|"+norm(f.object);
 const derive=facts=>{
