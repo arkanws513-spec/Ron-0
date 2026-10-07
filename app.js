@@ -41,6 +41,8 @@ const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push(
 const extractFacts=t=>{
  const n=norm(t).replace(/^\.\s*/,"");
  const facts=[];
+ let both=n.match(/^اسمي\s+(.+?)\s*[،,]\s*(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
+ if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});}
  let m=n.match(/(?:^|\s)(?:انا\s+)?(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?=\s|$)/);
  if(!m)m=n.match(/(?:^|\s)(?:انا\s+)?(\d{1,3})\s*(?:عام|سنة|سنين)(?=\s|$)/);
  if(m){const age=Number(m[1]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
