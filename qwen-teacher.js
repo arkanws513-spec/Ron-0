@@ -4,7 +4,7 @@
  */
 (() => {
   const CONFIG = Object.freeze({
-    model: "qwen3-4b",
+    model: "Qwen/Qwen3-0.6B",
     role: "base-model",
     defaultEndpoint: "https://ron-qwen-teacher-production.up.railway.app/v1/chat/completions",
     endpointStorageKey: "ron-qwen-endpoint-v2",
@@ -60,7 +60,7 @@
     exportTrainingDataset(){return this.getTrainingExamples().filter(x=>x.status==="approved").map(x=>({messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}]}));},
     buildMessages(userMessage,ronContext="",history=[]){
       const system=[
-        "أنت Qwen3، النموذج الأساسي للغة والاستدلال داخل رون.",
+        "أنت Qwen، النموذج الأساسي للغة والاستدلال داخل رون.",
         "رون هو النواة الأساسية والمستقلة وصاحب القرار النهائي، وليس تابعًا لـ Qwen أو OpenAI أو Google أو أي جهة أخرى.",
         "افهم الرسالة الحالية بالاعتماد على سياق المحادثة والذاكرة المقدمة.",
         "حافظ على اتساق الأسماء والحقائق والموضوع الجاري، وافهم الأسئلة المختصرة مثل: طيب؟ وماذا عنه؟ بالرجوع إلى السياق.",
