@@ -64,6 +64,12 @@ const extractFacts=t=>{
  return facts;
 };
 const extractFact=t=>extractFacts(t)[0]||null;
+const browserReasoningAnswer=(text)=>{
+ const engine=globalThis.RonReasoner;
+ if(!engine)return null;
+ const facts=engine.reason(engine.parseAll(lessons));
+ return engine.answer(text,facts);
+};
 const extractRonFacts=t=>{
  const n=norm(t),facts=[];
  let m=n.match(/(?:تذكر|سجل|احفظ|تعلم)\s+(?:ان\s+)?(?:عمرك|سنك|عمر رون)\s+(?:هو\s+)?(.+)$/);
@@ -120,12 +126,6 @@ const answer=t=>{
  if(n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")){lessons=[];save();return"تم مسح الذاكرة التي علّمتني إياها."}
  const stopWords=new Set(["ما","ماذا","ماهي","ماهو","هي","هو","هل","من","في","عن","الى","هذا","هذه","ذلك","تلك","اي","اية","ايه","يا","رون","انا","ان","و","او","ال","هو","هي","الذي","التي","هل"]);
 const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
-const browserReasoningAnswer=(text)=>{
- const engine=globalThis.RonReasoner;
- if(!engine)return null;
- const facts=engine.reason(engine.parseAll(lessons));
- return engine.answer(text,facts);
-};
 const localLessonAnswer=n=>{
  const query=norm(n);
  const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+?)[؟?]?$/);
@@ -193,7 +193,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  }
  if(String(r).trim()&&!learning&&!/^لا أملك محركًا/.test(String(r))) globalThis.RonLearning?.addExperience?.(t,String(r),"conversation",.5);
  messages.push({role:"ron",text:String(r)});bubble("ron",String(r));save();saveCurrent();
-}catch(err){console.error("Ron response error",err);const fallback=browserReasoningAnswer(t)?.answer||"حدث خطأ في نواة المعالجة المحلية.";messages.push({role:"ron",text:fallback});bubble("ron",fallback)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset.originalText||"إرسال";input.focus?.()}},80)};
+}catch(err){console.error("Ron response error",err);const fallback=browserReasoningAnswer(t)?.answer||"حدث خطأ في نواة المعالجة المحلية.";messages.push({role:"ron",text:fallback});bubble("ron",fallback)}finally{send.disabled=false;send.classList?.remove("thinking");send.textContent=send.dataset?.originalText||"إرسال";input.focus?.()}},80)};
 form.addEventListener("submit",e=>{e.preventDefault();sendMessage()});
 send.addEventListener("click",e=>{e.preventDefault();sendMessage()});input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"});input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
 $("start-ron")?.addEventListener("click",()=>{localStorage.setItem(S.started,"1");$("startup").classList.add("hidden");$("main-app").classList.remove("hidden");input.focus()});if(localStorage.getItem(S.started)==="1"){$("startup").classList.add("hidden");$("main-app").classList.remove("hidden")};$("menu").addEventListener("click",()=>{renderHistory();$("settings").classList.add("open")});$("close-settings").addEventListener("click",()=>$("settings").classList.remove("open"));const renderHistory=()=>{const box=$("history-list");if(!box)return;box.replaceChildren();if(!conversations.length){const e=document.createElement("div");e.className="history-empty";e.textContent="لا توجد محادثات محفوظة بعد.";box.appendChild(e);return}conversations.slice().reverse().forEach(x=>{const b=document.createElement("button");b.type="button";b.className="history-item";b.textContent=x.title||"محادثة";b.addEventListener("click",()=>{messages=asMessages(x.messages);globalThis.ronConversationId=x.id;save();render();$("settings").classList.remove("open")});box.appendChild(b)})};$("new-chat").addEventListener("click",()=>{saveCurrent();messages=[{role:"ron",text:"بدأنا محادثة جديدة. كيف يمكنني مساعدتك؟"}];globalThis.ronConversationId=makeId();save();render();$("settings").classList.remove("open")});$("history-btn")?.addEventListener("click",()=>{$("history-list")?.classList.toggle("open");renderHistory()});
