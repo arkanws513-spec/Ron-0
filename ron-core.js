@@ -1,7 +1,7 @@
 'use strict';
 
 /* Ron Core v2: one brain, memory + reasoning + web orchestration. Node 18+, zero dependencies. */
-const fs=require('fs');
+const fs=typeof require==='function'?require('fs'):null;
 
 const DIACRITICS=/[\u064B-\u065F\u0670\u0640]/g;
 const MAP={'أ':'ا','إ':'ا','آ':'ا','ى':'ي','ة':'ه'};
@@ -155,6 +155,6 @@ class RonCore{
  async runSearch(q){let timer;const timeout=new Promise(r=>timer=setTimeout(()=>r(null),this.cfg.searchTimeoutMs));try{return await Promise.race([Promise.resolve().then(()=>this.searchTool(q)),timeout]);}catch{return null;}finally{clearTimeout(timer);}}
 }
 
-module.exports={RonCore,FactStore,Reasoner,createRuleNLU,DEFAULT_RULES,MemoryAdapter,JsonFileAdapter,clean,normalize,key,arithmetic,evaluateResult};
+if(typeof module!=='undefined'&&module.exports)module.exports={RonCore,FactStore,Reasoner,createRuleNLU,DEFAULT_RULES,MemoryAdapter,JsonFileAdapter,LocalStorageAdapter,clean,normalize,key,arithmetic,evaluateResult};\nif(typeof globalThis!=='undefined'){globalThis.RonCore=RonCore;globalThis.RonCoreAdapters={MemoryAdapter,JsonFileAdapter,LocalStorageAdapter};}
 
-if(require.main===module){const readline=require('readline');const core=new RonCore({adapter:new JsonFileAdapter(process.argv[2]||'./ron-data.json')});const rl=readline.createInterface({input:process.stdin,output:process.stdout,prompt:'أنت> '});console.log('رون جاهز. (Ctrl+C للخروج)');rl.prompt();(async()=>{for await(const line of rl){if(line.trim())console.log('رون> '+(await core.handle(line)).reply);rl.prompt();}})();}
+if(typeof require==='function'&&typeof module!=='undefined'&&require.main===module){const readline=require('readline');const core=new RonCore({adapter:new JsonFileAdapter(process.argv[2]||'./ron-data.json')});const rl=readline.createInterface({input:process.stdin,output:process.stdout,prompt:'أنت> '});console.log('رون جاهز. (Ctrl+C للخروج)');rl.prompt();(async()=>{for await(const line of rl){if(line.trim())console.log('رون> '+(await core.handle(line)).reply);rl.prompt();}})();}
