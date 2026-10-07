@@ -138,8 +138,7 @@ const answer=t=>{
  if(/^(ماذا تستطيع|ايه اللي تقدر تعمله|ماذا يمكنك ان تفعل|ماذا يمكنك|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(n))return "أستطيع فهم المحادثة، حفظ ما تعلّمني إياه، استخدام معرفتي المحلية، إجراء استدلال بسيط، والبحث في الإنترنت عندما أحتاج معلومة غير موجودة لدي. وويمكنني الاعتماد على نواتي المحلية والبحث في الإنترنت عند الحاجة.";
  if(/^(عظيم|رائع|ممتاز|جميل|جيد جدا|جيد جدًا|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً)$/.test(n))return "شكرًا! أنا جاهز نكمل.";
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
- if(isRonNameStatement(n))return "صحيح. اسمي رون، وأنت صاحب الاسم الذي أخبرتني به.";
- if(isRonNameStatement(n))return "صحيح. اسمي رون، وأنت صاحب الاسم الذي أخبرتني به.";\n if(ronFacts.length&&!isRonNameQuestion(n)&&!isRonAgeQuestion(n)&&!isNameQuestion(n)&&!isAgeQuestion(n)){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
+ if(ronFacts.length&&!isRonNameQuestion(n)&&!isRonAgeQuestion(n)&&!isNameQuestion(n)&&!isAgeQuestion(n)){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
  if(isBothNamesQuestion(n)){
   const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
   return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+", "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
