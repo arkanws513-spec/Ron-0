@@ -80,6 +80,30 @@ const extractFacts=t=>{
 const extractFact=t=>extractFacts(t)[0]||null;
 const browserReasoningAnswer=(text)=>{
  const engine=globalThis.RonReasoner;
+ const localCoreAnswer=()=>{
+  const q=norm(text).replace(/[؟?]+$/,"").trim();
+  const learned=globalThis.RonLearning?.search?.(q,30)||[];
+  const all=[...learned,...(globalThis.RonLearning?.get?.()?.knowledge||[])];
+  const seen=new Set();
+  const facts=all.filter(x=>{const k=String(x.text||"");if(seen.has(k))return false;seen.add(k);return true;});
+  let m=q.match(/^(?:ما|ايه|اي)\s+(?:هي\s+)?عاصمة\s+(.+)$/);
+  if(m){
+   const country=cleanValue(m[1]);
+   const hit=facts.find(x=>{const s=norm(x.text);return new RegExp("^(.+?)\\s+(?:هي\\s+)?عاصمة\\s+"+country+"$").test(s)||new RegExp("^عاصمة\\s+"+country+"\\s+(?:هي\\s+)?(.+)$").test(s);});
+   if(hit){const s=norm(hit.text);let z=s.match(new RegExp("^(.+?)\\s+(?:هي\\s+)?عاصمة\\s+"+country+"$"));const city=z?z[1]:s.match(new RegExp("^عاصمة\\s+"+country+"\\s+(?:هي\\s+)?(.+)$"))?.[1];if(city)return{answer:city+" هي عاصمة "+country+".",confidence:hit.confidence??.9,source:hit.source||"ron-core"};}
+  }
+  for(const x of facts){
+   const s=norm(x.text);
+   let z=s.match(/^(.+?)\s+(?:هي|هو)\s+(.+)$/);
+   if(z&&q.match(/^(?:ما هو|ماهي|ما هي|ماهو)\s+/)){
+    const subject=q.replace(/^(?:ما هو|ماهي|ما هي|ماهو)\s+/,"").trim();
+    if(norm(z[2])===subject)return{answer:z[1]+".",confidence:x.confidence??.9,source:x.source||"ron-core"};
+   }
+  }
+  return null;
+ };
+ const core=localCoreAnswer();
+ if(core?.answer)return core;
  if(!engine)return null;
  const facts=engine.reason(engine.parseAll(lessons));
  return engine.answer(text,facts);
