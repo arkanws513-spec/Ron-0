@@ -26,6 +26,13 @@ app.add_middleware(
 # Qwen is Ron's local open-weight base model. No Qwen API key is required.
 MODEL_ID = os.getenv("RON_QWEN_MODEL", "Qwen/Qwen3-0.6B")
 MAX_NEW_TOKENS = min(max(int(os.getenv("RON_MAX_NEW_TOKENS", "384")), 64), 768)
+MAX_INPUT_CHARS = min(max(int(os.getenv("RON_MAX_INPUT_CHARS", "24000")), 4000), 60000)
+MODEL_THREADS = min(max(int(os.getenv("RON_MODEL_THREADS", str(min(os.cpu_count() or 2, 4)))), 1), 16)
+try:
+    torch.set_num_threads(MODEL_THREADS)
+    torch.set_num_interop_threads(1)
+except RuntimeError:
+    pass
 MODEL_REVISION = os.getenv("RON_QWEN_REVISION", "")
 
 # Optional external reasoning engines. Keys stay server-side in Railway.
@@ -96,6 +103,8 @@ def build_messages(body: dict[str, Any]):
                 for part in content
             )
         content = str(content or "").strip()
+        if len(content) > MAX_INPUT_CHARS:
+            content = content[-MAX_INPUT_CHARS:]
         if content:
             normalized.append({"role": role, "content": content})
     return normalized
