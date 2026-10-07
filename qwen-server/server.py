@@ -43,7 +43,7 @@ DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
 PROVIDER_ORDER = [
     x.strip().lower()
-    for x in os.getenv("RON_PROVIDER_ORDER", "qwen,deepseek,gemini").split(",")
+    for x in os.getenv("RON_PROVIDER_ORDER", "deepseek,qwen,gemini").split(",")
     if x.strip()
 ]
 
