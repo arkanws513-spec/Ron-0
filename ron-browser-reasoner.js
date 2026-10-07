@@ -27,7 +27,7 @@ const derive=facts=>{
   let changed=false;
   for(const f of [...out])if(inverse[f.relation])changed=add(f.object,inverse[f.relation],f.subject,f,"inverse")||changed;
   for(const rel of ["precedes","follows","causes","supports","needs","part_of"]){
-   const same=out.filter(x=>x.relation===rel);
+   const same=rel==="precedes"||rel==="follows"?out.filter(x=>x.relation===rel):[];
    for(const a of same)for(const b of same)if(norm(a.object)===norm(b.subject)&&norm(a.subject)!==norm(b.object))changed=add(a.subject,rel,b.object,a,"chain")||changed;
   }
   if(!changed)break;
@@ -38,7 +38,7 @@ const relMap={"يسبب":"causes","تسبب":"causes","يدعم":"supports","ت�
 const question=q=>{
  const n=norm(q).replace(/[؟?]+$/,"").trim();let m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+)$/);
  if(m)return{type:"capital",relation:"is",object:clean(m[1])};
- m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ايه|اي)\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
+ m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ما الذي|ايه|اي)\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
  if(m)return{type:"relation",relation:relMap[m[2]],subject:clean(m[1]),object:clean(m[3]),word:m[2]};
  m=n.match(/^هل\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
  if(m)return{type:"yesno",relation:relMap[m[2]],subject:clean(m[1]),object:clean(m[3])};
