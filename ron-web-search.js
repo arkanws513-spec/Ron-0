@@ -17,12 +17,15 @@ const wiki=async(q,lang)=>{const url="https://"+lang+".wikipedia.org/w/api.php?a
 const ddg=async q=>{const d=await timeout("https://api.duckduckgo.com/?q="+enc(q)+"&format=json&no_html=1&skip_disambig=1");const out=[];if(d?.AbstractText)out.push({title:d.Heading||q,extract:clean(d.AbstractText),url:d.AbstractURL||"https://duckduckgo.com/?q="+enc(q),source:"DuckDuckGo"});for(const x of (d?.RelatedTopics||[]).slice(0,5))if(x?.Text)out.push({title:x.Text.split(" - ")[0]||q,extract:clean(x.Text),url:x.FirstURL||"https://duckduckgo.com/?q="+enc(q),source:"DuckDuckGo"});return out};
 const answer=async query=>{
  const q=clean(query);if(!q)return null;
- const settled=await Promise.allSettled([wiki(q,"ar"),wiki(q,"en"),ddg(q)]);
+ // For capital questions, search for the country itself and prefer extracts that explicitly identify its capital.
+ const cap=q.match(/^(?:ما\s+(?:هي|هو)|ماهي|ماهو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+?)[؟?]?$/i);
+ const searchQ=cap?clean(cap[1]):q;
+ const settled=await Promise.allSettled([wiki(searchQ,"ar"),wiki(searchQ,"en"),ddg(searchQ)]);
  const results=settled.flatMap(x=>x.status==="fulfilled"?x.value:[]);
  const unique=[],seen=new Set();
  for(const r of results){const key=(r.url||r.title).toLowerCase();if(!seen.has(key)){seen.add(key);unique.push(r)}}
  if(!unique.length)return null;
- const ranked=unique.map((r,i)=>({...r,answer:concise(q,r.extract),score:scoreSentence(q,r.extract)+(r.source==="Wikipedia"?1:0)-i*.01})).filter(r=>r.answer);
+ const ranked=unique.map((r,i)=>{const answer=concise(q,r.extract);let score=scoreSentence(q,r.extract)+(r.source==="Wikipedia"?1:0)-i*.01;if(cap&&/(عاصمة|capital)\s*(?:هي|is)?\s*|عاصمة\s+.+\s+هي|capital\s+of/i.test(r.extract))score+=5;return {...r,answer,score};}).filter(r=>r.answer);
  ranked.sort((a,b)=>b.score-a.score||a.answer.length-b.answer.length);
  const best=ranked[0];
  return best?{answer:best.answer,source:best.source,title:best.title,url:best.url,results:ranked.slice(0,8).map(({answer,source,title,url})=>({answer,source,title,url}))}:null;
