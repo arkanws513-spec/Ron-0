@@ -1,7 +1,7 @@
 /* Ron Agent Core — orchestration layer
  * Independent control layer: intent, memory retrieval, deterministic reasoning,
  * uncertainty handling and safe routing between local knowledge, web search and
- * optional language models. External models never own Ron's identity or memory.
+ * deterministic local reasoning. Ron remains one core.
  */
 (()=>{"use strict";
 const norm=s=>String(s||"").toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
@@ -42,7 +42,7 @@ const api={
  },
  plan(q){
    const intent=this.classify(q), calc=arithmetic(q);
-   return {intent,steps:calc?["local-arithmetic"]:intent==="question"?["local-memory","optional-model","web-search","local-reasoning"]:["local"]};
+   return {intent,steps:calc?["local-arithmetic"]:intent==="question"?["local-memory","local-reasoning","web-search"]:["local"]};
  },
  answer(q){
    const calc=arithmetic(q); if(calc!==null)return"النتيجة: "+calc;
