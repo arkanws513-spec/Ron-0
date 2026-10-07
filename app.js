@@ -1,9 +1,9 @@
 (() => {
-const S={chat:"ron-chat-v4",lessons:"ron-lessons-v4",convos:"ron-conversations-v1",started:"ron-started-v1"},LEGACY={chat:"ron-chat-v3",lessons:"ron-lessons-v3"},$=id=>document.getElementById(id),chat=$("chat"),form=$("composer"),input=$("input"),send=$("send");
+const S={chat:"ron-chat-v5",lessons:"ron-lessons-v5",convos:"ron-conversations-v2",started:"ron-started-v1"},LEGACY={chat:"ron-chat-v4",lessons:"ron-lessons-v4",convos:"ron-conversations-v1"},$=id=>document.getElementById(id),chat=$("chat"),form=$("composer"),input=$("input"),send=$("send");
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 const asMessages=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.role==="string"&&typeof x.text==="string"):[];
 const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&typeof x.text==="string"):[];
-let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];
+let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];\n// One-time migration: keep user facts/explicit lessons, but discard stale model-generated replies from the old runtime.\nif(localStorage.getItem("ron-runtime-clean-v1")!=="1"){\n  const oldChat=asMessages(read("ron-chat-v4",[]));\n  const oldLessons=asLessons(read("ron-lessons-v4",[]));\n  if(!messages.length)messages=oldChat;\n  lessons=lessons.filter(x=>x.kind!=="response"&&x.kind!=="model-response");\n  const explicit=oldLessons.filter(x=>x.kind==="relation"||x.kind==="lesson"||x.key==="user.name"||x.key==="user.age"||x.key==="ron.name"||x.key==="ron.age");\n  lessons=[...lessons,...explicit.filter(x=>!lessons.some(y=>y.key===x.key&&y.text===x.text))].slice(-500);\n  localStorage.removeItem("ron-chat-v3");localStorage.removeItem("ron-lessons-v3");\n  localStorage.setItem("ron-runtime-clean-v1","1");\n  try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}\n}
 const FACTS_MIGRATION="ron-facts-migration-v1";
 if(localStorage.getItem(FACTS_MIGRATION)!=="1"){lessons=lessons.filter(x=>x.key!=="user.name"&&x.key!=="user.age");localStorage.setItem(FACTS_MIGRATION,"1");}
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
@@ -126,35 +126,7 @@ const answer=t=>{
  if(n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")){lessons=[];save();return"تم مسح الذاكرة التي علّمتني إياها."}
  const stopWords=new Set(["ما","ماذا","ماهي","ماهو","هي","هو","هل","من","في","عن","الى","هذا","هذه","ذلك","تلك","اي","اية","ايه","يا","رون","انا","ان","و","او","ال","هو","هي","الذي","التي","هل"]);
 const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>=2&&!stopWords.has(w));
-const localLessonAnswer=n=>{
- const query=norm(n);
- const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+?)[؟?]?$/);
- if(capitalMatch){
-  const place=cleanValue(capitalMatch[1]);
-  const candidates=lessons.filter(x=>x.kind==="relation"&&x.relation==="capital_of"&&norm(x.object)===norm(place));
-  const best=candidates[candidates.length-1];
-  if(best)return best.subject+" هي عاصمة "+best.object+".";
- }
- const q=tokens(query); if(!q.length)return null;
- let best=null,bestScore=0,bestIndex=-1;
- lessons.forEach((x,index)=>{
-   const text=norm(x.text||"");
-   const lt=tokens(text);
-   let score=0;
-   if(text===query)score+=20;
-   if(text.includes(query)&&query.length>=4)score+=18;
-   for(let size=Math.min(6,q.length);size>=2;size--){
-     for(let i=0;i<=q.length-size;i++){
-       const phrase=q.slice(i,i+size).join(" ");
-       if(phrase&&text.includes(phrase))score+=size*4;
-     }
-   }
-   score+=q.reduce((sum,w)=>sum+(lt.includes(w)?1:0),0);
-   if(x.key.startsWith("lesson:"))score+=0.2;
-   if(score>bestScore||(score===bestScore&&index>bestIndex)){bestScore=score;best=x;bestIndex=index;}
- });
- return best&&bestScore>=2?best.text:null;
-};
+const localLessonAnswer=n=>{\n const query=norm(n);\n const capitalMatch=query.match(/^(?:ما هي|ماهو|ما هو|ايه|اي)\\s+(?:عاصمة|عاصمه)\\s+(.+?)[؟?]?$/);\n if(capitalMatch){\n  const place=cleanValue(capitalMatch[1]);\n  const candidates=lessons.filter(x=>x.kind===\"relation\"&&x.relation===\"capital_of\"&&norm(x.object)===norm(place));\n  const best=candidates[candidates.length-1];\n  if(best)return best.subject+\" هي عاصمة \"+best.object+\".\";\n }\n return null;\n};
 const contextualTopic=()=>{
  const recent=messages.slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5);
  if(!recent)return null;
