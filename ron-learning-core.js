@@ -22,7 +22,7 @@ bootstrap();\nconst api={
    v.experiences.push({input:i,output:o,source,confidence,at:new Date().toISOString()});v.experiences=v.experiences.slice(-MAX);
    v.stats.interactions=(v.stats.interactions||0)+1;write(v);return true},
  reinforce(text,delta=.05){const v=read(),q=clean(text).toLowerCase();const k=v.knowledge.find(x=>clean(x.text).toLowerCase()===q);if(k)k.confidence=Math.max(0,Math.min(1,(k.confidence??.5)+delta));write(v);return !!k},
- search(query,limit=12){const v=read(),q=clean(query).toLowerCase();if(!q)return[];
+ search(query,limit=12){bootstrap();const v=read(),q=clean(query).toLowerCase();if(!q)return[];
    const words=q.split(" ").filter(x=>x.length>2);return v.knowledge.map((x,i)=>{const t=clean(x.text).toLowerCase();let s=t===q?20:(t.includes(q)?10:0);for(const w of words)if(t.includes(w))s++;return{x,s,i}}).filter(z=>z.s>0).sort((a,b)=>b.s-a.s||b.i-a.i).slice(0,limit).map(z=>z.x)},
  summary(){const v=read();return{knowledge:v.knowledge.length,experiences:v.experiences.length,interactions:v.stats.interactions||0}}
 };
