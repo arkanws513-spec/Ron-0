@@ -21,7 +21,7 @@ if(localStorage.getItem(LEARNING_CLEAN)!=="1"){try{const raw=JSON.parse(localSto
 const FACTS_MIGRATION="ron-facts-migration-v1";
 if(localStorage.getItem(FACTS_MIGRATION)!=="1"){lessons=lessons.filter(x=>x.key!=="user.name"&&x.key!=="user.age");localStorage.setItem(FACTS_MIGRATION,"1");}
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
-const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const qwenEnabled=()=>true;
+const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const qwenEnabled=()=>true;\nconst webSearchEnabled=()=>!!globalThis.RonWebSearch;
 const downloadText=(name,text,mime="application/jsonl")=>{const blob=new Blob([text],{type:mime+";charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 const analyzeIntent=text=>{const n=norm(text);if(/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع)$/.test(n))return "follow_up";if(/^(مرحبا|اهلا|السلام عليكم)/.test(n))return "greeting";if(isNameQuestion(n)||isAgeQuestion(n))return "profile";if(/^(ليه|لماذا|ازاي|كيف|ماذا|ما هو|ما هي|هل|هل يمكن|عايز|اريد|ممكن)/.test(n))return "question";if(/\?$/.test(String(text).trim())||/[؟?]/.test(text))return "question";if(/^عل[ّ]?م رون/.test(n))return "learning";return "statement";};
 const topicTokens=text=>tokens(String(text||"")).filter(x=>x.length>2);
@@ -159,10 +159,12 @@ const localLessonAnswer=n=>{
 };
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  let r=answer(t);
+ let webResult=null;
  const local=String(r||"").trim();
  const n=norm(t);
+ if(!local&&webSearchEnabled()){try{webResult=await globalThis.RonWebSearch.answer(t);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
  const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);
- const needsModel=!local||/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
+ const needsModel=!String(r||"").trim()&&!webResult&&/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
  if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsModel){
    try{
      const taught=await globalThis.RonQwenTeacher.ask(t,qwenContext(),conversationHistory());
@@ -178,7 +180,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
    if(semantic)r=semantic;
  }
  if(!String(r||"").trim()){
-   r="لا أملك محركًا لغويًا متاحًا الآن لتكوين رد جديد لهذه الرسالة. ذاكرة رون لم تتوقف، ويمكن متابعة المحادثة بعد عودة أحد محركات الاستدلال.";
+   r="لا أعلم هذه المعلومة بعد.";
  }
  if(String(r).trim()&&!learning&&!/^لا أملك محركًا/.test(String(r))) globalThis.RonLearning?.addExperience?.(t,String(r),"conversation",.5);
  messages.push({role:"ron",text:String(r)});bubble("ron",String(r));save();saveCurrent();
