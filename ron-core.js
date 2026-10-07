@@ -18,7 +18,7 @@ const DEFAULTS={
  bareNames:true, searchTimeoutMs:8000, autoSearch:true, minSearchConfidence:.68,
  maxAnswerChars:1400
 };
-const STATE=new Set('بخير جيد تمام طيب جائع تعبان سعيد حزين متعب مشغول'.split(' '));
+const STATE=new Set('بخير جيد تمام طيب جائع تعبان سعيد حزين متعب مشغول افكر افكرُ افكر فيه'.split(' '));
 const QSTART=/^(?:ما|ماذا|ماهو|ماهي|من|كيف|هل|اين|متى|كم|لماذا|ليه|ازاي)(?:\s|$)/;
 
 function createRuleNLU(cfg=DEFAULTS){
@@ -26,6 +26,9 @@ function createRuleNLU(cfg=DEFAULTS){
  const fillers=new Set(['يا','طيب','اذا','ان','تعلم','اعلم','تذكر','اوكي','حسنا',key(cfg.selfName)]);
  const parse=text=>{
   const c=clean(text),n0=normalize(c); let n=n0,t=c;
+  // Direct conversational forms must be recognized before filler removal.
+  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
   while(true){const m=/^(\S+)\s+/.exec(n);if(!m||!fillers.has(m[1]))break;n=n.slice(m[0].length);t=t.slice(m[0].length);}
   if(!n)return[{type:'unknown',text:c}];
   if(/^(?:كيف\s+(?:حالك|الحال)|كيفك|شلونك|شخبارك)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'howareyou'}];
@@ -60,7 +63,7 @@ function createRuleNLU(cfg=DEFAULTS){
   m=/^(\S+)\s+(.+?)\s+(?:هي|هو)\s+(.+)$/.exec(n);
   if(m)return[{type:'assert',s:key(m[2]),p:m[1],o:key(m[3]),sd:m[2],pd:m[1],od:m[3]}];
   m=/^(انا|انت)\s+(\S+)$/.exec(n);
-  if(cfg.bareNames&&m&&!STATE.has(m[2]))return[{type:'assert',s:m[1]==='انا'?'$user':'$self',p:'اسم',o:key(m[2]),sd:'',pd:'اسم',od:m[2]}];
+  if(cfg.bareNames&&m&&!STATE.has(m[2])&&m[2].length>=2)return[{type:'assert',s:m[1]==='انا'?'$user':'$self',p:'اسم',o:key(m[2]),sd:'',pd:'اسم',od:m[2]}];
   return[{type:'unknown',text:c}];
  };
  return{parse};
