@@ -31,7 +31,8 @@ const context = {
   localStorage: {
     getItem:k=>storage.has(k)?storage.get(k):null,
     setItem:(k,v)=>storage.set(k,v),
-    clear:()=>storage.clear()
+    clear:()=>storage.clear(),
+    removeItem:k=>storage.delete(k)
   },
   console,
   setTimeout: fn => { fn(); return 1; },
