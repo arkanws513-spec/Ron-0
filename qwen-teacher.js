@@ -39,23 +39,14 @@
       write(CONFIG.trainingStorageKey,examples);
       return true;
     },
-    exportTrainingCandidatesJSONL(){
-      return this.getTrainingExamples().map(x=>JSON.stringify({
-        messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}],
-        status:x.status,source:x.source,at:x.at
-      })).join("\n");
-    },
-    exportApprovedTrainingJSONL(){
-      return this.exportTrainingDataset().map(x=>JSON.stringify(x)).join("\n");
-    },
+    exportTrainingCandidatesJSONL(){return this.getTrainingExamples().map(x=>JSON.stringify({messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}],status:x.status,source:x.source,at:x.at})).join("\n");},
+    exportApprovedTrainingJSONL(){return this.exportTrainingDataset().map(x=>JSON.stringify(x)).join("\n");},
     learnFromQwen(user,assistant,context=""){const u=String(user||"").trim(),a=String(assistant||"").trim();if(!u||!a)return false;this.recordTrainingExample(u,a,context,"candidate",this.lastProvider||CONFIG.model);return true},
     recordTrainingExample(user,assistant,context,status="candidate",source=CONFIG.model){
-      const u=String(user||"").trim(),a=String(assistant||"").trim();
-      if(!u||!a)return false;
+      const u=String(user||"").trim(),a=String(assistant||"").trim();if(!u||!a)return false;
       const examples=this.getTrainingExamples().filter(x=>!(x.user===u&&x.assistant===a));
       examples.push({user:u,assistant:a,context:String(context||""),status,source:String(source||CONFIG.model),at:new Date().toISOString()});
-      write(CONFIG.trainingStorageKey,examples.slice(-CONFIG.maxTrainingExamples));
-      return true;
+      write(CONFIG.trainingStorageKey,examples.slice(-CONFIG.maxTrainingExamples));return true;
     },
     exportTrainingDataset(){return this.getTrainingExamples().filter(x=>x.status==="approved").map(x=>({messages:[{role:"user",content:x.user},{role:"assistant",content:x.assistant}]}));},
     buildMessages(userMessage,ronContext="",history=[]){
@@ -72,15 +63,11 @@
       const learned=globalThis.RonLearning?.search?.(userMessage,12)||[];
       const learnedText=learned.map(x=>`- ${x.text} (confidence ${Number(x.confidence??.5).toFixed(2)})`).join("\n");
       const systemWithLearning=system+(concepts?"\n\nمعرفة متراكمة من رون:\n"+concepts:"")+(learnedText?"\n\nمعرفة مسترجعة من ذاكرة التعلّم:\n"+learnedText:"");
-      const messages=[{role:"system",content:systemWithLearning}];
-      messages.push(...normalizeMessages(history));
-      messages.push({role:"user",content:String(userMessage||"")});
-      return messages;
+      const messages=[{role:"system",content:systemWithLearning}];messages.push(...normalizeMessages(history));messages.push({role:"user",content:String(userMessage||"")});return messages;
     },
     async ask(userMessage,ronContext="",history=[]){
       if(!this.isEnabled())return{ok:false,reason:"disabled"};
-      const endpoint=this.getEndpoint();
-      if(!endpoint)return{ok:false,reason:"no-endpoint"};
+      const endpoint=this.getEndpoint();if(!endpoint)return{ok:false,reason:"no-endpoint"};
       try{
         const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({model:CONFIG.model,messages:this.buildMessages(userMessage,ronContext,history),temperature:.35,stream:false})});
         let data=null;try{data=await response.json()}catch{data=null}
@@ -88,7 +75,8 @@
         const raw=data?.choices?.[0]?.message?.content??data?.output_text??data?.response??"";
         const text=Array.isArray(raw)?raw.map(x=>typeof x==="string"?x:(x?.text||x?.content||"")).join("").trim():String(raw||"").trim();
         if(!text){const message=data?.error?.message||data?.message||"";return{ok:false,reason:message?"upstream: "+message:"empty"}}
-        this.lastProvider=String(data?.provider||"qwen");\n        return{ok:true,text,model:String(data?.model||CONFIG.model),provider:this.lastProvider,fallbackUsed:Boolean(data?.fallback_used)}
+        this.lastProvider=String(data?.provider||"qwen");
+        return{ok:true,text,model:String(data?.model||CONFIG.model),provider:this.lastProvider,fallbackUsed:Boolean(data?.fallback_used)}
       }catch(error){return{ok:false,reason:"network: "+(error?.message||"request failed")}}
     }
   });
