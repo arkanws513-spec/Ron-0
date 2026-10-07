@@ -7,7 +7,7 @@ const DIACRITICS=/[\u064B-\u065F\u0670\u0640]/g;
 const MAP={'أ':'ا','إ':'ا','آ':'ا','ى':'ي','ة':'ه'};
 const PUNCT=/[.!?؟,،;؛:"«»()\[\]{}]/g;
 const clean=s=>String(s??'').replace(DIACRITICS,'').replace(/\s+/g,' ').trim();
-const normalize=s=>clean(s).replace(PUNCT,' ').replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[\s\S]/g,c=>MAP[c]||c.toLowerCase()).replace(/\s+/g,' ').trim();
+const normalize=s=>clean(s).replace(PUNCT,' ').replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[\s\S]/g,c=>MAP[c]||c.toLowerCase()).replace(/\bت\s+علم\b/g,'تعلم').replace(/\s+/g,' ').trim();
 const key=normalize;
 const STOP=new Set('ما ماذا ماهو ماهي هل هو هي من في عن الى هذا هذه ذلك تلك اي ايه يا رون انا انت ان و او ال التي الذي كان كانت مع على ثم قد لقد لم لن'.split(' '));
 const CONTEXT_WORDS=new Set('فوق قبل سابق السابق السابقه سابقا ذلك ذلكك هذه هذا عنه عنها فيه فيها منهم منه بها به قول كلام رسالة سؤال اجابة'.split(' '));
@@ -35,7 +35,7 @@ function createRuleNLU(cfg=DEFAULTS){
   if(!n)return[{type:'unknown',text:c}];
   if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
   if(/^(?:انظر|بص|شوف)\s+(?:لما|ما)\s+(?:قلته|قلت\ه|قولته)\s+(?:فوق|قبل)$/.test(n0)||/^(?:ماذا|ما)\s+(?:قلت|قلته)\s+(?:فوق|قبل)$/.test(n0))return[{type:'context',kind:'previous'}];
-  if(/^(?:ماذا|ما)\s+(?:تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0))return[{type:'context',kind:'learned'}];
+  if(/^(?:ماذا|ما)\s+(?:تعلم|تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0)return[{type:'context',kind:'learned'}];
   if(/^(?:كيف\s+(?:حالك|الحال)|كيفك|شلونك|شخبارك)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'howareyou'}];
   if(/^(?:مرحبا|اهلا|هلا|سلام|السلام\s+عليكم|صباح\s+الخير|مساء\s+الخير)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'greet'}];
   let m=/^(?:ابحث|دور|فتش)(?:\s+لي)?(?:\s+عن(ها|هم|ه)?(?:\s+(.+))?)?$/.exec(n);
