@@ -5,10 +5,14 @@
  */
 (()=>{"use strict";
 const KEY="ron-learning-core-v1",MAX=600;
+const BOOTSTRAP_KEY="ron-bootstrap-knowledge-v1";
+const BOOTSTRAP=[
+["مصر عاصمتها القاهرة.","geography"],["الماء يتكون من الهيدروجين والأكسجين.","science"],["الأرض تدور حول الشمس.","science"],["القمر يدور حول الأرض.","science"],["الماء يغلي عند نحو 100 درجة مئوية عند مستوى سطح البحر.","science"],["الماء يتجمد عند نحو 0 درجة مئوية عند الضغط الجوي المعتاد.","science"],["الشمس نجم.","astronomy"],["المريخ أحد كواكب المجموعة الشمسية.","astronomy"],["اللغة العربية من اللغات السامية.","language"],["الجمع بين المعلومة ومصدرها أفضل من حفظ معلومة بلا مصدر.","learning"]];
 const read=()=>{try{const v=JSON.parse(localStorage.getItem(KEY));return v&&typeof v==="object"?v:{knowledge:[],experiences:[],stats:{}}}catch{return{knowledge:[],experiences:[],stats:{}}}};
+const bootstrap=()=>{try{if(localStorage.getItem(BOOTSTRAP_KEY))return;const v=read();for(const [text,domain] of BOOTSTRAP){if(!v.knowledge.some(k=>clean(k.text).toLowerCase()===text.toLowerCase()))v.knowledge.push({text,domain,source:"ron-bootstrap",confidence:.85,at:new Date().toISOString()});}v.knowledge=v.knowledge.slice(-MAX);write(v);localStorage.setItem(BOOTSTRAP_KEY,"1")}catch{}};
 const write=v=>{try{localStorage.setItem(KEY,JSON.stringify(v))}catch{}};
 const clean=s=>String(s||"").trim().replace(/\s+/g," ");
-const api={
+bootstrap();\nconst api={
  get(){return read()},
  addKnowledge(item){const v=read(),x={...item,text:clean(item.text),at:new Date().toISOString()};if(!x.text)return false;
    const sig=clean(x.text).toLowerCase();v.knowledge=v.knowledge.filter(k=>clean(k.text).toLowerCase()!==sig);
