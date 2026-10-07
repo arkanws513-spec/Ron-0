@@ -119,9 +119,9 @@ const extractRonFacts=t=>{
  if(m){const v=cleanValue(m[1]);if(v)facts.push({key:"ron.name",text:v});}
  return facts;
 };
-const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n);
+const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n)||/^انت\s+رون$/.test(n);
 const isNameQuestion=n=>n.includes("ما اسمي")||n.includes("ايه اسمي")||n.includes("اي اسمي")||n.includes("هل تتذكر اسمي");
-const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("ما هو اسمك")||n==="وانت"||n==="وانت؟";
+const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("اي اسمك")||n.includes("ما هو اسمك")||n.includes("اسمك اي")||n.includes("اسمك ايه")||n==="وانت"||n==="وانت؟";
 const isBothNamesQuestion=n=>n.includes("ما اسمي وما اسمك")||n.includes("اسمي واسمك")||n.includes("ما اسمي واسمك");
 const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");
 const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
@@ -142,7 +142,7 @@ const answer=t=>{
  if(/^(مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا)([!！،,. ]*)$/.test(n))return "مرحبًا. أنا رون، وجاهز لمساعدتك.";
  if(/^(ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)([؟? !،,.]*)$/.test(n))return "أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟";
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
- if(ronFacts.length){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
+ if(isRonNameQuestion(n)||isRonAgeQuestion(n)||isNameQuestion(n)||isAgeQuestion(n)){} else if(ronFacts.length){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
  if(isBothNamesQuestion(n)){
   const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
   return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+", "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
@@ -189,7 +189,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  let webResult=null;
  const local=String(r||"").trim();
  const n=norm(t);
- if(!local&&webSearchEnabled()){try{webResult=await globalThis.RonWebSearch.answer(t);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
+ const shouldWebSearch=webSearchEnabled()&&(analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"||/^ابحث|^دورلي|^ابحث لي|^ابحث عن/.test(n));\n if(!local&&shouldWebSearch){try{webResult=await globalThis.RonWebSearch.answer(t);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
  const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);
  const needsModel=!String(r||"").trim()&&!webResult&&/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|ماذا تقصد|وضح|اشرح اكثر|كمل|تابع)$/i.test(n);
  if(qwenEnabled()&&globalThis.RonQwenTeacher&&needsModel){
