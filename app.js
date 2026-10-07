@@ -169,8 +169,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
      if(taught?.ok&&taught.text){
        r=taught.text;
        globalThis.RonQwenTeacher.recordTrainingExample?.(t,taught.text,qwenContext(),learning?"explicit-learning":"candidate");
-       globalThis.RonLearning?.addExperience?.(t,taught.text,"model-response",.55);
-       globalThis.RonLearning?.addKnowledge?.({text:taught.text,source:taught.model||"model",confidence:.55,kind:"response"});
+       // Model output is never promoted to reusable knowledge automatically; this prevents canned-answer loops.
      }
    }catch(error){console.warn("Model chain unavailable; using Ron local reasoning",error);}
  }
