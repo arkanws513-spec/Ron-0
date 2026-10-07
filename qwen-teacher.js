@@ -69,7 +69,9 @@
       if(!this.isEnabled())return{ok:false,reason:"disabled"};
       const endpoint=this.getEndpoint();if(!endpoint)return{ok:false,reason:"no-endpoint"};
       try{
-        const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({model:CONFIG.model,messages:this.buildMessages(userMessage,ronContext,history),temperature:.35,stream:false})});
+        const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),30000);
+        const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},signal:controller.signal,body:JSON.stringify({model:CONFIG.model,messages:this.buildMessages(userMessage,ronContext,history),temperature:.35,stream:false})});
+        clearTimeout(timeout);
         let data=null;try{data=await response.json()}catch{data=null}
         if(!response.ok){const message=data?.error?.message||data?.message||("HTTP "+response.status);return{ok:false,reason:"upstream: "+message}}
         const raw=data?.choices?.[0]?.message?.content??data?.output_text??data?.response??"";
@@ -77,7 +79,7 @@
         if(!text){const message=data?.error?.message||data?.message||"";return{ok:false,reason:message?"upstream: "+message:"empty"}}
         this.lastProvider=String(data?.provider||"qwen");
         return{ok:true,text,model:String(data?.model||CONFIG.model),provider:this.lastProvider,fallbackUsed:Boolean(data?.fallback_used)}
-      }catch(error){return{ok:false,reason:"network: "+(error?.message||"request failed")}}
+      }catch(error){return{ok:false,reason:error?.name==="AbortError"?"network: request timeout":"network: "+(error?.message||"request failed")}}
     }
   });
 })();
