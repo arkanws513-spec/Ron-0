@@ -148,7 +148,7 @@ class RonCore{
  async integrateSearch(p,r){
   const e=evaluateResult(r,this.ctx.pending?.text||this.ctx.history.at(-1)?.text);if(!e)return null;
   if(this.answerModel)try{const m=await this.answerModel({question:this.ctx.pending?.text,evidence:[e],history:this.ctx.history.slice(-8)});if(m?.answer){this.ctx.pending=null;return clean(m.answer).slice(0,this.cfg.maxAnswerChars);}}catch(err){this.store.event('model_error',{message:String(err?.message||err)});}
-  if(this.ctx.pending?.s&&e.score>=this.cfg.minSearchConfidence){const p=this.ctx.pending;this.store.set(p.s,p.p,key(e.answer),{source:e.confidence>=.85?'official':'search',confidence:e.confidence,sd:p.sd,pd:p.pd,od:e.answer});this.ctx.pending=null;}
+  if(this.ctx.pending?.s&&(e.score>=this.cfg.minSearchConfidence||e.confidence>=.85)){const p=this.ctx.pending;this.store.set(p.s,p.p,key(e.answer),{source:e.confidence>=.85?'official':'search',confidence:e.confidence,sd:p.sd,pd:p.pd,od:e.answer});this.ctx.pending=null;}
   this.store.event('search',{query:this.ctx.pending?.text||this.ctx.history.at(-1)?.text,source:e.source,confidence:e.confidence});
   return e.answer+'\n(المصدر: '+e.source+')';
  }
