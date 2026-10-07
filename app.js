@@ -3,7 +3,7 @@ const S={chat:"ron-chat-v4",lessons:"ron-lessons-v4",convos:"ron-conversations-v
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 const asMessages=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.role==="string"&&typeof x.text==="string"):[];
 const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&typeof x.text==="string"):[];
-let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];
+let messages=asMessages(read(S.chat,null)),lessons=asLessons(read(S.lessons,null)),conversations=Array.isArray(read(S.convos,[]))?read(S.convos,[]):[];\nconst FACTS_MIGRATION="ron-facts-migration-v1";\nif(localStorage.getItem(FACTS_MIGRATION)!=="1"){lessons=lessons.filter(x=>x.key!=="user.name"&&x.key!=="user.age");localStorage.setItem(FACTS_MIGRATION,"1");}
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const qwenEnabled=()=>globalThis.RonQwenTeacher?.isEnabled?.()!==false;
 const downloadText=(name,text,mime="application/jsonl")=>{const blob=new Blob([text],{type:mime+";charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
@@ -151,7 +151,7 @@ const localLessonAnswer=n=>{
    if(x.key.startsWith("lesson:"))score+=0.2;
    if(score>bestScore||(score===bestScore&&index>bestIndex)){bestScore=score;best=x;bestIndex=index;}
  });
- return best&&bestScore>=2?"أتذكر تعليمك: "+best.text:null;
+ return best&&bestScore>=2?best.text:null;
 };
 const contextualTopic=()=>{
  const recent=messages.slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5);
