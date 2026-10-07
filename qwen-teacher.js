@@ -25,7 +25,7 @@
     config:CONFIG,
     isEnabled(){return read(CONFIG.enabledStorageKey,true)!==false},
     setEnabled(value){write(CONFIG.enabledStorageKey,Boolean(value))},
-    getEndpoint(){const saved=String(read(CONFIG.endpointStorageKey,DEFAULT_ENDPOINT)).trim();if(/(^|\.)railway\.app$/i.test(new URL(saved).hostname)||/railway\.app/i.test(saved)){try{localStorage.removeItem(CONFIG.endpointStorageKey)}catch{};return DEFAULT_ENDPOINT}return endpointIsValid(saved)?saved:DEFAULT_ENDPOINT},
+    getEndpoint(){const saved=String(read(CONFIG.endpointStorageKey,DEFAULT_ENDPOINT)).trim();if(/railway\.app/i.test(saved)){try{localStorage.removeItem(CONFIG.endpointStorageKey)}catch{};return DEFAULT_ENDPOINT}return endpointIsValid(saved)?saved:DEFAULT_ENDPOINT},
     setEndpoint(url){write(CONFIG.endpointStorageKey,String(url||CONFIG.defaultEndpoint).trim())},
     getLessons(){const value=read(CONFIG.lessonsStorageKey,[]);return Array.isArray(value)?value.slice(-CONFIG.maxLessons):[]},
     saveLesson(text){const value=String(text||"").trim();if(!value)return false;const lessons=this.getLessons().filter(x=>x.text!==value);lessons.push({text:value,at:new Date().toISOString(),source:CONFIG.model});write(CONFIG.lessonsStorageKey,lessons.slice(-CONFIG.maxLessons));return true},
