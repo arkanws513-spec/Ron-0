@@ -72,7 +72,15 @@ def load_model():
         if MODEL_REVISION:
             kwargs["revision"] = MODEL_REVISION
         _tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, **kwargs)
-        dtype = torch.bfloat16 if getattr(torch, "cpu", None) is not None and torch.backends.cpu.is_bf16_supported() else torch.float32
+        dtype = torch.float32
+        try:
+            cpu_backend = getattr(torch.backends, "cpu", None)
+            if cpu_backend is not None:
+                checker = getattr(cpu_backend, "is_bf16_supported", None)
+                if callable(checker) and checker():
+                    dtype = torch.bfloat16
+        except Exception:
+            dtype = torch.float32
         try:
             _model = AutoModelForCausalLM.from_pretrained(
                 MODEL_ID,
