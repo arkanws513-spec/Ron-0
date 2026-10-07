@@ -10,6 +10,8 @@ const clean=s=>String(s??'').replace(DIACRITICS,'').replace(/\s+/g,' ').trim();
 const normalize=s=>clean(s).replace(PUNCT,' ').replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[\s\S]/g,c=>MAP[c]||c.toLowerCase()).replace(/\s+/g,' ').trim();
 const key=normalize;
 const STOP=new Set('ما ماذا ماهو ماهي هل هو هي من في عن الى هذا هذه ذلك تلك اي ايه يا رون انا انت ان و او ال التي الذي كان كانت مع على ثم قد لقد لم لن'.split(' '));
+const CONTEXT_WORDS=new Set('فوق قبل سابق السابق السابقه سابقا ذلك ذلكك هذه هذا عنه عنها فيه فيها منهم منه بها به قول كلام رسالة سؤال اجابة'.split(' '));
+const normalizeContextText=s=>normalize(s).replace(/\s+/g,' ').trim();
 const words=s=>normalize(s).split(' ').filter(x=>x&&x.length>1&&!STOP.has(x));
 const overlap=(a,b)=>{const A=new Set(words(a));if(!A.size)return 0;let n=0;for(const x of words(b))if(A.has(x))n++;return n/A.size;};
 
@@ -31,6 +33,9 @@ function createRuleNLU(cfg=DEFAULTS){
   if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
   while(true){const m=/^(\S+)\s+/.exec(n);if(!m||!fillers.has(m[1]))break;n=n.slice(m[0].length);t=t.slice(m[0].length);}
   if(!n)return[{type:'unknown',text:c}];
+  if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
+  if(/^(?:انظر|بص|شوف)\s+(?:لما|ما)\s+(?:قلته|قلت\ه|قولته)\s+(?:فوق|قبل)$/.test(n0)||/^(?:ماذا|ما)\s+(?:قلت|قلته)\s+(?:فوق|قبل)$/.test(n0))return[{type:'context',kind:'previous'}];
+  if(/^(?:ماذا|ما)\s+(?:تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0))return[{type:'context',kind:'learned'}];
   if(/^(?:كيف\s+(?:حالك|الحال)|كيفك|شلونك|شخبارك)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'howareyou'}];
   if(/^(?:مرحبا|اهلا|هلا|سلام|السلام\s+عليكم|صباح\s+الخير|مساء\s+الخير)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'greet'}];
   let m=/^(?:ابحث|دور|فتش)(?:\s+لي)?(?:\s+عن(ها|هم|ه)?(?:\s+(.+))?)?$/.exec(n);
@@ -136,11 +141,27 @@ class RonCore{
   if(opts.seed!==false)for(const x of SEED)this.store.set(key(x[0]),key(x[1]),key(x[2]),{source:'seed',confidence:.9,sd:x[0],pd:x[1],od:x[2],persist:false});
   this.store.save();
  }
- async handle(text){const input=clean(text);if(!input)return{reply:'اكتب رسالة أولًا.',frames:[]};this.ctx.history.push({role:'user',text:input,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();const frames=this.nlu.parse(input),out=[];for(const f of frames)out.push(await this.exec(f));const reply=out.filter(Boolean).join('\n');this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});return{reply,frames};}
+ async handle(text){const input=clean(text);if(!input)return{reply:'اكتب رسالة أولًا.',frames:[]};this.ctx.history.push({role:'user',text:input,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();const frames=this.nlu.parse(input),out=[];for(const f of frames)out.push(await this.exec(f));const reply=out.filter(Boolean).join('\n');this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});
+  globalThis.RonLearning?.addExperience?.(input,reply,'conversation',.65);
+  return{reply,frames};}
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
  async exec(f){
-  if(f.type==='smalltalk')return f.kind==='howareyou'?'أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟':'مرحبًا، كيف أساعدك؟';
-  if(f.type==='assert'){const r=this.store.set(f.s,f.p,f.o,{sd:f.sd,pd:f.pd,od:f.od});const line=this.phrase(f.s,f.p,f.o);if(r.status==='unchanged')return'أعرف ذلك بالفعل: '+line+'.';if(r.status==='replaced')return'تم، حدّثتها: '+line+' (كانت: '+this.store.display(r.prev)+').';return'تم. '+line+'.';}
+  if(f.type==='smalltalk')return f.kind==='howareyou'?'أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟':f.kind==='call'?'نعم، أنا معك.':'مرحبًا، كيف أساعدك؟';
+  if(f.type==='context'){
+   if(f.kind==='previous'){
+    const h=this.ctx.history.filter(x=>x.role==='user');
+    const prev=h.length>1?h[h.length-2]:null;
+    return prev?`آخر شيء قلته قبل رسالتك الحالية كان: «${prev.text}»`:'لا توجد رسالة سابقة أستطيع الرجوع إليها بعد.';
+   }
+   const facts=this.store.facts.filter(x=>x.source!=='seed');
+   const learned=[];
+   for(const fct of facts)learned.push(this.phrase(fct.s,fct.p,fct.o));
+   const knowledge=globalThis.RonLearning?.get?.()?.knowledge||[];
+   for(const x of knowledge.slice(-20))if(x?.text)learned.push(clean(x.text));
+   const unique=[...new Set(learned)].slice(-12);
+   return unique.length?'نعم، لدي معرفة محفوظة من محادثاتك وتعليماتك. من أمثلتها:\n'+unique.map((x,i)=>`${i+1}. ${x}`).join('\n'):'لم أتعلم معلومات شخصية أو تعليمات جديدة بعد.';
+  }
+  if(f.type==='assert'){const r=this.store.set(f.s,f.p,f.o,{sd:f.sd,pd:f.pd,od:f.od});globalThis.RonLearning?.addKnowledge?.({text:this.phrase(f.s,f.p,f.o),kind:'fact',source:'conversation',confidence:1});const line=this.phrase(f.s,f.p,f.o);if(r.status==='unchanged')return'أعرف ذلك بالفعل: '+line+'.';if(r.status==='replaced')return'تم، حدّثتها: '+line+' (كانت: '+this.store.display(r.prev)+').';return'تم. '+line+'.';}
   if(f.type==='ask'){
    const calc=arithmetic(f.text);if(calc!==null)return'النتيجة: '+calc;
    const local=this.reasoner.ask(f.s,f.p);if(local){this.ctx.pending=null;return this.phrase(f.s,f.p,local.o)+'.';}
