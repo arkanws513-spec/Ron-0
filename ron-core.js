@@ -69,8 +69,13 @@ function createRuleNLU(cfg=DEFAULTS){
 class MemoryAdapter{load(){return null;}save(){}}
 class JsonFileAdapter{
  constructor(path){this.path=path;}
- load(){try{return JSON.parse(fs.readFileSync(this.path,'utf8'));}catch{return null;}}
- save(data){fs.mkdirSync(require('path').dirname(this.path),{recursive:true});const tmp=this.path+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2));fs.renameSync(tmp,this.path);}
+ load(){try{return fs?JSON.parse(fs.readFileSync(this.path,'utf8')):null;}catch{return null;}}
+ save(data){if(!fs)return;fs.mkdirSync(require('path').dirname(this.path),{recursive:true});const tmp=this.path+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2));fs.renameSync(tmp,this.path);}
+}
+class LocalStorageAdapter{
+ constructor(k='ron-core-data-v2'){this.k=k;}
+ load(){try{return JSON.parse(localStorage.getItem(this.k)||'null');}catch{return null;}}
+ save(data){try{localStorage.setItem(this.k,JSON.stringify(data));}catch{}}
 }
 
 const RANK={search:0,seed:1,model:1,user:2,official:3};
