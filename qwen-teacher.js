@@ -6,7 +6,7 @@
   const CONFIG = Object.freeze({
     model: "Qwen/Qwen3-0.6B",
     role: "base-model",
-    defaultEndpoint: "https://ron-qwen-teacher-production.up.railway.app/v1/chat/completions",
+    defaultEndpoint: "",
     endpointStorageKey: "ron-qwen-endpoint-v2",
     enabledStorageKey: "ron-qwen-enabled-v2",
     lessonsStorageKey: "ron-qwen-lessons-v2",
@@ -18,7 +18,7 @@
   });
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
   const DEFAULT_ENDPOINT=CONFIG.defaultEndpoint;
-  const endpointIsValid=url=>/^https:\/\/ron-qwen-teacher-production\.up\.railway\.app\/v1\/chat\/completions\/?$/.test(String(url||"").trim());
+  const endpointIsValid=url=>{const value=String(url||"").trim();return value===""||/^https:\/\/.+\/v1\/chat\/completions\/?$/.test(value)};
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
   const normalizeMessages=history=>Array.isArray(history)?history.filter(x=>x&&(x.role==="user"||x.role==="assistant")&&typeof x.content==="string").slice(-CONFIG.maxHistory):[];
   window.RonQwenTeacher=Object.freeze({
