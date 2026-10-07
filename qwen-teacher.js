@@ -11,7 +11,7 @@
     enabledStorageKey: "ron-qwen-enabled-v2",
     lessonsStorageKey: "ron-qwen-lessons-v2",
     maxLessons: 80,
-    maxHistory: 14,
+    maxHistory: 18,
     trainingStorageKey: "ron-training-candidates-v1",
     maxTrainingExamples: 200,
     maxConcepts: 300
@@ -48,12 +48,12 @@
     exportApprovedTrainingJSONL(){
       return this.exportTrainingDataset().map(x=>JSON.stringify(x)).join("\n");
     },
-    learnFromQwen(user,assistant,context=""){const u=String(user||"").trim(),a=String(assistant||"").trim();if(!u||!a)return false;this.recordTrainingExample(u,a,context,"candidate");return true},
-    recordTrainingExample(user,assistant,context,status="candidate"){
+    learnFromQwen(user,assistant,context=""){const u=String(user||"").trim(),a=String(assistant||"").trim();if(!u||!a)return false;this.recordTrainingExample(u,a,context,"candidate",this.lastProvider||CONFIG.model);return true},
+    recordTrainingExample(user,assistant,context,status="candidate",source=CONFIG.model){
       const u=String(user||"").trim(),a=String(assistant||"").trim();
       if(!u||!a)return false;
       const examples=this.getTrainingExamples().filter(x=>!(x.user===u&&x.assistant===a));
-      examples.push({user:u,assistant:a,context:String(context||""),status,source:CONFIG.model,at:new Date().toISOString()});
+      examples.push({user:u,assistant:a,context:String(context||""),status,source:String(source||CONFIG.model),at:new Date().toISOString()});
       write(CONFIG.trainingStorageKey,examples.slice(-CONFIG.maxTrainingExamples));
       return true;
     },
@@ -88,7 +88,7 @@
         const raw=data?.choices?.[0]?.message?.content??data?.output_text??data?.response??"";
         const text=Array.isArray(raw)?raw.map(x=>typeof x==="string"?x:(x?.text||x?.content||"")).join("").trim():String(raw||"").trim();
         if(!text){const message=data?.error?.message||data?.message||"";return{ok:false,reason:message?"upstream: "+message:"empty"}}
-        return{ok:true,text,model:String(data?.model||CONFIG.model)}
+        this.lastProvider=String(data?.provider||"qwen");\n        return{ok:true,text,model:String(data?.model||CONFIG.model),provider:this.lastProvider,fallbackUsed:Boolean(data?.fallback_used)}
       }catch(error){return{ok:false,reason:"network: "+(error?.message||"request failed")}}
     }
   });
