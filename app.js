@@ -1,5 +1,6 @@
 (() => {
 const S={chat:"ron-chat-v5",lessons:"ron-lessons-v5",convos:"ron-conversations-v2",started:"ron-started-v1"},LEGACY={chat:"ron-chat-v4",lessons:"ron-lessons-v4",convos:"ron-conversations-v1"},$=id=>document.getElementById(id),chat=$("chat"),form=$("composer"),input=$("input"),send=$("send");
+const norm=s=>s.toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 const asMessages=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.role==="string"&&typeof x.text==="string"):[];
 const asLessons=v=>Array.isArray(v)?v.filter(x=>x&&typeof x.key==="string"&&typeof x.text==="string"):[];
@@ -54,7 +55,6 @@ if(!messages.length)messages=[{role:"ron",text:"مرحبًا. أنا رون. ا�
 if(!lessons.length)lessons=asLessons(read(LEGACY.lessons,[]));
 const bubble=(role,text)=>{const e=document.createElement("article");e.className="message "+role;const b=document.createElement("b"),p=document.createElement("p");b.textContent=role==="ron"?"رون":"أنت";p.textContent=text;e.append(b,p);chat.appendChild(e);chat.scrollTop=chat.scrollHeight};
 const render=()=>{chat.replaceChildren();messages.forEach(m=>bubble(m.role,m.text))};
-const norm=s=>s.toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
 const cleanValue=s=>s.replace(/^[\s.،,؛;:]+|[\s.!؟?،,؛;:]+$/g,"").trim();
 const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push({key,text,at:new Date().toISOString()});save()};
 const extractFacts=t=>{
