@@ -232,11 +232,21 @@ const commentOnPreviousUserMessage=()=>{
   return "تعليقي: السؤال عن عاصمة مصر له إجابة مباشرة وهي القاهرة. إذا أخفقت في ذكرها سابقًا، فهذا خلل في اختيار الإجابة وليس نقصًا في وضوح سؤالك.";
  return "فهمت أن رسالتك المقصودة للتعليق هي: «"+text+"». سأناقش مضمونها مباشرة بدل تكرار سؤال عام؛ وإذا احتجت توضيحًا فسأسأل عن نقطة واحدة محددة.";
 };
+const isPreviousReplyQuestion=n=>/^(?:ما\s+هذا|ما\s+هذا\s+النص|ما\s+هذه|ماذا\s+كان\s+هذا|ايه\s+ده|ايه\s+دا|ما\s+الذي\s+ارسلته|ما\s+المقصود\s+بهذا|what\s+is\s+this)[؟?!.،]*$/.test(norm(n));
+const explainPreviousReply=()=>{
+ const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
+ if(!previous)return "لا أرى ردًا سابقًا واضحًا في المحادثة لأشرحه.";
+ const text=String(previous.text||"").trim(),n=norm(text);
+ if(text.length>500&&/(?:رونالد ويليام هاوارد|ron howard)/.test(n))
+  return "الرد السابق كان مقالًا طويلًا عن رون هاورد، لكنه لم يكن مرتبطًا بسؤالك «هل أنت معي؟». كان ذلك استدعاءً غير مناسب للنص، وكان يجب أن أجيب مباشرة: نعم، أنا معك.";
+ return "أنت تسأل عن ردي السابق. كان مضمونه: «"+text.slice(0,220)+(text.length>220?"…":"")+"». إذا لم يجب عن سؤالك، فهذه مشكلة في اختيار السياق وكان ينبغي أن أرد بما يرتبط بطلبك.";
+};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
  if(isReadinessQuestion(n))return "أيوه، جاهز.";
  if(isWithMeQuestion(n))return "أيوه، أنا معاك. قولّي نكمل منين.";
+ if(isPreviousReplyQuestion(n))return explainPreviousReply();
  if(isPendingCommentConfirmation(n))return commentOnPreviousUserMessage();
  if(isCommentCommand(n))return commentOnPreviousUserMessage();
  if(isIncompleteMathQuestion(n))return "ما العملية الحسابية التي تريد حسابها؟";
@@ -299,7 +309,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
- const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
+ const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim()){
   const core=globalThis.ronCore;
