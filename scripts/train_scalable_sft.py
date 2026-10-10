@@ -90,15 +90,15 @@ def main() -> None:
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ds = PromptResponseDataset(args.data, args.tokenizer, args.sequence_length, args.limit)
-    config_vocab_size = args.vocab_size if args.vocab_size is not None else actual_vocab
-    config = ScalableRonConfig(vocab_size=config_vocab_size, hidden_size=args.hidden_size,
-        num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads,
-        max_sequence_length=args.sequence_length)
     # Validate tokenizer/model vocabulary agreement before allocating training batches.
     from tokenizers import Tokenizer
     actual_vocab = Tokenizer.from_file(str(args.tokenizer)).get_vocab_size()
-    if actual_vocab != config.vocab_size:
-        p.error(f"tokenizer vocabulary ({actual_vocab}) must match --vocab-size ({config.vocab_size})")
+    config_vocab_size = args.vocab_size if args.vocab_size is not None else actual_vocab
+    if actual_vocab != config_vocab_size:
+        p.error(f"tokenizer vocabulary ({actual_vocab}) must match --vocab-size ({config_vocab_size})")
+    config = ScalableRonConfig(vocab_size=config_vocab_size, hidden_size=args.hidden_size,
+        num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads,
+        max_sequence_length=args.sequence_length)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True)
     model = ScalableRonLM(config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
