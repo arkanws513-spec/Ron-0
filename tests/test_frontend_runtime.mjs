@@ -242,6 +242,5 @@ const context4 = {
 vm.runInNewContext(fs.readFileSync("app.js","utf8"),context4);
 nodes4.get("input").value = "ما هو البناء الضوئي؟";
 listeners4.get("composer:submit")({preventDefault(){}});
-await Promise.resolve();
-await Promise.resolve();
+await new Promise(resolve => setImmediate(resolve));
 assert.equal(nodes4.get("chat").children.at(-1).children.at(-1).textContent, "إجابة من المعرفة المحلية");
