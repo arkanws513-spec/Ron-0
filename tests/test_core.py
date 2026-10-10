@@ -97,3 +97,50 @@ def test_why_followup_reuses_previous_topic_and_dialogue():
     assert request.metadata["topic"] == "ما عاصمة مصر؟"
     assert any(message.content == "ما عاصمة مصر؟" for message in request.messages)
     assert any(message.content == "رد تجريبي" for message in request.messages)
+
+
+
+def test_core_falls_back_when_native_checkpoints_are_unloadable(monkeypatch):
+    from pathlib import Path
+    import ron.native_provider as native_provider
+    from ron.providers import LocalTeachingProvider
+
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda self: self.name in {"ron_native_10m.pt", "ron_native_baseline.pt"},
+    )
+
+    class BrokenCheckpointProvider:
+        def __init__(self, checkpoint):
+            raise RuntimeError("invalid checkpoint")
+
+    monkeypatch.setattr(native_provider, "NativeCheckpointProvider", BrokenCheckpointProvider)
+    core = RonCore()
+    assert isinstance(core.provider, LocalTeachingProvider)
+    assert core.provider_startup_warnings == [
+        "ron_native_10m.pt:RuntimeError",
+        "ron_native_baseline.pt:RuntimeError",
+    ]
+
+
+def test_core_tries_baseline_after_ron_10m_checkpoint_load_fails(monkeypatch):
+    from pathlib import Path
+    import ron.native_provider as native_provider
+
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda self: self.name in {"ron_native_10m.pt", "ron_native_baseline.pt"},
+    )
+
+    class SelectiveCheckpointProvider:
+        def __init__(self, checkpoint):
+            if checkpoint.name == "ron_native_10m.pt":
+                raise RuntimeError("bad larger checkpoint")
+            self.checkpoint_path = checkpoint
+
+    monkeypatch.setattr(native_provider, "NativeCheckpointProvider", SelectiveCheckpointProvider)
+    core = RonCore()
+    assert core.provider.checkpoint_path.name == "ron_native_baseline.pt"
+    assert core.provider_startup_warnings == ["ron_native_10m.pt:RuntimeError"]

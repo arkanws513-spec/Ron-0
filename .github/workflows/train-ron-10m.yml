@@ -1,0 +1,91 @@
+name: Train Ron-10M (manual)
+
+on:
+  push:
+    branches: [feat/native-core-audit]
+    paths:
+      - 'scripts/train_native_10m.py'
+      - 'scripts/prepare_corpus.py'
+      - 'scripts/download_english_corpus.py'
+      - 'scripts/download_oasst1_english.py'
+      - 'scripts/train_sft_10m.py'
+      - 'training/arabic_sft_seed.txt'
+      - 'tests/test_sft_10m.py'
+      - '.github/workflows/train-ron-10m.yml'
+      - 'ron/model.py'
+      - 'ron/model_config.py'
+  workflow_dispatch:
+    inputs:
+      training_steps:
+        description: Number of optimizer steps for this experiment
+        required: true
+        default: "1000"
+        type: string
+      batch_size:
+        description: Training batch size (lower if memory is limited)
+        required: true
+        default: "2"
+        type: string
+      sft_steps:
+        description: Assistant-only supervised fine-tuning steps
+        required: true
+        default: "500"
+        type: string
+
+concurrency:
+  group: ron-10m-training-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out the reviewed branch
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install model and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[model]" pytest
+      - name: Download English public-domain starter texts
+        run: python scripts/download_english_corpus.py
+      - name: Download reviewed English dialogue dataset
+        run: python scripts/download_oasst1_english.py
+      - name: Normalize and deduplicate pretraining corpus
+        run: python scripts/prepare_corpus.py
+      - name: Run focused native-model and SFT regression tests
+        run: python -m pytest tests/test_model.py tests/test_native_10m_recipe.py tests/test_sft_10m.py
+      - name: Train Ron-10M
+        env:
+          RON_STEPS: ${{ inputs.training_steps || '1000' }}
+          RON_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
+          RON_SEQUENCE_LENGTH: "256"
+        run: python scripts/train_native_10m.py
+      - name: Fine-tune Ron on reviewed conversations (English + Arabic)
+        env:
+          RON_SFT_STEPS: ${{ inputs.sft_steps || '500' }}
+          RON_SFT_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
+          RON_SFT_SEQUENCE_LENGTH: "256"
+        run: python scripts/train_sft_10m.py
+      - name: Archive model, metrics, and dataset manifests
+        uses: actions/upload-artifact@v6
+        with:
+          name: ron-10m-training-${{ github.run_id }}
+          path: |
+            artifacts/native-10m/ron_native_10m.pt
+            artifacts/native-10m/metrics.json
+            artifacts/native-10m/ron_native_10m_sft.pt
+            artifacts/native-10m/sft_metrics.json
+            training/corpus_manifest.json
+            training/gutenberg_sources.json
+            training/oasst1_manifest.json
+          if-no-files-found: error
+          retention-days: 30

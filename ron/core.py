@@ -25,18 +25,31 @@ class RonCore:
     understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
     reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
     advanced_reasoning:AdvancedReasoner=field(default_factory=AdvancedReasoner)
+    provider_startup_warnings:list[str]=field(default_factory=list,init=False)
 
     def __post_init__(self)->None:
         if self.provider is not None:
             return
-        checkpoint=Path(__file__).resolve().parent/"checkpoints"/"ron_native_baseline.pt"
-        if checkpoint.is_file():
-            # Load Ron's own weights when the trained checkpoint is present.
-            from .native_provider import NativeCheckpointProvider
-            self.provider=NativeCheckpointProvider(checkpoint)
-        else:
-            # A clear offline fallback for checkouts that do not yet contain weights.
-            self.provider=LocalTeachingProvider()
+        checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
+        # Prefer Ron-10M, then try the baseline. A damaged/incompatible checkpoint
+        # must not prevent the offline teaching fallback from starting.
+        candidates = (
+            checkpoint_dir / "ron_native_10m.pt",
+            checkpoint_dir / "ron_native_baseline.pt",
+        )
+        from .native_provider import NativeCheckpointProvider
+        for checkpoint in candidates:
+            if not checkpoint.is_file():
+                continue
+            try:
+                self.provider = NativeCheckpointProvider(checkpoint)
+                return
+            except Exception as exc:
+                self.provider_startup_warnings.append(
+                    f"{checkpoint.name}:{type(exc).__name__}"
+                )
+        # A clear offline fallback for checkouts that do not yet contain usable weights.
+        self.provider = LocalTeachingProvider()
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)

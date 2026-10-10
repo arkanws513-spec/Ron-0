@@ -39,15 +39,22 @@ class NativeCheckpointProvider:
         self.checkpoint_source = str(payload.get("checkpoint_source", "unknown"))
 
     def _build_dialogue_prompt(self, request: ModelRequest, user_text: str) -> str:
+        # Match the prompt language to the checkpoint's training language where possible.
+        # The current Ron-10M starter corpus is English-first; Arabic labels are retained for Arabic prompts.
+        has_arabic = any("\u0600" <= char <= "\u06ff" for char in user_text)
+        user_label, assistant_label = (
+            ("المستخدم", "رون") if has_arabic else ("User", "Ron")
+        )
         dialogue = []
         for message in request.messages:
             if message.role not in {"user", "assistant"} or not message.content.strip():
                 continue
-            label = "المستخدم" if message.role == "user" else "رون"
+            label = user_label if message.role == "user" else assistant_label
             dialogue.append(f"{label}: {message.content.strip()}")
-        latest_line = next((line for line in reversed(dialogue) if line.startswith("المستخدم: ")),
-                           f"المستخدم: {user_text}")
-        suffix = "\nرون:"
+        user_prefix = f"{user_label}: "
+        latest_line = next((line for line in reversed(dialogue) if line.startswith(user_prefix)),
+                           f"{user_prefix}{user_text}")
+        suffix = f"\n{assistant_label}:"
         budget = max(0, self.config.max_sequence_length - len(latest_line) - len(suffix))
         prior_lines = []
         for line in reversed(dialogue):

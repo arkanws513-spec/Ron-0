@@ -1,5 +1,95 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="رون — مساعد ذكاء اصطناعي مستقل"><meta name="theme-color" content="#080b14"><link rel="stylesheet" href="assets/style.css"><link rel="manifest" href="manifest.webmanifest"><title>رون — Ron</title></head><body>
-<section id="startup" class="startup"><div class="startup-card"><div class="startup-mark">R</div><h1>رون</h1><p>المساعد المستقل</p><span>نواة رون جاهزة للتشغيل</span><button id="start-ron" type="button">بدء التشغيل</button></div></section>
-<main id="main-app" class="app hidden"><header class="topbar"><div class="brand"><div class="mark">R</div><div><strong>رون</strong><small>المساعد المستقل</small></div></div><div class="actions"><span class="status"><i></i> جاهز</span><button id="menu" class="icon" aria-label="القائمة">☰</button></div></header><section id="chat" class="chat" aria-live="polite"></section><form id="composer" class="composer"><textarea id="input" rows="1" placeholder="اكتب رسالة لرون..." autocomplete="off"></textarea><button id="send" type="submit">إرسال</button></form><footer>رون يحتفظ بذاكرة المحادثات والتعلّم على جهازك</footer></main>
-<aside id="settings" class="drawer" aria-label="قائمة رون"><div class="drawer-card"><div class="drawer-head"><h2>رون</h2><button id="close-settings" class="icon" type="button">×</button></div><button id="new-chat" class="setting primary" type="button">＋ محادثة جديدة</button><button id="history-btn" class="setting" type="button">🕘 المحادثات السابقة</button><div id="history-list" class="history-list"></div><hr><button id="export" class="setting" type="button">تصدير الذاكرة</button><label class="setting file">استيراد الذاكرة<input id="import" type="file" accept="application/json"></label><button id="clear-data" class="setting danger" type="button">مسح بيانات الجهاز</button></div></aside>
-<script src="ron-core.js?v=4" defer></script><script src="ron-agent-core.js?v=2" defer></script><script src="ron-knowledge-core.js?v=1" defer></script><script src="ron-browser-reasoner.js?v=5" defer></script><script src="ron-learning-core.js?v=4" defer></script><script src="ron-web-search.js?v=3" defer></script><script src="app.js?v=35" defer></script></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="رون — مساعد ذكاء اصطناعي مستقل">
+  <meta name="theme-color" content="#0b0c10">
+  <link rel="stylesheet" href="assets/style.css?v=2">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>رون — Ron</title>
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <section id="startup" class="startup">
+    <div class="startup-card">
+      <div class="startup-brand">
+        <div class="startup-mark">R<span></span></div>
+        <div class="startup-wordmark">
+          <span class="eyebrow">RON · NATIVE INTELLIGENCE</span>
+          <h1>رون</h1>
+          <p>مساعدك المستقل</p>
+        </div>
+      </div>
+      <div class="startup-rule"></div>
+      <p class="startup-copy">مساحة هادئة لأفكارك، وأسئلتك، وكل ما تريد إنجازه.</p>
+      <div class="startup-status"><i></i><span>النواة المحلية جاهزة للتشغيل</span></div>
+      <button id="start-ron" type="button"><span>ابدأ المحادثة</span><span class="button-arrow" aria-hidden="true">←</span></button>
+      <small class="startup-footnote">خصوصيتك أولًا · ذاكرتك على جهازك</small>
+    </div>
+  </section>
+
+  <main id="main-app" class="app hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">R<span></span></div>
+        <div class="brand-copy"><strong>رون</strong><small>مساعدك المستقل</small></div>
+      </div>
+      <div class="topbar-center">
+        <span class="eyebrow">مساحة الحوار</span>
+        <span class="topbar-subtitle">فكّر بصوت عالٍ. نبدأ من هنا.</span>
+      </div>
+      <div class="actions">
+        <span class="status"><i></i><span>النواة جاهزة</span></span>
+        <button id="menu" class="icon menu-button" type="button" aria-label="فتح القائمة" title="القائمة"><span></span><span></span></button>
+      </div>
+    </header>
+
+    <section class="conversation-panel">
+      <div class="conversation-heading">
+        <div><span class="eyebrow">RON / 01</span><h1>مساحة أفكارك</h1></div>
+        <span class="secure-label"><span aria-hidden="true">✦</span> محادثة خاصة</span>
+      </div>
+      <section id="chat" class="chat" aria-label="المحادثة" aria-live="polite"></section>
+      <form id="composer" class="composer">
+        <div class="composer-shell">
+          <textarea id="input" rows="1" placeholder="اكتب ما يدور في ذهنك..." autocomplete="off" aria-label="رسالتك إلى رون"></textarea>
+          <button id="send" type="submit" aria-label="إرسال الرسالة"><span>إرسال</span><span class="send-arrow" aria-hidden="true">↑</span></button>
+        </div>
+        <div class="composer-hint"><span class="hint-dot"></span><span>رون قد يخطئ أحيانًا؛ راجع المعلومات المهمة.</span><span class="keyboard-hint">مساحة آمنة للتفكير</span></div>
+      </form>
+    </section>
+    <footer class="app-footer"><span class="footer-mark">R</span><span>رون مستقل — الذاكرة والتعلّم محفوظان على هذا الجهاز</span><span class="footer-line"></span></footer>
+  </main>
+
+  <aside id="settings" class="drawer" aria-label="قائمة رون">
+    <div class="drawer-backdrop" aria-hidden="true"></div>
+    <div class="drawer-card">
+      <div class="drawer-head">
+        <div class="drawer-brand"><div class="mark">R<span></span></div><div><h2>رون</h2><small>مركز التحكم</small></div></div>
+        <button id="close-settings" class="icon close-button" type="button" aria-label="إغلاق القائمة">×</button>
+      </div>
+      <div class="drawer-section-label">المحادثة</div>
+      <button id="new-chat" class="setting primary" type="button"><span class="setting-icon">＋</span><span>محادثة جديدة</span><span class="setting-end">↙</span></button>
+      <button id="history-btn" class="setting" type="button"><span class="setting-icon">◷</span><span>المحادثات السابقة</span><span class="setting-end">⌄</span></button>
+      <div id="history-list" class="history-list"></div>
+      <div class="drawer-section-label drawer-section-spaced">الذاكرة والبيانات</div>
+      <button id="export" class="setting" type="button"><span class="setting-icon">↗</span><span>تصدير الذاكرة</span></button>
+      <label class="setting file"><span class="setting-icon">↥</span><span>استيراد الذاكرة</span><input id="import" type="file" accept="application/json"></label>
+      <button id="clear-data" class="setting danger" type="button"><span class="setting-icon">⌫</span><span>مسح بيانات الجهاز</span></button>
+      <div class="drawer-note"><span class="note-star">✦</span><p>رون يعمل باستقلالية. تبقى بياناتك على جهازك ما لم تقم بتصديرها بنفسك.</p></div>
+      <div class="drawer-version">RON · NATIVE CORE</div>
+    </div>
+  </aside>
+
+  <script src="ron-core.js?v=4" defer></script>
+  <script src="ron-agent-core.js?v=2" defer></script>
+  <script src="ron-knowledge-core.js?v=1" defer></script>
+  <script src="ron-browser-reasoner.js?v=5" defer></script>
+  <script src="ron-learning-core.js?v=4" defer></script>
+  <script src="ron-web-search.js?v=3" defer></script>
+  <script src="app.js?v=36" defer></script>
+</body>
+</html>
