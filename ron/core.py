@@ -1,10 +1,12 @@
 """Ron orchestration core: intent -> memory -> conversation context -> model -> learning."""
 from __future__ import annotations
 from dataclasses import dataclass, field
+from pathlib import Path
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_facts
 from .intent import detect_intent
 from .memory import InMemoryStore
+from .providers import LocalTeachingProvider
 from .self_improvement import Experience, SelfImprovementEngine
 from .session import Conversation
 from .tools import ToolRegistry
@@ -14,7 +16,7 @@ from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
 
 @dataclass
 class RonCore:
-    provider:ModelProvider
+    provider:ModelProvider|None=None
     memory:MemoryStore=field(default_factory=InMemoryStore)
     tools:ToolRegistry=field(default_factory=ToolRegistry)
     self_improvement:SelfImprovementEngine=field(default_factory=SelfImprovementEngine)
@@ -23,6 +25,18 @@ class RonCore:
     understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
     reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
     advanced_reasoning:AdvancedReasoner=field(default_factory=AdvancedReasoner)
+
+    def __post_init__(self)->None:
+        if self.provider is not None:
+            return
+        checkpoint=Path(__file__).resolve().parent/"checkpoints"/"ron_native_baseline.pt"
+        if checkpoint.is_file():
+            # Load Ron's own weights when the trained checkpoint is present.
+            from .native_provider import NativeCheckpointProvider
+            self.provider=NativeCheckpointProvider(checkpoint)
+        else:
+            # A clear offline fallback for checkouts that do not yet contain weights.
+            self.provider=LocalTeachingProvider()
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)
@@ -94,6 +108,7 @@ class RonCore:
             metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
         )
         try:
+            assert self.provider is not None
             response=self.provider.generate(request)
         except Exception as exc:
             response=ModelResponse(
