@@ -22,6 +22,7 @@ from ron.model_config import RonModelConfig
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "training" / "corpus" / "oasst1" / "english_dialogues.txt"
+ARABIC_CORPUS = ROOT / "training" / "arabic_sft_seed.txt"
 PRETRAINED = ROOT / "artifacts" / "native-10m" / "ron_native_10m.pt"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_10m.pt"
 OUT = ROOT / "artifacts" / "native-10m"
@@ -59,18 +60,25 @@ def encode_examples(examples: list[str], vocab: dict[str, int]):
             if ":" not in line:
                 continue
             role, content = line.split(":", 1)
-            if role not in {"User", "Ron"}:
+            role = role.strip()
+            if role not in {"User", "Ron", "المستخدم", "رون"}:
                 continue
             normalized = f"{role}:{content}"
+            assistant_role = role in {"Ron", "رون"}
+            response_start = len(role) + 1 + (1 if content.startswith(" ") else 0)
             for position, char in enumerate(normalized):
                 total_characters += 1
                 token_id = vocab.get(char, unknown_id)
                 unknown_characters += char not in vocab
                 tokens.append(token_id)
-                # Include the separator after "Ron:" and all response text.
-                response_mask.append(role == "Ron" and position >= len("Ron:"))
-        tokens.extend([vocab.get("\n", unknown_id), vocab.get("\n", unknown_id)])
-        response_mask.extend([False, False])
+                # Keep the role label and separator out of the assistant-only loss.
+                response_mask.append(assistant_role and position >= response_start)
+            newline_id = vocab.get("\n", unknown_id)
+            tokens.append(newline_id)
+            response_mask.append(False)
+        # Blank-line separators are not prediction targets.
+        tokens.append(vocab.get("\n", unknown_id))
+        response_mask.append(False)
     if not tokens:
         raise ValueError("No valid User/Ron dialogue lines found")
     return (
@@ -154,7 +162,34 @@ def main() -> None:
     model.load_state_dict(payload.get("best_state_dict", payload["state_dict"]))
     model.eval()
 
-    train_examples, validation_examples = split_examples(CORPUS.read_text(encoding="utf-8"))
+    english_dialogues = CORPUS.read_text(encoding="utf-8")
+    arabic_dialogues = ARABIC_CORPUS.read_text(encoding="utf-8") if ARABIC_CORPUS.is_file() else ""
+    # Mix reviewed English dialogues with the curated Arabic conversation curriculum.
+    dialogue_text = english_dialogues.rstrip() + ("\n\n" + arabic_dialogues.strip() if arabic_dialogues.strip() else "") + "\n"
+    old_vocab = dict(vocab)
+    for char in sorted(set(dialogue_text) - set(vocab)):
+        vocab[char] = len(vocab)
+    if len(vocab) != len(old_vocab):
+        # Extend the native character vocabulary without changing existing token IDs.
+        old_state = payload.get("best_state_dict", payload["state_dict"])
+        expanded_config = dict(payload["config"])
+        expanded_config["vocab_size"] = len(vocab)
+        expanded_model = RonCausalLM(RonModelConfig(**expanded_config))
+        expanded_state = expanded_model.state_dict()
+        for name, current in expanded_state.items():
+            previous = old_state.get(name)
+            if previous is None:
+                raise ValueError(f"Checkpoint is missing model tensor {name!r}")
+            if previous.shape == current.shape:
+                current.copy_(previous)
+            elif name in {"token_embedding.weight", "lm_head.weight"} and previous.ndim == 2 and previous.shape[1] == current.shape[1] and previous.shape[0] < current.shape[0]:
+                current[:previous.shape[0]].copy_(previous)
+            else:
+                raise ValueError(f"Cannot safely expand checkpoint tensor {name!r}: {tuple(previous.shape)} -> {tuple(current.shape)}")
+        expanded_model.load_state_dict(expanded_state)
+        model = expanded_model
+        config = model.config
+    train_examples, validation_examples = split_examples(dialogue_text)
     train_tokens, train_mask, train_unknown, train_total = encode_examples(train_examples, vocab)
     val_tokens, val_mask, val_unknown, val_total = encode_examples(validation_examples, vocab)
     if train_unknown / max(1, train_total) > 0.05 or val_unknown / max(1, val_total) > 0.05:
@@ -210,7 +245,7 @@ def main() -> None:
 
     final_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     changed_tensors = sum(not torch.equal(final_state[name], initial_state[name]) for name in final_state)
-    corpus_text = CORPUS.read_text(encoding="utf-8")
+    corpus_text = dialogue_text
     checkpoint = {
         "state_dict": final_state,
         "best_state_dict": best_state,
