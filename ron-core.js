@@ -45,6 +45,7 @@ function createRuleNLU(cfg=DEFAULTS){
   while(true){const m=/^(\S+)\s+/.exec(n);if(!m||!fillers.has(m[1]))break;n=n.slice(m[0].length);t=t.slice(m[0].length);}
   if(!n)return[{type:'unknown',text:c}];
   if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
+  if(/^(?:اذا\s+)?(?:لماذا|ليه|ازاي)\s+(?:قلت|قولت|كتبت|ذكرت|حفظت)(?=\s|$)/.test(n0))return[{type:'context',kind:'why-previous',text:c}];
   if(/^(?:انظر|بص|شوف)\s+(?:لما|ما)\s+(?:قلته|قلت\ه|قولته)\s+(?:فوق|قبل)$/.test(n0)||/^(?:ماذا|ما)\s+(?:قلت|قلته)\s+(?:فوق|قبل)$/.test(n0))return[{type:'context',kind:'previous'}];
   if(/^(?:ماذا|ما)\s+(?:تعلم|تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0))return[{type:'context',kind:'learned'}];
   if(/^(?:كيف\s+(?:حالك|الحال)|كيفك|شلونك|شخبارك)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'howareyou'}];
@@ -166,6 +167,16 @@ class RonCore{
   if(f.type==='self-age')return this.store.get('$self','عمر')?'عمري المسجل هو '+this.store.display(this.store.get('$self','عمر').o)+'.':'ليس لدي عمر بشري؛ أنا برنامج، ولا أملك عمرًا شخصيًا مثل الإنسان.';
   if(f.type==='ask-both-names'){const user=this.store.get('$user','اسم'),self=this.store.get('$self','اسم');return (user?'اسمك '+this.store.display(user.o):'لم تخبرني باسمك بعد')+'، واسمي '+(self?this.store.display(self.o):this.cfg.selfName)+'.';}
   if(f.type==='context'){
+   if(f.kind==='why-previous'){
+    const previous=this.ctx.history.filter(x=>x.role==='assistant').at(-1);
+    const query=normalize(f.text);
+    if(query.includes('اسم')){
+     const user=this.store.get('$user','اسم'),self=this.store.get('$self','اسم');
+     if(user)return 'لأنني أخطأت في فهم عبارتك السابقة وخلطت بين سؤالك عن الاسم والاسم نفسه. الصحيح أن اسمك '+this.store.display(user.o)+' واسمي '+(self?this.store.display(self.o):this.cfg.selfName)+'. أعتذر عن الخلط.';
+     return 'لأنني أخطأت في تحليل عبارتك، ولا ينبغي أن أحوّل سؤالك عن الاسم إلى حقيقة محفوظة. لا أملك اسمك الصحيح مسجلًا الآن؛ أخبرني به وسأحفظه بوضوح.';
+    }
+    return previous?'قد يكون ردي السابق غير دقيق. كان ردي: «'+clean(previous.text).slice(0,240)+'». سأراجعه بدل أن أخمّن سببًا غير مؤكد.':'لا أجد ردًا سابقًا واضحًا أراجعه، لذلك لن أخمّن سببًا.';
+   }
    if(f.kind==='previous'){
     const h=this.ctx.history.filter(x=>x.role==='user');
     const prev=h.length>1?h[h.length-2]:null;

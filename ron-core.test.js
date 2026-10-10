@@ -42,3 +42,19 @@ test('confirming Ron identity does not overwrite self name',async()=>{
  assert.match(await say(r,'اسمك رون فعلا'),/اسمي رون/);
  assert.strictEqual(r.store.get('$self','اسم').o,'رون');
 });
+
+test('why-question uses prior context and corrects identity confusion',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي اركانوس');
+ const reply=await say(r,'اذا لماذا قولت اسمك بسألك عن اسمي');
+ assert.match(reply,/أخطأت/);
+ assert.match(reply,/اركانوس/);
+ assert.match(reply,/رون/);
+ assert.strictEqual(r.store.get('$user','اسم').o,'اركانوس');
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+});
+test('why-question without a prior answer does not invent a reason',async()=>{
+ const r=new RonCore();
+ const reply=await say(r,'لماذا قلت ذلك');
+ assert.match(reply,/لن أخمّن|أخطأت|غير دقيق/);
+});
