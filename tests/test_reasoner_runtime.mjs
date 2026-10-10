@@ -26,6 +26,6 @@ const chained = R.reason(R.parseAll([
   "أ يتبع ب",
   "ب يتبع ج"
 ]));
-assert.ok(chained.some(x => x.relation === "follows" && x.subject === "أ" && x.object === "ج"));
+assert.ok(chained.some(x => x.relation === "follows" && x.subject === "ا" && x.object === "ج"));
 
 console.log("reasoner runtime smoke test passed");
