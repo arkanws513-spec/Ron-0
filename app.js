@@ -243,6 +243,15 @@ const explainPreviousReply=()=>{
 };
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ // Answer stable, high-confidence facts before memory/retrieval can hijack the question.
+ if(/^(?:هل\\s+)?(?:اسمك\\s+رون|اسمك\\s+هو\\s+رون|انت\\s+اسمك\\s+رون)[؟?!.]*$/.test(n))return "نعم، اسمي رون.";
+ if(/^(?:ماذا فهمت|ما فهمت|فهمت ايه|ماذا استنتجت)[؟?!.]*$/.test(n)){
+  const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim());
+  if(!previous)return "لم تذكر لي فكرة سابقة واضحة لألخّصها.";
+  const prior=norm(previous.text);
+  if(/عاصم(?:ة|ه).*مصر|مصر.*عاصم(?:ة|ه)/.test(prior))return "فهمت أن عاصمة مصر هي القاهرة، وأن عليّ الإجابة عن السؤال مباشرة وبشكل متسق حتى لو تغيّرت صياغته. إذا أجبت سابقًا بإجابة مختلفة أو غير مفهومة، فهذا خطأ مني.";
+  return "فهمت أنك قلت: «"+String(previous.text).trim().slice(0,220)+"». سأتعامل معها باعتبارها سياقًا للمحادثة، لا مجرد نص أعيده.";
+ }
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
  if(isReadinessQuestion(n))return "أيوه، جاهز.";
  if(isWithMeQuestion(n))return "أيوه، أنا معاك. قولّي نكمل منين.";
@@ -250,7 +259,7 @@ const answer=t=>{
  if(isPendingCommentConfirmation(n))return commentOnPreviousUserMessage();
  if(isCommentCommand(n))return commentOnPreviousUserMessage();
  if(isIncompleteMathQuestion(n))return "ما العملية الحسابية التي تريد حسابها؟";
- if(isEgyptCapitalQuestion(n)&&preferences.shortEgyptCapital)return "القاهرة";
+ if(isEgyptCapitalQuestion(n))return preferences.shortEgyptCapital?"القاهرة":"عاصمة مصر هي القاهرة.";
  if(/^(?:اسمك|اسمك هو|انت اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(n))return "نعم، اسمي رون.";
  if(/^(مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا)([!！،,. ]*)$/.test(n))return "مرحبًا. أنا رون، وجاهز لمساعدتك.";
  if(/^(ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)([؟? !،,.]*)$/.test(n))return "أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟";
