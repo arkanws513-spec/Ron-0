@@ -42,13 +42,16 @@ Run the native training script in an environment with the repository's `model` e
 python -m pip install -e ".[model]" pytest
 python -m scripts.train_native
 python -m scripts.surprise_eval
+python -m scripts.eval_conversation --strict
 ```
 
 Training and evaluation reports are written under `artifacts/native-baseline/`. The workflow keeps candidate weights separate from the live checkpoint until the blind anti-degeneration gate passes.
 
 ## Current limitations
 
-Ron-0's native Transformer is a small character-level prototype trained on a curated corpus. It is not yet a general-purpose language model. A lower training loss alone is not evidence that responses improved; held-out validation and blind generation checks must also be reviewed.
+The checkpoint currently tracked in the repository is the baseline model with **110,272 parameters**, not the intended 10M model. Its saved metrics show training loss falling from 1.128 to 0.893 while validation loss rises from 0.988 to 1.402; the run therefore shows an overfitting/generalization warning, not a verified quality improvement. The `ron_native_10m.pt` checkpoint and `training/corpus.txt` are ignored external artifacts and are not present in the tracked repository snapshot, so the 10M training run cannot be claimed complete from source code alone.
+
+Ron-0's native Transformer remains a small character-level prototype, not a general-purpose language model. Set `RON_REQUIRE_10M=1` when launching the server to refuse startup unless the active checkpoint has at least 8 million parameters. The default health endpoint reports the actual parameter count, checkpoint hash, selected inference step, and whether the 10M target was reached. A lower training loss alone is not evidence that responses improved; held-out validation and blind generation checks must also be reviewed.
 
 
 ## Ron-10M experimental training track
