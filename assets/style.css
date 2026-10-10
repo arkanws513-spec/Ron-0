@@ -92,7 +92,7 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold); o
   flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 22px;
   border: 1px solid var(--line); border-radius: var(--radius-xl);
   background: linear-gradient(155deg, #15161bd9, #101116e8);
-  box-shadow: 0 24px 70px #00020, inset 0 1px 0 #ffffff05; overflow: hidden;
+  box-shadow: 0 24px 70px #00000020, inset 0 1px 0 #ffffff05; overflow: hidden;
 }
 .conversation-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 23px 26px 17px; border-bottom: 1px solid #ffffff07; }
 .conversation-heading h1 { margin: 4px 0 0; font-size: 18px; font-weight: 550; letter-spacing: -.025em; }
