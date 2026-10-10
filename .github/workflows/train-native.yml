@@ -51,16 +51,19 @@ jobs:
         run: python -m scripts.surprise_eval --output artifacts/native-baseline/surprise-eval.json
       - name: Commit trained weights and metrics to Ron-0
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Add trained Ron-0 native checkpoint"
-            # Other reviewed changes may reach main while this CPU training job runs.
-            # Rebase the generated checkpoint commit onto the latest main before pushing.
-            git fetch origin main
-            git rebase origin/main
-            git push origin HEAD:main
+          if python -c 'import json,sys; r=json.load(open("artifacts/native-baseline/surprise-eval.json", encoding="utf-8")); sys.exit(0 if r.get("anti_degeneration_gate_passed") else 1)'; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Add validated Ron-0 native checkpoint"
+              # Other reviewed changes may reach main while this CPU training job runs.
+              git fetch origin main
+              git rebase origin/main
+              git push origin HEAD:main
+            fi
+          else
+            echo "::warning::Anti-degeneration gate failed; trained weights remain an artifact candidate and were not promoted."
           fi
       - name: Archive training run and surprise evaluation
         uses: actions/upload-artifact@v6

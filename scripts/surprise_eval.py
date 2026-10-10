@@ -12,6 +12,7 @@ from pathlib import Path
 
 from ron.contracts import Message, ModelRequest
 from ron.native_provider import NativeCheckpointProvider
+from ron.generation_quality import is_degenerate_text
 
 ROOT = Path(__file__).resolve().parents[1]
 BLIND_PROMPTS = (
@@ -26,6 +27,10 @@ BLIND_PROMPTS = (
     "ما الفرق بين ملاحظة حدث واستنتاج سببه؟",
     "أعد صياغة السؤال التالي دون تغيير معناه: كيف تتكوّن السحب؟",
 )
+
+
+def is_degenerate_answer(answer: str) -> bool:
+    return is_degenerate_text(answer)
 
 
 def evaluate(checkpoint: Path | None = None) -> dict:
@@ -50,16 +55,20 @@ def evaluate(checkpoint: Path | None = None) -> dict:
             "non_empty": bool(answer),
             "not_exact_echo": answer != prompt,
             "answer_length": len(answer),
+            "degenerate": is_degenerate_answer(answer) or bool(response.metadata.get("native_generated_answer_rejected")),
             "model": response.model,
             "native_weights_loaded": bool(response.metadata.get("native_weights_loaded")),
             "external_model_used": bool(response.metadata.get("external_model_used", False)),
             "checkpoint": response.metadata.get("inference_checkpoint"),
             "selected_training_step": response.metadata.get("selected_training_step"),
+            "generation_quality_fallback": bool(response.metadata.get("generation_quality_fallback", False)),
         })
 
     non_empty = sum(row["non_empty"] for row in rows)
     not_echo = sum(row["not_exact_echo"] for row in rows)
     unique_answers = len({row["answer"] for row in rows})
+    stable_answers = sum(row["non_empty"] and row["not_exact_echo"] and not row["degenerate"] for row in rows)
+    anti_degeneration_gate_passed = bool(rows) and stable_answers / len(rows) >= 0.8
     return {
         "suite": "ron0-blind-surprise-v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -68,13 +77,17 @@ def evaluate(checkpoint: Path | None = None) -> dict:
         "non_empty_answers": non_empty,
         "non_echo_answers": not_echo,
         "unique_answer_count": unique_answers,
+        "degenerate_answers": sum(row["degenerate"] for row in rows),
+        "stable_answers": stable_answers,
+        "anti_degeneration_gate_threshold": 0.8,
+        "anti_degeneration_gate_passed": anti_degeneration_gate_passed,
         "native_checkpoint_loaded": all(row["native_weights_loaded"] for row in rows),
         "external_model_used": any(row["external_model_used"] for row in rows),
         "cases": rows,
         "interpretation": (
             "These checks measure runtime robustness and prompt coverage, not factual "
-            "accuracy or general intelligence. Review each answer manually; non-empty "
-            "or unique output is not evidence of correctness."
+            "accuracy or general intelligence. The anti-degeneration gate only catches obvious repetition; "
+            "passing it is not evidence of factual correctness or general intelligence."
         ),
     }
 

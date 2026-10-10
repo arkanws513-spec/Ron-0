@@ -7,6 +7,7 @@ import torch
 from .contracts import ModelRequest, ModelResponse
 from .model import RonCausalLM
 from .model_config import RonModelConfig
+from .generation_quality import guard_generated_text
 
 
 class NativeCheckpointProvider:
@@ -89,10 +90,12 @@ class NativeCheckpointProvider:
             if newline_id is not None and next_id == newline_id and len(generated) > 1:
                 break
 
-        answer = "".join(self.id_to_char.get(index, "") for index in generated)
-        answer = answer.split("\n", 1)[0].strip()
-        if not answer:
-            answer = "لم أتمكن من توليد إجابة واضحة من النموذج الأصلي بعد."
+        raw_answer = "".join(self.id_to_char.get(index, "") for index in generated)
+        raw_answer = raw_answer.split("\n", 1)[0].strip()
+        answer, generation_rejected = guard_generated_text(
+            raw_answer,
+            "لم أتمكن من صياغة إجابة موثوقة من نموذجي المحلي الحالي. أحتاج إلى تحسين التدريب قبل الإجابة عن هذا السؤال.",
+        )
         return ModelResponse(
             content=answer,
             model="ron-native-checkpoint",
@@ -108,5 +111,7 @@ class NativeCheckpointProvider:
                 "optimizer_state_persisted": self.optimizer_state_persisted,
                 "checkpoint_source": self.checkpoint_source,
                 "external_model_used": False,
+                "native_generated_answer_rejected": generation_rejected,
+                "generation_quality_fallback": generation_rejected,
             },
         )
