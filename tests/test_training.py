@@ -101,3 +101,11 @@ def test_best_validation_checkpoint_uses_current_state_when_it_is_better():
     assert loss == 0.80
     assert step == 7800
     assert source == "current_final"
+
+
+def test_validation_improvement_does_not_claim_prior_checkpoint_as_this_run_gain():
+    from scripts.train_native import validation_improvement_percent, checkpoint_delta_percent
+
+    assert validation_improvement_percent(1.32, 1.21, "prior_best") == 0.0
+    assert round(checkpoint_delta_percent(1.32, 1.21), 2) == 8.33
+    assert round(validation_improvement_percent(1.32, 1.21, "this_run"), 2) == 8.33
