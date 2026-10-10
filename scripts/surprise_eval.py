@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,6 +27,22 @@ BLIND_PROMPTS = (
     "ما الفرق بين ملاحظة حدث واستنتاج سببه؟",
     "أعد صياغة السؤال التالي دون تغيير معناه: كيف تتكوّن السحب؟",
 )
+
+
+_TOKEN_RE = re.compile(r"[\w\u0600-\u06ff]+", re.UNICODE)
+
+
+def is_degenerate_answer(answer: str) -> bool:
+    """Detect obvious token loops; this is a stability check, not a correctness score."""
+    tokens = [token.casefold() for token in _TOKEN_RE.findall(str(answer))]
+    if len(tokens) < 6:
+        return False
+    counts = {}
+    for token in tokens:
+        counts[token] = counts.get(token, 0) + 1
+    dominant_ratio = max(counts.values()) / len(tokens)
+    unique_ratio = len(counts) / len(tokens)
+    return dominant_ratio >= 0.45 or unique_ratio <= 0.35
 
 
 def evaluate(checkpoint: Path | None = None) -> dict:
@@ -50,6 +67,7 @@ def evaluate(checkpoint: Path | None = None) -> dict:
             "non_empty": bool(answer),
             "not_exact_echo": answer != prompt,
             "answer_length": len(answer),
+            "degenerate": is_degenerate_answer(answer),
             "model": response.model,
             "native_weights_loaded": bool(response.metadata.get("native_weights_loaded")),
             "external_model_used": bool(response.metadata.get("external_model_used", False)),
@@ -60,6 +78,8 @@ def evaluate(checkpoint: Path | None = None) -> dict:
     non_empty = sum(row["non_empty"] for row in rows)
     not_echo = sum(row["not_exact_echo"] for row in rows)
     unique_answers = len({row["answer"] for row in rows})
+    stable_answers = sum(row["non_empty"] and row["not_exact_echo"] and not row["degenerate"] for row in rows)
+    anti_degeneration_gate_passed = bool(rows) and stable_answers / len(rows) >= 0.8
     return {
         "suite": "ron0-blind-surprise-v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -68,13 +88,17 @@ def evaluate(checkpoint: Path | None = None) -> dict:
         "non_empty_answers": non_empty,
         "non_echo_answers": not_echo,
         "unique_answer_count": unique_answers,
+        "degenerate_answers": sum(row["degenerate"] for row in rows),
+        "stable_answers": stable_answers,
+        "anti_degeneration_gate_threshold": 0.8,
+        "anti_degeneration_gate_passed": anti_degeneration_gate_passed,
         "native_checkpoint_loaded": all(row["native_weights_loaded"] for row in rows),
         "external_model_used": any(row["external_model_used"] for row in rows),
         "cases": rows,
         "interpretation": (
             "These checks measure runtime robustness and prompt coverage, not factual "
-            "accuracy or general intelligence. Review each answer manually; non-empty "
-            "or unique output is not evidence of correctness."
+            "accuracy or general intelligence. The anti-degeneration gate only catches obvious repetition; "
+            "passing it is not evidence of factual correctness or general intelligence."
         ),
     }
 
