@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "description": "Unseen-phrasing generalization probe. These prompts are intentionally paraphrased rather than copied verbatim from the seed curriculum. Substring scoring is heuristic and must be reviewed with the full answers.",
+  "cases": [
+    {
+      "id": "paraphrase_memory_training",
+      "session": "g1",
+      "prompt": "اشرح لي باختصار كيف يختلف الاحتفاظ بالمعلومة عن تعلمها داخل الأوزان.",
+      "contains_any": [
+        "الذاكرة",
+        "الأوزان"
+      ],
+      "critical": true
+    },
+    {
+      "id": "paraphrase_validation_loss",
+      "session": "g2",
+      "prompt": "لماذا لا تكفي خسارة التدريب وحدها للحكم على أداء النموذج؟",
+      "contains_any": [
+        "التحقق",
+        "الاختبار",
+        "التقييم"
+      ],
+      "critical": true
+    },
+    {
+      "id": "evidence_uncertainty",
+      "session": "g3",
+      "prompt": "ما أول خطوة عندما لا تتوفر أدلة كافية للإجابة؟",
+      "contains_any": [
+        "لا أعرف",
+        "تحقق",
+        "أدلة"
+      ],
+      "critical": true
+    },
+    {
+      "id": "decompose_task",
+      "session": "g4",
+      "prompt": "كيف يمكن تقسيم مهمة كبيرة إلى خطوات قابلة للفحص؟",
+      "contains_any": [
+        "خطوات",
+        "أجزاء"
+      ],
+      "critical": false
+    },
+    {
+      "id": "source_reliability",
+      "session": "g5",
+      "prompt": "ما الذي يجعل المصدر جديرًا بالثقة؟",
+      "contains_any": [
+        "مصدر",
+        "موثوق",
+        "أدلة"
+      ],
+      "critical": false
+    },
+    {
+      "id": "apology_paraphrase",
+      "session": "g6",
+      "prompt": "صغ اعتذارًا مختصرًا لتأخر الرد على رسالة.",
+      "contains_any": [
+        "أعتذر",
+        "التأخر"
+      ],
+      "critical": false
+    },
+    {
+      "id": "programming_plan",
+      "session": "g7",
+      "prompt": "اقترح خطة بسيطة لتعلم البرمجة خلال شهر.",
+      "contains_any": [
+        "Python",
+        "البرمجة",
+        "متغيرات"
+      ],
+      "critical": false
+    },
+    {
+      "id": "context_example",
+      "session": "g8",
+      "prompt": "وضح مفهوم السياق باستخدام مثال من حوار.",
+      "contains_any": [
+        "السياق",
+        "حوار"
+      ],
+      "critical": false
+    },
+    {
+      "id": "user_correction",
+      "session": "g9",
+      "prompt": "كيف تتعامل مع تصحيح يقدمه المستخدم؟",
+      "contains_any": [
+        "أراجع",
+        "تحقق",
+        "التصحيح"
+      ],
+      "critical": true
+    },
+    {
+      "id": "repetitive_generation",
+      "session": "g10",
+      "prompt": "لماذا قد يكرر النموذج عبارات غير مرتبطة بالسؤال؟",
+      "contains_any": [
+        "السياق",
+        "التدريب",
+        "البيانات"
+      ],
+      "critical": true
+    },
+    {
+      "id": "hypothesis_evidence",
+      "session": "g11",
+      "prompt": "ما الفرق بين فرضية ونتيجة مثبتة؟",
+      "contains_any": [
+        "دليل",
+        "أدلة",
+        "التحقق"
+      ],
+      "critical": false
+    },
+    {
+      "id": "conflicting_answers",
+      "session": "g12",
+      "prompt": "كيف تختار بين إجابتين متعارضتين؟",
+      "contains_any": [
+        "الأدلة",
+        "المصدر",
+        "أتحقق"
+      ],
+      "critical": false
+    }
+  ]
+}
