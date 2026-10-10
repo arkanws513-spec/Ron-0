@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import random
 import time
+import tempfile
 from pathlib import Path
 
 import torch
@@ -24,6 +26,22 @@ LENGTH = int(os.environ.get("RON_SEQUENCE_LENGTH", "256"))
 HIDDEN, LAYERS, HEADS = 384, 6, 6
 MIN_CORPUS_CHARACTERS = 100_000
 PATIENCE_EVALS = 10
+if STEPS < 1 or BATCH < 1 or LENGTH < 8:
+    raise ValueError("RON_STEPS must be positive, RON_BATCH_SIZE must be positive, and RON_SEQUENCE_LENGTH must be at least 8")
+
+
+def atomic_torch_save(payload: dict, destination: Path) -> None:
+    """Write checkpoints atomically so interrupted writes cannot corrupt the live file."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=destination.name + ".", suffix=".tmp", delete=False) as handle:
+            temporary_path = Path(handle.name)
+        torch.save(payload, temporary_path)
+        os.replace(temporary_path, destination)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
 
 
 def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
@@ -277,15 +295,32 @@ def main():
         "prior_selected_step": prior_step,
         "optimizer_state_dict": optimizer.state_dict(),
     }
-    # Keep a run artifact and a dedicated resumable checkpoint for Ron-10M.
+    # Always retain the candidate as an artifact, but never replace the live model
+    # unless this run actually improves held-out validation loss.
     OUT.mkdir(parents=True, exist_ok=True)
-    torch.save(checkpoint, OUT / "ron_native_10m.pt")
-    LIVE_CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(checkpoint, LIVE_CHECKPOINT)
+    candidate_path = OUT / "ron_native_10m.pt"
+    atomic_torch_save(checkpoint, candidate_path)
+    checkpoint_promoted = bool(
+        best_source == "this_run"
+        and math.isfinite(best_val)
+        and best_val < start_val
+        and changed_tensors > 0
+    )
+    promotion_reason = (
+        "held_out_validation_improved"
+        if checkpoint_promoted
+        else "validation_gate_not_passed_live_checkpoint_preserved"
+    )
+    if checkpoint_promoted:
+        atomic_torch_save(checkpoint, LIVE_CHECKPOINT)
     parameters = sum(parameter.numel() for parameter in model.parameters())
     metrics = {
         "experiment": "ron0-native-10m-character-lm",
         "status": "completed",
+        "checkpoint_promoted": checkpoint_promoted,
+        "promotion_reason": promotion_reason,
+        "candidate_checkpoint": str(candidate_path.relative_to(ROOT)),
+        "live_checkpoint": str(LIVE_CHECKPOINT.relative_to(ROOT)) if checkpoint_promoted else None,
         "checkpoint_source": checkpoint_source,
         "prior_selected_step": prior_step,
         "vocabulary_expanded": vocab_expanded,
@@ -302,6 +337,7 @@ def main():
         "final_validation_loss": final_validation,
         "weights_persisted_from_final_training_step": True,
         "best_validation_weights_persisted": True,
+        "live_checkpoint_promoted_only_after_validation_improvement": True,
         "best_selected_step_total": best_selected_step_total,
         "best_checkpoint_source": best_source,
         "optimizer_state_persisted": True,
