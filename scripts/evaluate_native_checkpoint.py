@@ -105,6 +105,7 @@ def evaluate_checkpoint(checkpoint_path: Path, cases_path: Path, report_path: Pa
         "checkpoint_sha256": checkpoint_hash,
         "parameter_count": parameter_count,
         "case_count": len(results),
+        "critical_case_count": sum(bool(case.get("critical", False)) for case in cases),
         "passed_count": passed_count,
         "pass_rate": pass_rate,
         "required_pass_rate": min_pass_rate,
