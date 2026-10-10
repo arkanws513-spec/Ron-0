@@ -11,13 +11,17 @@ def test_saved_native_checkpoint_is_used_by_default_core():
 
     core = RonCore()
     assert isinstance(core.provider, NativeCheckpointProvider)
+    assert core.provider.checkpoint_path == checkpoint
+    assert core.provider.model.training is False
+    assert core.provider.config.vocab_size == len(core.provider.vocab)
 
     response = core.provider.generate(
         ModelRequest(messages=(Message(role="user", content="مرحبا"),), metadata={})
     )
     assert response.metadata["native_weights_loaded"] is True
     assert response.metadata["external_model_used"] is False
-    assert response.metadata["selected_training_step"] >= 0
-    assert response.metadata["training_steps_this_run"] >= 600
-    assert response.metadata["training_steps_total"] >= response.metadata["selected_training_step"]
-    assert response.metadata["checkpoint_source"] != "unknown"
+    assert response.metadata["selected_training_step"] >= 1800
+    assert response.metadata["training_steps_this_run"] >= 1800
+    assert response.metadata["training_steps_total"] >= 2400
+    assert response.metadata["optimizer_state_persisted"] is True
+    assert response.metadata["checkpoint_source"] == "continued_existing_ron_checkpoint"
