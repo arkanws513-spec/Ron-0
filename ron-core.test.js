@@ -19,7 +19,20 @@ test('trust ranking',()=>{const r=new RonCore();r.store.set('x','y','صحيح',{
 test('unparsed logged',async()=>{const r=new RonCore();assert.match(await say(r,'بلا بلا بلا'),/لم أفهم/);assert.strictEqual(r.store.unparsed.length,1);});
 test('smalltalk',async()=>{const r=new RonCore();assert.match(await say(r,'كيف حالك'),/بخير/);assert.match(await say(r,'مرحبا'),/مرحبًا/);});
 test('multi-hop reasoning',()=>{const s=new FactStore();s.set('القاهرة','جزء_من','مصر');s.set('مصر','جزء_من','افريقيا');assert.ok([...new Reasoner(s).infer().values()].some(v=>v.t.join() === 'القاهرة,جزء_من,افريقيا'));});
-test('safe arithmetic',()=>{assert.strictEqual(arithmetic('2 + 3 * 4'),'14');assert.strictEqual(arithmetic('process.exit()'),null);assert.strictEqual(arithmetic('2 / 0'),null);});
+test('safe arithmetic respects precedence, parentheses, decimals, and Arabic digits',()=>{
+ assert.strictEqual(arithmetic('2 + 3 * 4'),'14');
+ assert.strictEqual(arithmetic('2*(3+4)'),'14');
+ assert.strictEqual(arithmetic('(8 - 2) / 3'),'2');
+ assert.strictEqual(arithmetic('١٢ ÷ ٣'),'4');
+ assert.strictEqual(arithmetic('احسب: 2.5 + .5'),'3');
+ assert.strictEqual(arithmetic('كم تساوي 5 × (4 + 2)'),'30');
+ assert.strictEqual(arithmetic('-2 + +5'),'3');
+});
+test('safe arithmetic rejects prose, malformed expressions, and unsafe edge cases',()=>{
+ for(const input of ['process.exit()','hello 2+2','2 / 0','2 % 0','2+','(2+3','2**3','2..3',''])assert.strictEqual(arithmetic(input),null,input);
+ assert.strictEqual(arithmetic('9'.repeat(300)+'+1'),null);
+});
+
 test('source scoring',()=>{const a=evaluateResult({answer:'معلومة',source:'official',url:'https://example.gov'},'معلومة');const b=evaluateResult({answer:'معلومة',source:'unknown'},'معلومة');assert.ok(a.confidence>b.confidence);});
 
 test('name meta-question never becomes a profile fact',async()=>{
