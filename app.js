@@ -96,6 +96,18 @@ if(!lessons.length)lessons=asLessons(read(LEGACY.lessons,[]));
 const bubble=(role,text)=>{const e=document.createElement("article");e.className="message "+role;const b=document.createElement("b"),p=document.createElement("p");b.textContent=role==="ron"?"رون":"أنت";p.textContent=text;e.append(b,p);chat.appendChild(e);chat.scrollTop=chat.scrollHeight};
 const render=()=>{chat.replaceChildren();messages.forEach(m=>bubble(m.role,m.text))};
 const cleanValue=s=>s.replace(/^[\s.،,؛;:]+|[\s.!؟?،,؛;:]+$/g,"").trim();
+const isSafeProfileName=value=>{
+ const raw=String(value??"").trim(),n=norm(cleanValue(raw)),parts=n.split(" ").filter(Boolean);
+ return !!n&&parts.length<=4&&!/^(?:لا|ليس|مش|مو|ما|بسالك|اسالك|عن|اسمك|اسمي|لكن|ولكن|وليس|بل)(?:\s|$)/.test(n)&&!/(?:^|\s)(?:وليس|لكن|ولكن|مش|مو|بل|لا|ليس|بسالك|اسالك|عن|اسمي|اسمك)$/.test(n)&&!/(?:^|\s)(?:بسالك|اسالك)\s+عن(?:\s|$)/.test(n)&&!/(?:^|\s)(?:اسمك|اسمي)(?:\s|$)/.test(n)&&!/[؟?]/.test(raw);
+};
+const PROFILE_CLEAN_V5="ron-profile-clean-v5";
+if(localStorage.getItem(PROFILE_CLEAN_V5)!=="1"){
+ lessons=lessons.filter(x=>x?.key!=="user.name"||isSafeProfileName(x.text)).filter(x=>x?.key!=="ron.name"||norm(x.text)==="رون");
+ try{const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");if(raw&&Array.isArray(raw.facts)){raw.facts=raw.facts.filter(x=>{if(x?.s==="$user"&&norm(x.p)==="اسم")return isSafeProfileName(x.o);if(x?.s==="$self"&&norm(x.p)==="اسم")return norm(x.o)==="رون";return true;});localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));}}catch{}
+ try{const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");if(raw&&Array.isArray(raw.knowledge)){raw.knowledge=raw.knowledge.filter(x=>{if(x?.kind!=="fact")return true;const t=norm(x.text||"");let m=t.match(/^اسمك\s+هو\s+(.+)$/);if(m)return isSafeProfileName(m[1]);m=t.match(/^اسمي\s+هو\s+(.+)$/);if(m)return norm(m[1])==="رون";return true;});localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));}}catch{}
+ localStorage.setItem(PROFILE_CLEAN_V5,"1");
+ try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
+}
 const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push({key,text,at:new Date().toISOString()});save()};
 const extractFacts=t=>{
  const n=norm(t).replace(/^\.\s*/,"");
@@ -104,9 +116,9 @@ const extractFacts=t=>{
  if(/[؟?]/.test(String(t))||/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي(?=\s|$)/.test(n))return facts;
  // Handle explicit corrections as one user-name fact; never parse the negated clause as Ron's name.
  const corrected=n.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)(?=\s|$).*$/);
- if(corrected){const value=cleanValue(corrected[1]);if(value)facts.push({key:"user.name",text:value});return facts;}
- let both=n.match(/^اسمي\s+(.+?)\s*[،,]\s*(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
- if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});return facts;}
+ if(corrected){const value=cleanValue(corrected[1]);if(isSafeProfileName(value))facts.push({key:"user.name",text:value});return facts;}
+ let both=n.match(/^اسمي\s+(.+?)\s*[،,]?\s+(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
+ if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(!isSafeProfileName(userName))return facts;facts.push({key:"user.name",text:userName});if(isSafeProfileName(ronName)&&norm(ronName)==="رون")facts.push({key:"ron.name",text:"رون"});return facts;}
  let m=n.match(/(?:^|\s)(?:انا\s+)?(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?=\s|$)/);
  if(!m)m=n.match(/(?:^|\s)(?:انا\s+)?(\d{1,3})\s*(?:عام|سنة|سنين)(?=\s|$)/);
  if(m){const age=Number(m[1]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
@@ -118,20 +130,20 @@ const extractFacts=t=>{
   const correction=value.match(/^(.+?)\s+فقط\s+(?:اما|لكن)\s+(\d{1,3})\s*(?:عام|سنة|سنين)\s*$/);
   if(correction){value=cleanValue(correction[1]);const age=Number(correction[2]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
   value=value.replace(/\s+(?:و)?عمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/,"").replace(/\s+\d{1,3}\s*(?:عام|سنة|سنين)$/,"").trim();
-  if(value)facts.push({key:"user.name",text:value});
+  if(isSafeProfileName(value))facts.push({key:"user.name",text:value});
 }
  if(!facts.some(x=>x.key==="user.name")){
   m=n.match(/^انا\s+(.+?)\s+وعمري\s+\d{1,3}\s*(?:عام|سنة|سنين)?$/);
   if(m){
    const value=cleanValue(m[1]);
-   if(value&&!/^(?:عمري|سني|احب|لا احب)\b/.test(value))facts.push({key:"user.name",text:value});
+   if(isSafeProfileName(value)&&!/^(?:عمري|سني|احب|لا احب)\b/.test(value))facts.push({key:"user.name",text:value});
   }
  }
  if(!facts.some(x=>x.key==="user.name")){
   m=n.match(/^انا\s+(.+?)$/);
   if(m&&!/^(?:عمري|سني|احب|لا احب|بسالك|اسالك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)(?:\s|$)/.test(m[1])){
    const value=cleanValue(m[1]);
-   if(value)facts.push({key:"user.name",text:value});
+   if(isSafeProfileName(value))facts.push({key:"user.name",text:value});
   }
  }
  return facts;
@@ -175,7 +187,7 @@ const extractRonFacts=t=>{
  if(m){const v=cleanValue(m[1]);if(v)facts.push({key:"ron.age",text:v});}
  m=n.match(/(?:تذكر|سجل|احفظ|تعلم|اعلم)\s+(?:ان\s+)?(?:اسمك(?:\s+انت)?|اسم رون)\s+(?:هو\s+)?(.+)$/);
  if(!m)m=n.match(/^(?:انت\s+)?اسمك\s+(?:هو\s+)?(.+)$/);
- if(m){let v=cleanValue(m[1]).replace(/^انت\s+/,"").trim();if(v)facts.push({key:"ron.name",text:v});}
+ if(m){let v=cleanValue(m[1]).replace(/^انت\s+/,"").trim();if(isSafeProfileName(v)&&norm(v)==="رون")facts.push({key:"ron.name",text:"رون"});}
  return facts;
 };
 const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n)||/^انت\s+رون$/.test(n)||/^اسمك\s+انت\s+رون$/.test(n)||/^وانت\s+رون$/.test(n)||/^انت\s+اسمك\s+رون$/.test(n);

@@ -23,6 +23,12 @@ const DEFAULTS={
 const STATE=new Set('بخير جيد تمام طيب جائع تعبان سعيد حزين متعب مشغول افكر افكرُ افكر فيه'.split(' '));
 const QSTART=/^(?:ما|ماذا|ماهو|ماهي|من|كيف|هل|اين|متى|كم|لماذا|ليه|ازاي)(?:\s|$)/;
 
+const INVALID_NAME_PREFIX=/^(?:لا|ليس|مش|مو|ما|بسالك|اسالك|عن|اسمك|اسمي|لكن|ولكن|وليس|بل)(?:\s|$)/;
+const INVALID_NAME_SUFFIX=/(?:^|\s)(?:وليس|لكن|ولكن|مش|مو|بل|لا|ليس|بسالك|اسالك|عن|اسمي|اسمك)$/;
+function isSafeNameValue(value){
+ const raw=clean(value),n=normalize(raw),parts=n.split(' ').filter(Boolean);
+ return !!n&&parts.length<=4&&!INVALID_NAME_PREFIX.test(n)&&!INVALID_NAME_SUFFIX.test(n)&&!/(?:^|\s)(?:بسالك|اسالك)\s+عن(?:\s|$)/.test(n)&&!/[؟?]/.test(raw);
+}
 function createRuleNLU(cfg=DEFAULTS){
  cfg={...DEFAULTS,...cfg}; const pers=cfg.personal.map(key).join('|');
  const fillers=new Set(['يا','طيب','اذا','ان','تعلم','اعلم','تذكر','اوكي','حسنا',key(cfg.selfName)]);
@@ -34,11 +40,18 @@ function createRuleNLU(cfg=DEFAULTS){
   if(/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+رون\s+(?:فعلا|حقا)$/.test(n0))return[{type:'identity-confirm',text:c}];
   if(/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي(?=\s|$)/.test(n0))return[{type:'unknown',text:c}];
   let correction=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)(?=\s|$).*$/);
-  if(correction){const value=correction[1].trim();if(value)return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
+  if(correction){const value=correction[1].trim();if(isSafeNameValue(value))return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];return[{type:'memory-clarify',text:c}];}
   let namedBoth=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
-  if(namedBoth){const userName=namedBoth[1].trim(),selfName=namedBoth[2].trim();return[{type:'assert',s:'$user',p:'اسم',o:key(userName),sd:'',pd:'اسم',od:userName},{type:'assert',s:'$self',p:'اسم',o:key(selfName),sd:'',pd:'اسم',od:selfName}];}
+  if(namedBoth){
+   const userName=namedBoth[1].trim(),selfName=namedBoth[2].trim();
+   if(!isSafeNameValue(userName))return[{type:'memory-clarify',text:c}];
+   const frames=[{type:'assert',s:'$user',p:'اسم',o:key(userName),sd:'',pd:'اسم',od:userName}];
+   if(isSafeNameValue(selfName)&&key(selfName)===key(cfg.selfName))frames.push({type:'assert',s:'$self',p:'اسم',o:key(selfName),sd:'',pd:'اسم',od:selfName});
+   else frames.push({type:'identity-protected',text:c});
+   return frames;
+  }
   let explicitName=n0.match(/^(?:انا\s+)?اسمي\s+(?:هو\s+)?(.+?)$/);
-  if(explicitName){const value=explicitName[1].trim();if(value&&!/^(?:بسالك|اسالك)(?=\s|$)/.test(value))return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
+  if(explicitName){const value=explicitName[1].trim();if(isSafeNameValue(value))return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];return[{type:'memory-clarify',text:c}];}
   if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:و\s*)?(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
   if(/^(?:و\s*)?(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
   if(/^(?:و\s*)?(?:انت\s+)?(?:كم\s+عمرك|ما\s+عمرك|ما\s+هو\s+عمرك)$/.test(n0))return[{type:'self-age',text:c}];
@@ -80,7 +93,12 @@ function createRuleNLU(cfg=DEFAULTS){
    if(o&&!['انت','انا','هو','هي'].includes(o))frames.push({type:'assert',s:hit[2]==='ي'?'$user':'$self',p:hit[1],o,sd:'',pd:hit[1],od:parts.join(' ')});
    if(stop)re.lastIndex=valueStart+stop.index;
   }
-  if(frames.length)return frames;
+  if(frames.length){
+   const blocked=frames.some(f=>f.s==='$self'&&key(f.p)==='اسم'&&key(f.o)!==key(cfg.selfName));
+   const safeFrames=frames.filter(f=>!(f.s==='$self'&&key(f.p)==='اسم'&&key(f.o)!==key(cfg.selfName)));
+   if(blocked)safeFrames.push({type:'identity-protected',text:c});
+   return safeFrames;
+  }
   m=/^(\S+)\s+(.+?)\s+(?:هي|هو)\s+(.+)$/.exec(n);
   if(m)return[{type:'assert',s:key(m[2]),p:m[1],o:key(m[3]),sd:m[2],pd:m[1],od:m[3]}];
   m=/^(انا|انت)\s+(\S+)$/.exec(n);
@@ -162,6 +180,8 @@ class RonCore{
   return{reply,frames};}
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
  async exec(f){
+  if(f.type==='memory-clarify')return 'لم أغيّر الذاكرة لأن صياغة الاسم غير واضحة أو تحتوي على نفي أو تكملة. اكتب الاسم وحده، مثل: «اسمي أركانوس».';
+  if(f.type==='identity-protected'){const self=this.store.get('$self','اسم');return 'هويتي المسجلة هي '+(self?this.store.display(self.o):this.cfg.selfName)+'، ولن أغيّرها من عبارة ملتبسة. إذا كنت تقصد تغيير الإعداد فعلًا، وضّح الأمر مباشرة.';}
   if(f.type==='identity-confirm')return 'نعم، اسمي '+this.cfg.selfName+'.';
   if(f.type==='smalltalk')return f.kind==='howareyou'?'أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟':f.kind==='call'?'نعم، أنا معك.':'مرحبًا، كيف أساعدك؟';
   if(f.type==='self-age')return this.store.get('$self','عمر')?'عمري المسجل هو '+this.store.display(this.store.get('$self','عمر').o)+'.':'ليس لدي عمر بشري؛ أنا برنامج، ولا أملك عمرًا شخصيًا مثل الإنسان.';
