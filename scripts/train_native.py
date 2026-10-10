@@ -15,7 +15,7 @@ from ron.model_config import RonModelConfig
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "native-baseline"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_baseline.pt"
-SEED, STEPS, BATCH, LENGTH = 1701, 600, 8, 96
+SEED, STEPS, BATCH, LENGTH = 1701, 1800, 8, 96
 HIDDEN, LAYERS, HEADS = 64, 2, 4
 
 
