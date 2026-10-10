@@ -200,3 +200,16 @@ assert.equal(nodes3.get("chat").children.at(-1).children.at(-1).textContent, "ا
 input.value = "وكم تساوي؟";
 submit({preventDefault(){}});
 assert.equal(nodes.get("chat").children.at(-1).children.at(-1).textContent, "ما العملية الحسابية التي تريد حسابها؟");
+
+
+// Regression: direct engagement questions must not trigger unrelated retrieval, and "yes"
+// must execute the previously offered comment instead of restarting the same clarification loop.
+input.value = "هل انت معي؟";
+submit({preventDefault(){}});
+assert.equal(nodes.get("chat").children.at(-1).children.at(-1).textContent, "أيوه، أنا معاك. قولّي نكمل منين.");
+
+input.value = "أنت تكرر الردود العامة ولا تربطها بسياق المحادثة";
+submit({preventDefault(){}});
+input.value = "نعم";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /معك حق|أكرر ردًا عامًا|سياق المحادثة/);
