@@ -215,6 +215,31 @@ submit({preventDefault(){}});
 assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /معك حق|أكرر ردًا عامًا|سياق المحادثة/);
 
 
+
+input.value = "ما هي عاصمة مصر؟";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /عاصمة مصر هي القاهرة/);
+
+input.value = "ما عاصمة مصر؟";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /عاصمة مصر هي القاهرة/);
+
+input.value = "ما هي عاصمة فرنسا؟";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /باريس/);
+assert.doesNotMatch(nodes.get("chat").children.at(-1).children.at(-1).textContent, /كريستا ثيريت|ممثلة فرنسية/);
+
+input.value = "هل اسمك رون؟";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /نعم، اسمي رون/);
+
+input.value = "مصر عاصمتها القاهرة، ويجب أن تجيب بثبات.";
+submit({preventDefault(){}});
+input.value = "ماذا فهمت؟";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /عاصمة مصر هي القاهرة/);
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /بشكل متسق/);
+
 // Regression: when a user asks "what is this?" after an irrelevant long reply,
 // Ron should explain the previous reply and acknowledge the context mismatch.
 const nodes4 = new Map();
