@@ -160,7 +160,7 @@ function arithmetic(text){
   .replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))
   .replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))
   .replace(/×/g,'*').replace(/÷/g,'/').replace(/[−–]/g,'-');
- s=s.replace(/^(?:(?:احسب(?:\s+لي)?|كم\s+(?:تساوي|يساوي)|ما\s+الناتج(?:\s+عن)?|ما\s+ناتج)\s*[:：؟?]?\s*)/,'').trim();
+ s=s.replace(/^(?:و\s*)?(?:(?:احسب(?:\s+لي)?|كم\s+(?:تساوي|يساوي)|ما\s+الناتج(?:\s+عن)?|ما\s+ناتج)\s*[:：؟?]?\s*)/,'').trim();
  if(!s||!/[+\-*/%]/.test(s)||!/[0-9]/.test(s)||/[^0-9+\-*/().%\s]/.test(s))return null;
  const compact=s.replace(/\s+/g,'');
  const ts=s.match(/(?:\d+(?:\.\d*)?|\.\d+|[()+\-*/%])/g)||[];
@@ -192,7 +192,7 @@ class RonCore{
   if(opts.seed!==false)for(const x of SEED)this.store.set(key(x[0]),key(x[1]),key(x[2]),{source:'seed',confidence:.9,sd:x[0],pd:x[1],od:x[2],persist:false});
   this.store.save();
  }
- async handle(text){const input=clean(text);if(!input)return{reply:'اكتب رسالة أولًا.',frames:[]};this.ctx.history.push({role:'user',text:input,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();const frames=this.nlu.parse(input),out=[];for(const f of frames)out.push(await this.exec(f));const reply=out.filter(Boolean).join('\n');this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});
+ async handle(text){const input=clean(text);if(!input)return{reply:'اكتب رسالة أولًا.',frames:[]};this.ctx.history.push({role:'user',text:input,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();const calc=arithmetic(input);if(calc!==null){const reply='النتيجة: '+calc;this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();globalThis.RonLearning?.addExperience?.(input,reply,'conversation',.65);return{reply,frames:[{type:'calculation',text:input,result:calc}]};}const frames=this.nlu.parse(input),out=[];for(const f of frames)out.push(await this.exec(f));const reply=out.filter(Boolean).join('\n');this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});
   globalThis.RonLearning?.addExperience?.(input,reply,'conversation',.65);
   return{reply,frames};}
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
