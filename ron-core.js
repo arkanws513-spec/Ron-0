@@ -41,6 +41,10 @@ function createRuleNLU(cfg=DEFAULTS){
   let m=/^(?:ابحث|دور|فتش)(?:\s+لي)?(?:\s+عن(ها|هم|ه)?(?:\s+(.+))?)?$/.exec(n);
   if(m)return[{type:'search',anaphor:!!m[1],query:m[2]?m[2]:null}];
   if(QSTART.test(n)){
+   // Resolve capital-city questions before the generic subject/property parser.
+   // normalize() maps Arabic taa marbuta to haa, so match "عاصمه" here.
+   const capitalQuestion=/^(?:ما|ماذا)\s+(?:هي\s+)?عاصمه\s+(.+)$/.exec(n);
+   if(capitalQuestion)return[{type:'ask',s:key(capitalQuestion[1]),p:key('عاصمة'),sd:capitalQuestion[1],pd:'عاصمة',text:c}];
    if(/^من\s+انا$/.test(n))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
    if(/^من\s+انت$/.test(n))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
    m=/^(?:ما|ماذا|ماهو|ماهي)\s+(?:هو\s+|هي\s+)?(\S+?)(ي|ك)$/.exec(n);
@@ -169,7 +173,7 @@ class RonCore{
    if(this.cfg.autoSearch&&this.searchTool){const r=await this.runSearch(f.text);const a=await this.integrateSearch(f,r);if(a)return a;}
    if(f.s==='$user')return'لا أعرف '+f.pd+'ك بعد. قل لي: «'+f.pd+'ي ...»';
    if(f.s==='$self')return'لا أعرف '+f.pd+'ي بعد.';
-   return this.searchTool?'لم أجد إجابة موثوقة كافية بعد. يمكنك أن تقول «ابحث عنها» لإعادة البحث.':'فهمت سؤالك لكن لا أعرف الإجابة بعد. يمكنك تعليمي: «'+f.pd+' '+f.sd+' هي ...» أو تفعيل البحث.';
+   return this.searchTool?'لا أعرف الإجابة بعد. يمكنك أن تقول «ابحث عنها» لإعادة البحث.':'فهمت سؤالك لكن لا أعرف الإجابة بعد. يمكنك تعليمي: «'+f.pd+' '+f.sd+' هي ...» أو تفعيل البحث.';
   }
   if(f.type==='search'){const q=f.query||this.ctx.pending?.text;if(!q)return'عن ماذا تريد أن أبحث؟';if(!this.searchTool)return'أداة البحث غير مفعّلة حاليًا في نواة رون.';const r=await this.runSearch(q);if(!r)return'بحثت ولم أجد نتيجة مفيدة.';return(await this.integrateSearch(this.ctx.pending,r))||r.answer;}
   this.store.logUnparsed(f.text);return f.question?'فهمت أنه سؤال، لكن صياغته خارج ما أستطيع تحليله بعد.':'لم أفهم الجملة. جرّب صياغة أخرى.';
