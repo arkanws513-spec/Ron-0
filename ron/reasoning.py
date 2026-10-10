@@ -187,8 +187,10 @@ class ReasoningEngine:
             known.extend(produced)
 
         contradictions: list[Contradiction] = []
-        for a in known:
-            for b in known:
+        # Compare each unordered pair once: the previous nested loop emitted
+        # both A-vs-B and B-vs-A, duplicating every contradiction in reports.
+        for index, a in enumerate(known):
+            for b in known[index + 1:]:
                 if (self._entity_norm(a.subject) == self._entity_norm(b.subject)
                         and a.relation.lower() == b.relation.lower()
                         and self._entity_norm(a.object) != self._entity_norm(b.object)):
