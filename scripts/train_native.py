@@ -63,6 +63,18 @@ def choose_best_checkpoint(
     return dict(current_state), current_validation_loss, current_selected_step, "current_final"
 
 
+def validation_improvement_percent(start_loss: float, best_loss: float, source: str) -> float:
+    """Measure improvement made during this run, excluding a reused prior checkpoint."""
+    if source != "this_run":
+        return 0.0
+    return 100 * (start_loss - best_loss) / max(start_loss, 1e-9)
+
+
+def checkpoint_delta_percent(start_loss: float, best_loss: float) -> float:
+    """Compare the selected inference checkpoint against the continuation starting state."""
+    return 100 * (start_loss - best_loss) / max(start_loss, 1e-9)
+
+
 def batch(tokens: torch.Tensor, size: int, length: int):
     top = len(tokens) - length - 1
     if top < 1:
@@ -266,7 +278,8 @@ def main():
         "last_train_loss": final_train,
         "last_validation_loss": final_validation,
         "train_loss_reduction_percent": 100 * (start_train - final_train) / max(start_train, 1e-9),
-        "validation_loss_reduction_percent": 100 * (start_val - best_val) / max(start_val, 1e-9),
+        "validation_loss_reduction_percent": validation_improvement_percent(start_val, best_val, best_source),
+        "best_checkpoint_validation_loss_delta_vs_continuation_start_percent": checkpoint_delta_percent(start_val, best_val),
         "elapsed_seconds": round(time.time() - started, 2),
         "history": history,
         "limitations": [
