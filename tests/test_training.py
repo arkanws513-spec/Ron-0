@@ -21,6 +21,37 @@ def test_checkpoint_roundtrip():
         assert all(left.equal(right) for left, right in zip(model.parameters(), restored.parameters()))
 
 
+
+def test_native_corpus_split_holds_out_complete_pairs_reproducibly():
+    from scripts.train_native import split_corpus
+
+    corpus = (
+        "المستخدم: سؤال ألف؟\nرون: إجابة ألف.\n"
+        "المستخدم: سؤال باء؟\nرون: إجابة باء.\n"
+        "المستخدم: سؤال جيم؟\nرون: إجابة جيم.\n"
+        "المستخدم: سؤال دال؟\nرون: إجابة دال.\n"
+    )
+    train_text, validation_text, train_count, validation_count = split_corpus(corpus, seed=19)
+    repeated = split_corpus(corpus, seed=19)
+    assert (train_text, validation_text, train_count, validation_count) == repeated
+    assert train_count + validation_count == 4
+    assert train_count >= 1 and validation_count >= 1
+    train_pairs = set(train_text.strip().split("\nالمستخدم: "))
+    validation_pairs = set(validation_text.strip().split("\nالمستخدم: "))
+    assert train_pairs.isdisjoint(validation_pairs)
+    assert all(line.startswith(("المستخدم: ", "رون: ")) for line in train_text.splitlines())
+    assert all(line.startswith(("المستخدم: ", "رون: ")) for line in validation_text.splitlines())
+
+
+def test_native_corpus_split_rejects_malformed_pairs():
+    import pytest
+    from scripts.train_native import split_corpus
+
+    with pytest.raises(ValueError):
+        split_corpus("المستخدم: سؤال بلا إجابة\nرون: إجابة\nسطر غير صالح\n")
+    with pytest.raises(ValueError):
+        split_corpus("المستخدم: واحد\nرون: واحد\n", train_fraction=1.0)
+
 def test_native_evaluation_is_deterministic_and_restores_training_mode():
     import torch
     from scripts.train_native import evaluate

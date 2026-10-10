@@ -20,6 +20,31 @@ SEED, STEPS, BATCH, LENGTH = 1701, 1800, 8, 96
 HIDDEN, LAYERS, HEADS = 64, 2, 4
 
 
+def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
+    """Hold out complete user/assistant pairs instead of the final contiguous text tail."""
+    if not 0 < train_fraction < 1:
+        raise ValueError("train_fraction must be between 0 and 1")
+    lines = [line.rstrip("\r") for line in corpus.splitlines() if line.strip()]
+    if len(lines) < 4 or len(lines) % 2:
+        raise ValueError("corpus must contain at least two complete user/assistant pairs")
+    pairs = []
+    for index in range(0, len(lines), 2):
+        user_line, assistant_line = lines[index:index + 2]
+        if not user_line.startswith("المستخدم: ") or not assistant_line.startswith("رون: "):
+            raise ValueError(f"invalid conversation pair near corpus line {index + 1}")
+        pairs.append(user_line + "\n" + assistant_line)
+    validation_count = max(1, min(len(pairs) - 1, round(len(pairs) * (1 - train_fraction))))
+    validation_indices = set(random.Random(seed).sample(range(len(pairs)), validation_count))
+    train_pairs = [pair for index, pair in enumerate(pairs) if index not in validation_indices]
+    validation_pairs = [pair for index, pair in enumerate(pairs) if index in validation_indices]
+    return (
+        "\n".join(train_pairs) + "\n",
+        "\n".join(validation_pairs) + "\n",
+        len(train_pairs),
+        len(validation_pairs),
+    )
+
+
 def batch(tokens: torch.Tensor, size: int, length: int):
     top = len(tokens) - length - 1
     if top < 1:
@@ -105,9 +130,9 @@ def main():
     torch.set_num_threads(min(4, torch.get_num_threads()))
     corpus = (ROOT / "training" / "seed_corpus.txt").read_text(encoding="utf-8")
     model, vocab, checkpoint_source, prior_step, vocab_expanded, prior_optimizer_state = load_or_initialize(corpus)
-    ids = torch.tensor([vocab[char] for char in corpus], dtype=torch.long)
-    split = int(len(ids) * 0.9)
-    train, val = ids[:split], ids[split:]
+    train_text, validation_text, train_pairs, validation_pairs = split_corpus(corpus)
+    train = torch.tensor([vocab[char] for char in train_text], dtype=torch.long)
+    val = torch.tensor([vocab[char] for char in validation_text], dtype=torch.long)
     if len(train) < LENGTH + 2 or len(val) < LENGTH + 2:
         raise ValueError("Training corpus is too small for the configured sequence length; expand training/seed_corpus.txt.")
 
@@ -192,7 +217,10 @@ def main():
         "parameter_delta_l2": delta_squared ** 0.5,
         "parameters": parameters,
         "vocab_size": len(vocab),
-        "corpus_characters": len(ids),
+        "corpus_characters": len(corpus),
+        "training_pairs": train_pairs,
+        "validation_pairs": validation_pairs,
+        "split_strategy": "deterministic_conversation_pair_holdout",
         "train_characters": len(train),
         "validation_characters": len(val),
         "initial_train_loss": start_train,
