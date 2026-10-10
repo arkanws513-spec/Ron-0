@@ -94,7 +94,7 @@ class LocalStorageAdapter{
 
 const RANK={search:0,seed:1,model:1,user:2,official:3};
 class FactStore{
- constructor(adapter=new MemoryAdapter(),{multi=[]}={}){this.adapter=adapter;this.multi=new Set(multi.map(key));const d=adapter.load()||{};this.facts=d.facts||[];this.disp=d.disp||{};this.unparsed=d.unparsed||[];this.events=d.events||[];}
+ constructor(adapter=new MemoryAdapter(),{multi=[]}={}){this.adapter=adapter;this.multi=new Set(multi.map(key));const d=adapter.load()||{};this.facts=(d.facts||[]).filter(f=>!(f&&f.s==='$user'&&key(f.p)==='اسم'&&/اسالك عن اسمك|اسالك|ما اسمي|ما اسمك|اسمي وما اسمك/.test(key(f.o))));this.disp=d.disp||{};this.unparsed=d.unparsed||[];this.events=d.events||[];}
  display(k){return k==='$user'?'أنت':k==='$self'?'أنا':this.disp[k]??k;}
  get(s,p){const subject=key(s),property=key(p);return this.facts.find(f=>key(f.s)===subject&&key(f.p)===property);}
  set(s,p,o,{source='user',confidence=1,sd,pd,od,persist=true}={}){
