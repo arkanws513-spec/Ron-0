@@ -6,7 +6,9 @@ def test_curated_knowledge_retrieves_reviewed_exact_prompts():
     knowledge = CuratedKnowledgeBase()
     assert "القاهرة" in knowledge.answer("ما عاصمة مصر؟")
     assert "رون" in knowledge.answer("ما اسمك؟")
+    assert "مرحبا" in knowledge.answer("مرحبا")
     assert "التدريب" in knowledge.answer("ما الفرق بين الذاكرة والتدريب؟")
+    assert "لا أعرف" in knowledge.answer("ماذا تفعل إذا لم تعرف الإجابة؟")
     assert normalize_question("ما عاصمة مصر؟") == normalize_question("ما عاصمة مصر")
 
 
