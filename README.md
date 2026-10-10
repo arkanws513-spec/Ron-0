@@ -12,7 +12,18 @@ Ron-0 is an independent assistant project built around Ron's own local code, rea
 
 ## Core architecture
 
-`Browser UI → RonCore (single orchestrator) → integrated cognition/reasoning + local memory/knowledge/tools → answer and quality checks`\n\nThe browser-side cognition, symbolic reasoning, knowledge retrieval, and learning code is bundled into `ron-core.js` and orchestrated by `RonCore`. The UI loads this single core asset and routes each message through it first; these capabilities are not separate agents. The native Python Transformer remains a separate runtime implementation today; this change unifies the browser-side JavaScript cognition path only and does not claim that Python checkpoint inference is now running in the browser.
+`Browser UI → Python RonCore → local memory + reasoning/tools → Ron's native Transformer → response`
+
+The browser is a user interface only. In normal browsers, every chat turn is sent to `/api/chat`; the UI does not silently fall back to a second JavaScript assistant if the Python service is unavailable. The Python service loads one shared native checkpoint and gives each session its own conversation/memory state. The same process exposes `/api/health`, which reports whether native weights really loaded, the checkpoint selected, and the training step metadata.
+
+Run the app and API together from the repository root:
+
+```bash
+python -m pip install -e ".[model]" pytest
+python -m ron.server
+```
+
+Open `http://127.0.0.1:8000`. The server requires a usable native checkpoint by default and refuses to start with only the teaching fallback. For isolated API tests only, set `RON_REQUIRE_NATIVE=0`; this mode is not evidence that the Transformer is active. Static GitHub Pages cannot run Python inference, so it cannot serve as the full single-core deployment by itself; deploy the Python service and UI together on a Python-capable host.
 
 Clear deterministic tasks such as arithmetic should be handled by Ron's local code before general language generation. Memory stores facts; training updates model weights. They are not the same process.
 
