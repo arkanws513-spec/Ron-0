@@ -65,3 +65,18 @@ Estimate the new architecture independently from the legacy character model:
     python scripts/estimate_model_scale.py --architecture scalable --vocab-size 16000 --hidden-size 256 --layers 4 --heads 4 --kv-heads 2 --sequence-length 512
 
 The memory result is a planning estimate, not a guarantee that a given machine can train that configuration. Training peak memory also depends on activations, optimizer implementation, precision, sequence length, and runtime buffers.
+
+
+## Pretraining before instruction fine-tuning
+
+For a real pipeline, first pretrain the new scalable student on a large, diverse, reviewed local text corpus:
+
+    python scripts/pretrain_scalable_ron.py --corpus training/corpus.txt --tokenizer artifacts/ron-tokenizer/tokenizer.json --output artifacts/ron-pretrained --sequence-length 256 --epochs 1
+
+Use a separate held-out text file with `--validation-corpus` for validation loss. `--max-documents 100` is only a smoke test, not a useful training run. This causal next-token objective trains Ron's own weights and leaves the legacy checkpoint untouched.
+
+Then fine-tune from that compatible checkpoint; keep architecture and sequence length the same:
+
+    python scripts/train_scalable_sft.py --data training/distillation/qwen25_7b_teacher.jsonl --tokenizer artifacts/ron-tokenizer/tokenizer.json --output artifacts/ron-scalable --init-checkpoint artifacts/ron-pretrained/checkpoint.pt --sequence-length 256 --epochs 1 --batch-size 2 --limit 64
+
+The JSONL records must be reviewed and explicitly marked `review_status: approved` first. For a meaningful validation signal, pass a separate reviewed file with `--validation-data`.
