@@ -26,6 +26,9 @@ def test_http_api_uses_python_core_and_reports_native_status():
         if health["native_weights_loaded"]:
             assert health["parameter_count"] > 0
             assert len(health["checkpoint_sha256"]) == 64
+            assert health["model_config"]["hidden_size"] > 0
+            assert health["model_config"]["num_layers"] > 0
+            assert health["model_config"]["num_heads"] > 0
 
         request = Request(
             base + "/api/chat",
