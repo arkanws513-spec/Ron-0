@@ -45,6 +45,24 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
     )
 
 
+def choose_best_checkpoint(
+    current_state: dict,
+    current_validation_loss: float,
+    current_selected_step: int,
+    prior_best_state: dict | None,
+    prior_best_validation_loss: float | None,
+    prior_best_step: int,
+):
+    """Keep the lower-loss inference snapshot while training may resume from final weights."""
+    if (
+        prior_best_state is not None
+        and prior_best_validation_loss is not None
+        and prior_best_validation_loss < current_validation_loss
+    ):
+        return dict(prior_best_state), prior_best_validation_loss, prior_best_step, "prior_best"
+    return dict(current_state), current_validation_loss, current_selected_step, "current_final"
+
+
 def batch(tokens: torch.Tensor, size: int, length: int):
     top = len(tokens) - length - 1
     if top < 1:
@@ -116,12 +134,14 @@ def load_or_initialize(corpus: str):
         model.load_state_dict(target)
         if copied == 0:
             raise RuntimeError("Existing checkpoint contained no compatible weights; refusing silent reinitialization.")
-        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("training_steps_total", payload.get("selected_step", 0))), expanded, payload.get("optimizer_state_dict")
+        prior_best_state = payload.get("best_state_dict") if not expanded else None
+        prior_best_step = int(payload.get("best_selected_step", payload.get("selected_step", 0)))
+        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("training_steps_total", payload.get("selected_step", 0))), expanded, payload.get("optimizer_state_dict"), prior_best_state, prior_best_step
 
     vocab = {char: index for index, char in enumerate(sorted(set(corpus)))}
     cfg = RonModelConfig(vocab_size=len(vocab), hidden_size=HIDDEN, num_layers=LAYERS,
                          num_heads=HEADS, max_sequence_length=LENGTH, dropout=0.1)
-    return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False, None
+    return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False, None, None, 0
 
 
 def main():
@@ -129,7 +149,7 @@ def main():
     torch.manual_seed(SEED)
     torch.set_num_threads(min(4, torch.get_num_threads()))
     corpus = (ROOT / "training" / "seed_corpus.txt").read_text(encoding="utf-8")
-    model, vocab, checkpoint_source, prior_step, vocab_expanded, prior_optimizer_state = load_or_initialize(corpus)
+    model, vocab, checkpoint_source, prior_step, vocab_expanded, prior_optimizer_state, prior_best_state_dict, prior_best_step = load_or_initialize(corpus)
     train_text, validation_text, train_pairs, validation_pairs = split_corpus(corpus)
     train = torch.tensor([vocab[char] for char in train_text], dtype=torch.long)
     val = torch.tensor([vocab[char] for char in validation_text], dtype=torch.long)
@@ -138,8 +158,22 @@ def main():
 
     initial_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     start_train, start_val = evaluate(model, train), evaluate(model, val)
-    best_val, best_step = start_val, 0
-    best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
+    best_step = 0
+    current_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
+    prior_best_validation = None
+    if prior_best_state_dict is not None:
+        model.load_state_dict(prior_best_state_dict)
+        prior_best_validation = evaluate(model, val, count=16)
+        model.load_state_dict(current_state)
+
+    best_state_dict, best_val, best_selected_step_total, best_source = choose_best_checkpoint(
+        current_state,
+        start_val,
+        prior_step,
+        prior_best_state_dict,
+        prior_best_validation,
+        prior_best_step,
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
     if prior_optimizer_state and not vocab_expanded:
         try:
@@ -166,6 +200,8 @@ def main():
             print(f"step={step} train_loss={train_loss:.4f} validation_loss={validation_loss:.4f}", flush=True)
             if validation_loss < best_val:
                 best_val, best_step = validation_loss, step
+                best_selected_step_total = prior_step + step
+                best_source = "this_run"
                 best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
 
     # Persist the final state after this run, not the starting/best snapshot.
@@ -182,7 +218,7 @@ def main():
         "state_dict": final_state_dict,
         # Inference uses the best validation snapshot to reduce overfitting.
         "best_state_dict": best_state_dict,
-        "best_selected_step": prior_step + best_step,
+        "best_selected_step": best_selected_step_total,
         "best_validation_loss": best_val,
         "config": model.config.__dict__,
         "vocab": vocab,
@@ -211,7 +247,8 @@ def main():
         "final_validation_loss": final_validation,
         "weights_persisted_from_final_training_step": True,
         "best_validation_weights_persisted": True,
-        "best_selected_step_total": prior_step + best_step,
+        "best_selected_step_total": best_selected_step_total,
+        "best_checkpoint_source": best_source,
         "optimizer_state_persisted": True,
         "changed_parameter_tensors": changed_tensors,
         "parameter_delta_l2": delta_squared ** 0.5,

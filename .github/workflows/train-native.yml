@@ -16,6 +16,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ron-native-model-training
+  cancel-in-progress: false
+
 jobs:
   train-native-baseline:
     runs-on: ubuntu-latest
@@ -52,7 +56,11 @@ jobs:
           git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json
           if ! git diff --cached --quiet; then
             git commit -m "Add trained Ron-0 native checkpoint"
-            git push
+            # Other reviewed changes may reach main while this CPU training job runs.
+            # Rebase the generated checkpoint commit onto the latest main before pushing.
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
       - name: Archive training run and surprise evaluation
         uses: actions/upload-artifact@v6
