@@ -109,6 +109,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=1701)
     parser.add_argument("--local-files-only", action="store_true", help="Do not download missing model/tokenizer files")
     parser.add_argument("--trust-remote-code", action="store_true", help="Explicitly allow model repository custom code")
+    parser.add_argument("--load-in-4bit", action="store_true", help="Load the teacher in 4-bit NF4 for memory-limited CUDA runtimes; requires bitsandbytes")
     args = parser.parse_args()
 
     if args.max_new_tokens < 1:
@@ -135,11 +136,27 @@ def main() -> None:
         args.model, local_files_only=args.local_files_only,
         trust_remote_code=args.trust_remote_code,
     )
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model, torch_dtype="auto", device_map="auto",
-        local_files_only=args.local_files_only,
-        trust_remote_code=args.trust_remote_code,
-    )
+    model_kwargs = {
+        "torch_dtype": "auto",
+        "device_map": "auto",
+        "local_files_only": args.local_files_only,
+        "trust_remote_code": args.trust_remote_code,
+    }
+    if args.load_in_4bit:
+        if not torch.cuda.is_available():
+            raise SystemExit("--load-in-4bit requires a CUDA GPU; use a GPU runtime or omit this flag")
+        try:
+            from transformers import BitsAndBytesConfig
+        except ImportError as exc:
+            raise SystemExit("4-bit loading requires a recent transformers install and bitsandbytes") from exc
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+        model_kwargs["torch_dtype"] = torch.float16
+    model = AutoModelForCausalLM.from_pretrained(args.model, **model_kwargs)
     model.eval()
     records: list[dict] = []
     seen_pairs: set[str] = set()
