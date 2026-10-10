@@ -234,5 +234,13 @@
       "don't know"
     ],
     "critical": false
+  },
+  {
+    "id": "verify_news",
+    "prompt": "كيف تتحقق من خبر؟",
+    "contains": [
+      "مصدر"
+    ],
+    "critical": false
   }
 ]
