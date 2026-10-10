@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import torch
-from tokenizers import Tokenizer
 from ron.scalable_model import ScalableRonConfig, ScalableRonLM
 
 def main() -> None:
@@ -20,6 +19,7 @@ def main() -> None:
     for path in (args.checkpoint, args.config, args.tokenizer):
         if not path.is_file():
             p.error(f"required file not found: {path}")
+    from tokenizers import Tokenizer
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config = ScalableRonConfig.load(args.config)
     tokenizer = Tokenizer.from_file(str(args.tokenizer))
