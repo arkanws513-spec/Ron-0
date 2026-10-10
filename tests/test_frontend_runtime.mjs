@@ -194,3 +194,9 @@ vm.runInNewContext(fs.readFileSync("app.js","utf8"),context3);
 nodes3.get("input").value = "ما هي عاصمة مصر؟";
 listeners3.get("composer:submit")({preventDefault(){}});
 assert.equal(nodes3.get("chat").children.at(-1).children.at(-1).textContent, "القاهرة");
+
+
+ // An incomplete arithmetic follow-up must ask for the missing expression, not guess or retrieve unrelated text.
+input.value = "وكم تساوي؟";
+submit({preventDefault(){}});
+assert.equal(nodes.get("chat").children.at(-1).children.at(-1).textContent, "ما العملية الحسابية التي تريد حسابها؟");
