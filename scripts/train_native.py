@@ -195,7 +195,7 @@ def main():
         "limitations": [
             "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
             "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
-            "The persisted checkpoint is the final state after this training run so each run continues from newly updated weights; validation metrics are reported separately and may worsen.",
+            "The checkpoint stores both final weights for training continuation and best-validation weights for inference; the two snapshots serve different purposes.",
             "No external inference model or paid API is used.",
         ],
     }
