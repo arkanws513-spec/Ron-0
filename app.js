@@ -318,6 +318,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
   try{
    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:t,session_id:sessionId})});
    let payload={};try{payload=await response.json();}catch{}
+   globalThis.ronRuntimeStatus=payload.health||null;
    if(!response.ok)throw new Error(payload.error||("http_"+response.status));
    const nativeReply=String(payload.reply||"").trim();
    if(!nativeReply)throw new Error("empty_reply");
@@ -325,8 +326,13 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
    messages.push({role:"ron",text:nativeReply});bubble("ron",nativeReply);save();saveCurrent();
    return;
   }catch(error){
-   console.error("Ron Python core unavailable",error);
-   const unavailable="تعذّر الاتصال بنواة رون الأصلية المكتوبة بـ Python. لم أستخدم عقلًا بديلًا. شغّل خدمة رون عبر «python -m ron.server» وتأكد من نجاح فحص /api/health ووجود النموذج الأصلي المدرّب.";
+   console.error("Ron Python core request failed",error);
+   const code=String(error?.message||"");
+   const unavailable=code==="native_inference_rejected"
+    ?"نواة رون الأصلية متصلة، لكن فاحص الجودة رفض النص المولّد من النموذج. لم أستبدله برد من عقل آخر؛ يلزم تحسين النموذج واختباره قبل اعتماد الإجابة."
+    :code==="native_model_unavailable"
+    ?"خدمة رون تعمل، لكن لم يتم تحميل نموذج Transformer أصلي صالح. راجع /api/health وملف checkpoint."
+    :"تعذّر الاتصال بخدمة نواة رون الأصلية المكتوبة بـ Python. لم أستخدم عقلًا بديلًا. شغّل خدمة رون عبر «python -m ron.server» وتأكد من نجاح فحص /api/health.";
    messages.push({role:"ron",text:unavailable});bubble("ron",unavailable);save();saveCurrent();
    return;
   }
