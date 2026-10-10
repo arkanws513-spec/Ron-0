@@ -1,32 +1,28 @@
 # Ron-0 Architecture
 
 ## Goal
-Build Ron as an agent runtime rather than a provider-specific chatbot.
+
+Build Ron-0 as an independent local assistant whose original reasoning, memory, learning, and generation components are owned by this repository. Ron-0 is distinct from Ron-1.
 
 ## Layers
-1. Conversation Engine — owns turns and creates runtime requests.
-2. Ron Core — coordinates understanding, planning, execution, verification, and response.
-3. Memory — short-term and long-term memory behind a replaceable interface.
-4. Retrieval — retrieves relevant knowledge without flooding model context.
-5. Tools — explicit capability contracts with inputs, outputs, and errors.
-6. Model Router — selects a configured provider through a common interface.
 
-## Initial contracts
-- ModelProvider
-- MemoryStore
-- Retriever
-- Tool
-- Planner
-- AgentRuntime
+1. Conversation UI — receives user messages and displays replies.
+2. Ron Core — routes intent, checks context, and coordinates execution.
+3. Local reasoning and deterministic tools — handles explicit rules and verifiable operations such as arithmetic.
+4. Memory — stores user-approved facts separately from model weights.
+5. Native model — Ron's own character-level Transformer and local checkpoint.
+6. Evaluation and learning — trains on reviewed examples, validates checkpoints, and blocks low-quality candidates.
 
 ## Execution lifecycle
-1. Receive request.
-2. Build context.
-3. Decide whether planning, retrieval, or tools are needed.
-4. Execute bounded actions.
-5. Verify results.
-6. Produce response.
-7. Record useful memory.
 
-## Design rule
-No external service becomes the architectural center of Ron. External services are adapters around the GitHub-owned codebase.
+1. Receive the message.
+2. Detect deterministic requests before generic language handling.
+3. Build the relevant local context.
+4. Execute local rules, tools, or native generation.
+5. Check the result and avoid promoting unsupported output to memory.
+6. Record useful experience with provenance.
+7. Evaluate training changes on held-out and blind examples before promoting weights.
+
+## Independence rule
+
+Ron-0 must not require an external model or cloud inference service to run. Any improvement to its core language ability must be implemented and evaluated through Ron-0's own code and training process.
