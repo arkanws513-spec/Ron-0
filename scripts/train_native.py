@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import random
 import time
@@ -18,6 +19,7 @@ OUT = ROOT / "artifacts" / "native-baseline"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_baseline.pt"
 SEED, STEPS, BATCH, LENGTH = 1701, 1800, 8, 96
 HIDDEN, LAYERS, HEADS = 64, 2, 4
+PATIENCE_EVALS = 10
 
 
 def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
@@ -43,6 +45,13 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
         len(train_pairs),
         len(validation_pairs),
     )
+
+
+def should_stop_early(stale_evaluations: int, patience: int = PATIENCE_EVALS) -> bool:
+    """Stop wasting steps when held-out validation stops improving."""
+    if patience < 1 or stale_evaluations < 0:
+        raise ValueError("patience must be positive and stale_evaluations non-negative")
+    return stale_evaluations >= patience
 
 
 def choose_best_checkpoint(
@@ -109,8 +118,10 @@ def evaluate(model, tokens: torch.Tensor, count: int = 16) -> float:
 
 def load_or_initialize(corpus: str):
     """Continue from Ron's live checkpoint when compatible; otherwise initialize Ron's own model."""
+    corpus_sha256 = hashlib.sha256(corpus.encode("utf-8")).hexdigest()
     if LIVE_CHECKPOINT.is_file():
         payload = torch.load(LIVE_CHECKPOINT, map_location="cpu", weights_only=True)
+        corpus_changed = payload.get("corpus_sha256") != corpus_sha256
         old_vocab = payload["vocab"]
         vocab = dict(old_vocab)  # Preserve existing token IDs so old weights keep their meaning.
         for char in sorted(set(corpus) - set(vocab)):
@@ -129,7 +140,9 @@ def load_or_initialize(corpus: str):
             raise RuntimeError("Existing Ron checkpoint architecture differs from this training recipe; refusing to overwrite it.")
         model = RonCausalLM(cfg)
         target = model.state_dict()
-        old_state = payload["state_dict"]
+        # When the corpus changes, resume from the best inference snapshot rather than overfit final weights.
+        old_state = (payload.get("best_state_dict", payload["state_dict"])
+                     if corpus_changed else payload["state_dict"])
         copied, expanded = 0, False
         for name, current in target.items():
             previous = old_state.get(name)
@@ -146,9 +159,11 @@ def load_or_initialize(corpus: str):
         model.load_state_dict(target)
         if copied == 0:
             raise RuntimeError("Existing checkpoint contained no compatible weights; refusing silent reinitialization.")
-        prior_best_state = payload.get("best_state_dict") if not expanded else None
+        prior_best_state = payload.get("best_state_dict") if not expanded and not corpus_changed else None
         prior_best_step = int(payload.get("best_selected_step", payload.get("selected_step", 0)))
-        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("training_steps_total", payload.get("selected_step", 0))), expanded, payload.get("optimizer_state_dict"), prior_best_state, prior_best_step
+        source = "continued_best_checkpoint_after_corpus_change" if corpus_changed else "continued_existing_ron_checkpoint"
+        optimizer_state = None if corpus_changed or expanded else payload.get("optimizer_state_dict")
+        return model, vocab, source, int(payload.get("training_steps_total", payload.get("selected_step", 0))), expanded, optimizer_state, prior_best_state, prior_best_step
 
     vocab = {char: index for index, char in enumerate(sorted(set(corpus)))}
     cfg = RonModelConfig(vocab_size=len(vocab), hidden_size=HIDDEN, num_layers=LAYERS,
@@ -196,8 +211,12 @@ def main():
             print(f"optimizer_state_reset_due_to_shape_change={exc}", flush=True)
     started = time.time()
     history = []
+    stale_evaluations = 0
+    early_stopped = False
+    steps_completed = 0
     model.train()
     for step in range(1, STEPS + 1):
+        steps_completed = step
         x, y = batch(train, BATCH, LENGTH)
         optimizer.zero_grad(set_to_none=True)
         loss = model(x, y).loss
@@ -215,12 +234,19 @@ def main():
                 best_selected_step_total = prior_step + step
                 best_source = "this_run"
                 best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
+                stale_evaluations = 0
+            else:
+                stale_evaluations += 1
+            if should_stop_early(stale_evaluations):
+                early_stopped = True
+                print(f"early_stopping=true step={step} stale_evaluations={stale_evaluations}", flush=True)
+                break
 
     # Persist the final state after this run, not the starting/best snapshot.
     # This guarantees the next run continues from weights actually updated by this training pass.
     final_train, final_validation = evaluate(model, train), evaluate(model, val, count=16)
     OUT.mkdir(parents=True, exist_ok=True)
-    total_steps = prior_step + STEPS
+    total_steps = prior_step + steps_completed
     final_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     delta_squared = sum(float((final_state_dict[name].float() - initial_state[name].float()).pow(2).sum().item())
                         for name in final_state_dict)
@@ -236,7 +262,8 @@ def main():
         "vocab": vocab,
         "seed": SEED,
         "selected_step": total_steps,
-        "training_steps_this_run": STEPS,
+        "training_steps_this_run": steps_completed,
+        "corpus_sha256": hashlib.sha256(corpus.encode("utf-8")).hexdigest(),
         "training_steps_total": total_steps,
         "checkpoint_source": checkpoint_source,
         "prior_selected_step": prior_step,
@@ -251,8 +278,12 @@ def main():
         "prior_selected_step": prior_step,
         "vocabulary_expanded": vocab_expanded,
         "seed": SEED,
-        "training_steps_this_run": STEPS,
-        "selected_checkpoint_step_this_run": STEPS,
+        "training_steps_this_run": steps_completed,
+        "selected_checkpoint_step_this_run": steps_completed,
+        "corpus_sha256": hashlib.sha256(corpus.encode("utf-8")).hexdigest(),
+        "early_stopped": early_stopped,
+        "early_stopping_patience_evaluations": PATIENCE_EVALS,
+        "stale_evaluations_at_stop": stale_evaluations,
         "best_validation_step_this_run": best_step,
         "training_steps_total": total_steps,
         "final_train_loss": final_train,
