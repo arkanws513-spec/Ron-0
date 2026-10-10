@@ -5,7 +5,11 @@ import re
 from .intent import Intent, detect_intent
 from .memory import normalize_arabic
 
-_FOLLOWUP_RE = re.compile(r"^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ماذا تقصد)\s*[؟?]?$")
+_FOLLOWUP_RE = re.compile(
+    r"^(?:طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ماذا تقصد|"
+    r"ليه|لماذا|ازاي|كيف ذلك|لماذا ذلك|ما السبب|ما معنى ذلك|هل هذا صحيح)"
+    r"(?:\s*[؟?!.،]*)?$"
+)
 _WORD_RE = re.compile(r"[\w\u0600-\u06ff]+")
 
 @dataclass(frozen=True)
