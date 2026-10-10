@@ -1,6 +1,238 @@
 [
-  {"prompt":"من أنت؟","contains":["رون"]},
-  {"prompt":"ما عاصمة مصر؟","contains":["القاهرة"]},
-  {"prompt":"أحمد ذهب إلى العمل فوجده مغلقًا، ماذا يفعل؟","contains":["يتواصل"]},
-  {"prompt":"ماذا تفعل إذا لم تعرف الإجابة؟","contains":["لا أعرف"]}
+  {
+    "id": "identity_arabic",
+    "prompt": "من أنت؟",
+    "contains": [
+      "رون"
+    ],
+    "forbidden": [
+      "كريستا ثيريت"
+    ],
+    "critical": true
+  },
+  {
+    "id": "identity_yes_no",
+    "prompt": "هل اسمك رون؟",
+    "contains": [
+      "رون"
+    ],
+    "forbidden": [
+      "ممثلة"
+    ],
+    "critical": true
+  },
+  {
+    "id": "egypt_capital_short",
+    "prompt": "ما عاصمة مصر؟",
+    "contains": [
+      "القاهرة"
+    ],
+    "forbidden": [
+      "كريستا ثيريت",
+      "باريس"
+    ],
+    "critical": true
+  },
+  {
+    "id": "egypt_capital_variant",
+    "prompt": "ما هي عاصمة مصر؟",
+    "contains": [
+      "القاهرة"
+    ],
+    "forbidden": [
+      "باريس",
+      "كريستا ثيريت"
+    ],
+    "critical": true
+  },
+  {
+    "id": "egypt_capital_inflection",
+    "prompt": "مصر عاصمتها القاهرة، صحيح؟",
+    "contains": [
+      "القاهرة"
+    ],
+    "critical": true
+  },
+  {
+    "id": "france_capital",
+    "prompt": "ما عاصمة فرنسا؟",
+    "contains": [
+      "باريس"
+    ],
+    "forbidden": [
+      "كريستا ثيريت",
+      "ممثلة فرنسية"
+    ],
+    "critical": true
+  },
+  {
+    "id": "uk_capital",
+    "prompt": "ما عاصمة المملكة المتحدة؟",
+    "contains": [
+      "لندن"
+    ],
+    "critical": false
+  },
+  {
+    "id": "unknown_question",
+    "prompt": "ما عاصمة دولة زيرافيا الخيالية؟",
+    "contains": [
+      "لا أعرف"
+    ],
+    "critical": true
+  },
+  {
+    "id": "unknown_safe_response",
+    "prompt": "اذكر رقم هاتف العالم الذي اكتشف كوكبًا غدًا.",
+    "contains": [
+      "لا أعرف"
+    ],
+    "critical": false
+  },
+  {
+    "id": "practical_reasoning",
+    "prompt": "أحمد ذهب إلى العمل فوجده مغلقًا، ماذا يفعل؟",
+    "contains": [
+      "يتواصل"
+    ],
+    "critical": true
+  },
+  {
+    "id": "uncertainty",
+    "prompt": "ماذا تفعل إذا لم تعرف الإجابة؟",
+    "contains": [
+      "لا أعرف"
+    ],
+    "critical": true
+  },
+  {
+    "id": "simple_math",
+    "prompt": "كم يساوي 9 ضرب 7؟",
+    "contains": [
+      "63"
+    ],
+    "critical": true
+  },
+  {
+    "id": "division",
+    "prompt": "كم يساوي 125 مقسومًا على 5؟",
+    "contains": [
+      "25"
+    ],
+    "critical": false
+  },
+  {
+    "id": "equation",
+    "prompt": "حل المعادلة 2x + 4 = 10.",
+    "contains": [
+      "x = 3"
+    ],
+    "critical": false
+  },
+  {
+    "id": "context_followup",
+    "messages": [
+      {
+        "role": "user",
+        "content": "تذكر أن عاصمة مصر هي القاهرة."
+      },
+      {
+        "role": "assistant",
+        "content": "فهمت، عاصمة مصر هي القاهرة."
+      },
+      {
+        "role": "user",
+        "content": "ماذا فهمت؟"
+      }
+    ],
+    "contains": [
+      "القاهرة"
+    ],
+    "critical": true
+  },
+  {
+    "id": "context_short_yes",
+    "messages": [
+      {
+        "role": "user",
+        "content": "هل تستطيع شرح معنى الاستدلال؟"
+      },
+      {
+        "role": "assistant",
+        "content": "نعم، أستطيع شرحه."
+      },
+      {
+        "role": "user",
+        "content": "نعم، افعل ذلك."
+      }
+    ],
+    "contains": [
+      "الاستدلال"
+    ],
+    "critical": false
+  },
+  {
+    "id": "reliable_translation",
+    "prompt": "ترجم كلمة reliable إلى العربية.",
+    "contains": [
+      "موثوق"
+    ],
+    "critical": false
+  },
+  {
+    "id": "context_definition",
+    "prompt": "ماذا يعني السياق في المحادثة؟",
+    "contains": [
+      "الرسائل"
+    ],
+    "critical": false
+  },
+  {
+    "id": "truth_opinion",
+    "prompt": "ما الفرق بين الحقيقة والرأي؟",
+    "contains": [
+      "الحقيقة"
+    ],
+    "critical": false
+  },
+  {
+    "id": "training_loss",
+    "prompt": "هل انخفاض خسارة التدريب يضمن الذكاء؟",
+    "contains": [
+      "لا"
+    ],
+    "critical": true
+  },
+  {
+    "id": "factuality",
+    "prompt": "هل كل إجابة أقولها لك صحيحة؟",
+    "contains": [
+      "لا"
+    ],
+    "critical": false
+  },
+  {
+    "id": "programming",
+    "prompt": "كيف أكتب دالة Python تجمع رقمين؟",
+    "contains": [
+      "a + b"
+    ],
+    "critical": false
+  },
+  {
+    "id": "english_identity",
+    "prompt": "Who are you?",
+    "contains": [
+      "Ron"
+    ],
+    "critical": true
+  },
+  {
+    "id": "english_uncertainty",
+    "prompt": "What should you do if you do not know an answer?",
+    "contains": [
+      "don't know"
+    ],
+    "critical": false
+  }
 ]
