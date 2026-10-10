@@ -29,8 +29,10 @@ function createRuleNLU(cfg=DEFAULTS){
  const parse=text=>{
   const c=clean(text),n0=normalize(c); let n=n0,t=c;
   // Direct conversational forms must be recognized before filler removal.
-  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
-  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:و\s*)?(?:ما|ايه|اي)\s+اسمي\s+و\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0)||/^(?:ما|ايه|اي)\s+اسمي\s+و?\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0))return[{type:'ask-both-names',text:c}];
+  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:و\s*)?(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:و\s*)?(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:و\s*)?(?:انت\s+)?(?:كم\s+عمرك|ما\s+عمرك|ما\s+هو\s+عمرك)$/.test(n0))return[{type:'self-age',text:c}];
   while(true){const m=/^(\S+)\s+/.exec(n);if(!m||!fillers.has(m[1]))break;n=n.slice(m[0].length);t=t.slice(m[0].length);}
   if(!n)return[{type:'unknown',text:c}];
   if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
@@ -41,6 +43,10 @@ function createRuleNLU(cfg=DEFAULTS){
   let m=/^(?:ابحث|دور|فتش)(?:\s+لي)?(?:\s+عن(ها|هم|ه)?(?:\s+(.+))?)?$/.exec(n);
   if(m)return[{type:'search',anaphor:!!m[1],query:m[2]?m[2]:null}];
   if(QSTART.test(n)){
+   // Resolve capital-city questions before the generic subject/property parser.
+   // normalize() maps Arabic taa marbuta to haa, so match "عاصمه" here.
+   const capitalQuestion=/^(?:ما|ماذا)\s+(?:هي\s+)?عاصمه\s+(.+)$/.exec(n);
+   if(capitalQuestion)return[{type:'ask',s:key(capitalQuestion[1]),p:key('عاصمة'),sd:capitalQuestion[1],pd:'عاصمة',text:c}];
    if(/^من\s+انا$/.test(n))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
    if(/^من\s+انت$/.test(n))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
    m=/^(?:ما|ماذا|ماهو|ماهي)\s+(?:هو\s+|هي\s+)?(\S+?)(ي|ك)$/.exec(n);
@@ -88,9 +94,9 @@ class LocalStorageAdapter{
 
 const RANK={search:0,seed:1,model:1,user:2,official:3};
 class FactStore{
- constructor(adapter=new MemoryAdapter(),{multi=[]}={}){this.adapter=adapter;this.multi=new Set(multi.map(key));const d=adapter.load()||{};this.facts=d.facts||[];this.disp=d.disp||{};this.unparsed=d.unparsed||[];this.events=d.events||[];}
+ constructor(adapter=new MemoryAdapter(),{multi=[]}={}){this.adapter=adapter;this.multi=new Set(multi.map(key));const d=adapter.load()||{};this.facts=(d.facts||[]).filter(f=>!(f&&f.s==='$user'&&key(f.p)==='اسم'&&/اسالك عن اسمك|اسالك|ما اسمي|ما اسمك|اسمي وما اسمك/.test(key(f.o))));this.disp=d.disp||{};this.unparsed=d.unparsed||[];this.events=d.events||[];}
  display(k){return k==='$user'?'أنت':k==='$self'?'أنا':this.disp[k]??k;}
- get(s,p){return this.facts.find(f=>f.s===s&&f.p===p);}
+ get(s,p){const subject=key(s),property=key(p);return this.facts.find(f=>key(f.s)===subject&&key(f.p)===property);}
  set(s,p,o,{source='user',confidence=1,sd,pd,od,persist=true}={}){
   const i=this.facts.findIndex(f=>f.s===s&&f.p===p&&(!this.multi.has(p)||f.o===o));let status,prev;
   if(i<0){this.facts.push({s,p,o,source,confidence,ts:Date.now(),history:[]});status='added';}
@@ -147,6 +153,8 @@ class RonCore{
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
  async exec(f){
   if(f.type==='smalltalk')return f.kind==='howareyou'?'أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟':f.kind==='call'?'نعم، أنا معك.':'مرحبًا، كيف أساعدك؟';
+  if(f.type==='self-age')return this.store.get('$self','عمر')?'عمري المسجل هو '+this.store.display(this.store.get('$self','عمر').o)+'.':'ليس لدي عمر بشري؛ أنا برنامج، ولا أملك عمرًا شخصيًا مثل الإنسان.';
+  if(f.type==='ask-both-names'){const user=this.store.get('$user','اسم'),self=this.store.get('$self','اسم');return (user?'اسمك '+this.store.display(user.o):'لم تخبرني باسمك بعد')+'، واسمي '+(self?this.store.display(self.o):this.cfg.selfName)+'.';}
   if(f.type==='context'){
    if(f.kind==='previous'){
     const h=this.ctx.history.filter(x=>x.role==='user');
@@ -169,7 +177,7 @@ class RonCore{
    if(this.cfg.autoSearch&&this.searchTool){const r=await this.runSearch(f.text);const a=await this.integrateSearch(f,r);if(a)return a;}
    if(f.s==='$user')return'لا أعرف '+f.pd+'ك بعد. قل لي: «'+f.pd+'ي ...»';
    if(f.s==='$self')return'لا أعرف '+f.pd+'ي بعد.';
-   return this.searchTool?'لم أجد إجابة موثوقة كافية بعد. يمكنك أن تقول «ابحث عنها» لإعادة البحث.':'فهمت سؤالك لكن لا أعرف الإجابة بعد. يمكنك تعليمي: «'+f.pd+' '+f.sd+' هي ...» أو تفعيل البحث.';
+   return this.searchTool?'لا أعرف الإجابة بعد. يمكنك أن تقول «ابحث عنها» لإعادة البحث.':'فهمت سؤالك لكن لا أعرف الإجابة بعد. يمكنك تعليمي: «'+f.pd+' '+f.sd+' هي ...» أو تفعيل البحث.';
   }
   if(f.type==='search'){const q=f.query||this.ctx.pending?.text;if(!q)return'عن ماذا تريد أن أبحث؟';if(!this.searchTool)return'أداة البحث غير مفعّلة حاليًا في نواة رون.';const r=await this.runSearch(q);if(!r)return'بحثت ولم أجد نتيجة مفيدة.';return(await this.integrateSearch(this.ctx.pending,r))||r.answer;}
   this.store.logUnparsed(f.text);return f.question?'فهمت أنه سؤال، لكن صياغته خارج ما أستطيع تحليله بعد.':'لم أفهم الجملة. جرّب صياغة أخرى.';

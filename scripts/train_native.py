@@ -15,7 +15,7 @@ from ron.model_config import RonModelConfig
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "native-baseline"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_baseline.pt"
-SEED, STEPS, BATCH, LENGTH = 1701, 600, 8, 96
+SEED, STEPS, BATCH, LENGTH = 1701, 1800, 8, 96
 HIDDEN, LAYERS, HEADS = 64, 2, 4
 
 
@@ -78,12 +78,12 @@ def load_or_initialize(corpus: str):
         model.load_state_dict(target)
         if copied == 0:
             raise RuntimeError("Existing checkpoint contained no compatible weights; refusing silent reinitialization.")
-        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("selected_step", 0)), expanded
+        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("training_steps_total", payload.get("selected_step", 0))), expanded, payload.get("optimizer_state_dict")
 
     vocab = {char: index for index, char in enumerate(sorted(set(corpus)))}
     cfg = RonModelConfig(vocab_size=len(vocab), hidden_size=HIDDEN, num_layers=LAYERS,
                          num_heads=HEADS, max_sequence_length=LENGTH)
-    return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False
+    return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False, None
 
 
 def main():
@@ -91,7 +91,7 @@ def main():
     torch.manual_seed(SEED)
     torch.set_num_threads(min(4, torch.get_num_threads()))
     corpus = (ROOT / "training" / "seed_corpus.txt").read_text(encoding="utf-8")
-    model, vocab, checkpoint_source, prior_step, vocab_expanded = load_or_initialize(corpus)
+    model, vocab, checkpoint_source, prior_step, vocab_expanded, prior_optimizer_state = load_or_initialize(corpus)
     ids = torch.tensor([vocab[char] for char in corpus], dtype=torch.long)
     split = int(len(ids) * 0.9)
     train, val = ids[:split], ids[split:]
@@ -100,8 +100,14 @@ def main():
 
     start_train, start_val = evaluate(model, train), evaluate(model, val)
     best_val, best_step = start_val, 0
-    best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
     optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
+    if prior_optimizer_state and not vocab_expanded:
+        try:
+            optimizer.load_state_dict(prior_optimizer_state)
+            print("restored_optimizer_state=true", flush=True)
+        except (ValueError, RuntimeError) as exc:
+            # A vocabulary expansion changes embedding shapes; reset optimizer moments but retain every compatible model weight.
+            print(f"optimizer_state_reset_due_to_shape_change={exc}", flush=True)
     started = time.time()
     history = []
     model.train()
@@ -120,19 +126,23 @@ def main():
             print(f"step={step} train_loss={train_loss:.4f} validation_loss={validation_loss:.4f}", flush=True)
             if validation_loss < best_val:
                 best_val, best_step = validation_loss, step
-                best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
-    model.load_state_dict(best_state)
+    # Persist the final state after this run, not the starting/best snapshot.
+    # This guarantees the next run continues from weights actually updated by this training pass.
+    final_train, final_validation = evaluate(model, train), evaluate(model, val, count=16)
     OUT.mkdir(parents=True, exist_ok=True)
+    total_steps = prior_step + STEPS
     checkpoint = {
         "state_dict": model.state_dict(),
         "config": model.config.__dict__,
         "vocab": vocab,
         "seed": SEED,
-        "selected_step": best_step,
+        "selected_step": total_steps,
         "training_steps_this_run": STEPS,
+        "training_steps_total": total_steps,
         "checkpoint_source": checkpoint_source,
         "prior_selected_step": prior_step,
+        "optimizer_state_dict": optimizer.state_dict(),
     }
     torch.save(checkpoint, OUT / "ron_native_baseline.pt")
     parameters = sum(parameter.numel() for parameter in model.parameters())
@@ -144,7 +154,13 @@ def main():
         "vocabulary_expanded": vocab_expanded,
         "seed": SEED,
         "training_steps_this_run": STEPS,
-        "selected_checkpoint_step_this_run": best_step,
+        "selected_checkpoint_step_this_run": STEPS,
+        "best_validation_step_this_run": best_step,
+        "training_steps_total": total_steps,
+        "final_train_loss": final_train,
+        "final_validation_loss": final_validation,
+        "weights_persisted_from_final_training_step": True,
+        "optimizer_state_persisted": True,
         "parameters": parameters,
         "vocab_size": len(vocab),
         "corpus_characters": len(ids),
@@ -153,16 +169,16 @@ def main():
         "initial_train_loss": start_train,
         "initial_validation_loss": start_val,
         "best_validation_loss": best_val,
-        "last_train_loss": history[-1]["train_loss"] if history else start_train,
-        "last_validation_loss": history[-1]["validation_loss"] if history else start_val,
-        "train_loss_reduction_percent": 100 * (start_train - (history[-1]["train_loss"] if history else start_train)) / max(start_train, 1e-9),
+        "last_train_loss": final_train,
+        "last_validation_loss": final_validation,
+        "train_loss_reduction_percent": 100 * (start_train - final_train) / max(start_train, 1e-9),
         "validation_loss_reduction_percent": 100 * (start_val - best_val) / max(start_val, 1e-9),
         "elapsed_seconds": round(time.time() - started, 2),
         "history": history,
         "limitations": [
             "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
             "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
-            "The selected checkpoint is the best validation checkpoint, including the starting weights, to avoid promoting a regression.",
+            "The persisted checkpoint is the final state after this training run so each run continues from newly updated weights; validation metrics are reported separately and may worsen.",
             "No external inference model or paid API is used.",
         ],
     }

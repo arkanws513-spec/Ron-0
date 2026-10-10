@@ -23,6 +23,16 @@ const FACTS_MIGRATION="ron-facts-migration-v1";
 if(localStorage.getItem(FACTS_MIGRATION)!=="1"){lessons=lessons.filter(x=>x.key!=="user.name"&&x.key!=="user.age");localStorage.setItem(FACTS_MIGRATION,"1");}
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
 if(localStorage.getItem("ron-name-clean-v2")!=="1"){lessons=lessons.filter(x=>!(x.key==="ron.name"&&/^(?:اي|انت رون|اسمك|اسمك انت رون)$/i.test(norm(x.text))));localStorage.setItem("ron-name-clean-v2","1");save();}
+
+const PROFILE_CLEAN="ron-profile-clean-v3";
+if(localStorage.getItem(PROFILE_CLEAN)!=="1"){
+ const badName=x=>x?.key==="user.name"&&/^(?:اسالك عن اسمك|اسالك|ما اسمي|ما اسمك|اسمي وما اسمك)$/i.test(norm(x.text));
+ lessons=lessons.filter(x=>!badName(x));
+ try{const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");if(raw&&Array.isArray(raw.facts)){raw.facts=raw.facts.filter(x=>!(x?.s==="$user"&&norm(x.p)==="اسم"&&/اسالك عن اسمك|اسالك|ما اسمي|ما اسمك|اسمي وما اسمك/i.test(norm(x.o))));localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));}}catch{}
+ try{const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");if(raw&&Array.isArray(raw.knowledge)){raw.knowledge=raw.knowledge.filter(x=>!/اسمك اسالك عن اسمك|اسمك ما اسمي/i.test(norm(x?.text||"")));localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));}}catch{}
+ localStorage.setItem(PROFILE_CLEAN,"1");
+ try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
+}
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const webSearchEnabled=()=>!!globalThis.RonWebSearch;
 const initRonCore=()=>{
  if(!globalThis.RonCore||!globalThis.RonCoreAdapters?.LocalStorageAdapter)return null;
@@ -43,10 +53,10 @@ const initRonCore=()=>{
 };
 const ronCore=initRonCore();
 const downloadText=(name,text,mime="application/jsonl")=>{const blob=new Blob([text],{type:mime+";charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
-const analyzeIntent=text=>{const n=norm(text);if(/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ابحث عنها|ابحث عن ذلك|دور عليها|دور عن ذلك|اذا ابحث عنها|اذا ابحث عن ذلك)$/.test(n))return "follow_up";if(/^(مرحبا|اهلا|السلام عليكم)/.test(n))return "greeting";if(isNameQuestion(n)||isAgeQuestion(n))return "profile";if(/^(ليه|لماذا|ازاي|كيف|ماذا|ما هو|ما هي|ما |ايه |اي |هل|هل يمكن|عايز|اريد|ممكن|من |اين |فين |متى |كم )/.test(n))return "question";if(/\?$/.test(String(text).trim())||/[؟?]/.test(text))return "question";if(/^عل[ّ]?م رون/.test(n))return "learning";return "statement";};
+const analyzeIntent=text=>{const n=norm(text);if(/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ابحث عنها|ابحث عن ذلك|دور عليها|دور عن ذلك|اذا ابحث عنها|اذا ابحث عن ذلك|نعم علق عليه|ايوه علق عليه|علق عليه|اشرح كلامي|حلل كلامي)$/.test(n))return "follow_up";if(/^(مرحبا|اهلا|السلام عليكم)/.test(n))return "greeting";if(isNameQuestion(n)||isAgeQuestion(n))return "profile";if(/^(ليه|لماذا|ازاي|كيف|ماذا|ما هو|ما هي|ما |ايه |اي |هل|هل يمكن|عايز|اريد|ممكن|من |اين |فين |متى |كم )/.test(n))return "question";if(/\?$/.test(String(text).trim())||/[؟?]/.test(text))return "question";if(/^عل[ّ]?م رون/.test(n))return "learning";return "statement";};
 const topicTokens=text=>tokens(String(text||"")).filter(x=>x.length>2);
 const topicOf=()=>{const recent=messages.slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5&&!/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع)\s*[؟?]?$/.test(norm(m.text)));return recent?String(recent.text).trim():null;};
-const resolveFollowUp=text=>{const n=norm(text);if(!/^(?:اذا\s+)?(?:طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ابحث عنها|ابحث عن ذلك|دور عليها|دور عن ذلك)(?:\s*[؟?])?$/.test(n))return null;const current=String(text||"").trim();const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5&&!/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ابحث عنها|ابحث عن ذلك|دور عليها|دور عن ذلك|اذا ابحث عنها|اذا ابحث عن ذلك)\s*[؟?]?$/.test(norm(m.text)));return previous?String(previous.text).trim():null;};
+const resolveFollowUp=text=>{const n=norm(text);if(!/^(?:اذا\s+)?(?:طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ابحث عنها|ابحث عن ذلك|دور عليها|دور عن ذلك|نعم علق عليه|ايوه علق عليه|علق عليه|اشرح كلامي|حلل كلامي)(?:\s*[؟?])?$/.test(n))return null;const current=String(text||"").trim();const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim().length>=5&&!/^(طيب|طب|وبعدين|وماذا عنه|وماذا عنها|وهل|وضح|اشرح اكثر|كمل|تابع|ابحث عنها|ابحث عن ذلك|دور عليها|دور عن ذلك|اذا ابحث عنها|اذا ابحث عن ذلك)\s*[؟?]?$/.test(norm(m.text)));return previous?String(previous.text).trim():null;};
 const relatedMemories=topic=>{if(!topic)return [];const q=new Set(topicTokens(topic));return lessons.map((x,i)=>{const t=new Set(topicTokens(x.text));let score=0;q.forEach(w=>{if(t.has(w))score++});if(x.key.startsWith("lesson:"))score+=0.1;return {x,score,i};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||b.i-a.i).slice(0,8).map(x=>x.x);};
 const understanding= text=>{const intent=analyzeIntent(text),follow=resolveFollowUp(text),topic=follow||topicOf()||String(text||"").trim(),related=relatedMemories(topic);return {intent,topic,shortHistory:messages.slice(-12).map(m=>(m.role==="ron"?"رون: ":"المستخدم: ")+m.text),longMemory:related.map(x=>x.key+": "+x.text),followUp:!!follow};};
 const conversationHistory=()=>messages.slice(-14).map(m=>({role:m.role==="ron"?"assistant":"user",content:String(m.text||"")}));
@@ -158,16 +168,23 @@ const answer=t=>{
  if(/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً)$/.test(n))return "شكرًا! أنا جاهز نكمل.";
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
  if(ronFacts.length&&!isRonNameQuestion(n)&&!isRonAgeQuestion(n)&&!isNameQuestion(n)&&!isAgeQuestion(n)){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
+ if(/^(?:نعم\s+)?(?:علق\s+عليه|علّق\s+عليه|اشرح\s+كلامي|حلل\s+كلامي)$/.test(n)){
+  const prior=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&!/^(?:مظبوط|صح|تمام|نعم|ايوه|أيوه|اه|اها|ممتاز|جميل|شكرا|شكرًا|نعم علق عليه|علق عليه|اشرح كلامي|حلل كلامي)$/.test(norm(m.text)));
+  const savedName=lessons.find(x=>x.key==="user.name");
+  if(prior&&/^(?:انا\s+)?اسمي\s+/.test(norm(prior.text))&&savedName)return "تعليقًا على كلامك: عرّفتني باسمك، وقد حفظت الاسم «"+savedName.text+"» لأستخدمه عند الحاجة في المحادثة.";
+  if(prior)return "تعليقًا على كلامك «"+prior.text+"»: فهمت أنك تريد مناقشته، لكن أحتاج إلى معرفة أي جانب تريد تحليله تحديدًا.";
+  return "بالتأكيد، أستطيع التعليق، لكن لا أجد في سياق المحادثة كلامًا سابقًا واضحًا لأعلّق عليه.";
+ }
  if(isBothNamesQuestion(n)){
-  const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
-  return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+", "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
+  const name=lessons.find(x=>x.key==="user.name"),self=lessons.find(x=>x.key==="ron.name");
+  return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+"، واسمي "+(self?self.text:"رون")+".";
  }
  if(isProfileQuestion(n)){
   const name=lessons.find(x=>x.key==="user.name"),age=lessons.find(x=>x.key==="user.age");
   return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+"، "+(age?("وعمرك "+age.text+" سنة."): "ولم تخبرني بعمرك بعد.");
  }
  if(isRonNameQuestion(n)){const x=lessons.find(x=>x.key==="ron.name");return x?"اسمي "+x.text+".":"اسمي رون.";}
- if(isRonAgeQuestion(n)){const x=lessons.find(x=>x.key==="ron.age");return x?"عمري "+x.text+".":"لم أحدد عمرًا لنفسي بعد."; }
+ if(isRonAgeQuestion(n)){const x=lessons.find(x=>x.key==="ron.age");return x?"عمري المسجل هو "+x.text+".":"ليس لدي عمر بشري؛ أنا برنامج، ولا أملك عمرًا شخصيًا مثل الإنسان."; }
  if(facts.length){
   facts.forEach(x=>saveFact(x.key,x.text));
   const name=facts.find(x=>x.key==="user.name"),age=facts.find(x=>x.key==="user.age");

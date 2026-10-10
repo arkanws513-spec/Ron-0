@@ -81,6 +81,9 @@ class ReasoningEngine:
     def default_rules() -> tuple[Rule, ...]:
         return (
             Rule("transitive_precedes", (("?a", "precedes", "?b"), ("?b", "precedes", "?c")), ("?a", "precedes", "?c"), 0.92),
+            Rule("transitive_follows", (("?a", "follows", "?b"), ("?b", "follows", "?c")), ("?a", "follows", "?c"), 0.90),
+            Rule("reverse_precedes_follows", (("?a", "precedes", "?b"),), ("?b", "follows", "?a"), 0.90),
+            Rule("reverse_follows_precedes", (("?a", "follows", "?b"),), ("?b", "precedes", "?a"), 0.90),
             Rule("transitive_supports", (("?a", "supports", "?b"), ("?b", "supports", "?c")), ("?a", "supports", "?c"), 0.88),
             Rule("causal_chain", (("?a", "causes", "?b"), ("?b", "causes", "?c")), ("?a", "causes", "?c"), 0.84),
         )
