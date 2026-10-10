@@ -5,6 +5,8 @@ import threading
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from ron.contracts import ModelResponse
+from ron.core import RonCore
 from ron.server import make_server
 
 
@@ -63,6 +65,41 @@ def test_http_api_rejects_invalid_chat_payload():
             assert exc.code == 400
             payload = json.loads(exc.read().decode("utf-8"))
             assert payload["error"] == "invalid_message"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+def test_server_rejects_quality_fallback_when_native_is_required(monkeypatch):
+    server = make_server(host="127.0.0.1", port=0, require_native=False)
+    server.RequestHandlerClass.state.require_native = True
+    monkeypatch.setattr(
+        RonCore,
+        "respond",
+        lambda self, text: ModelResponse(
+            content="fallback reply",
+            model="ron-core-fallback",
+            metadata={"fallback": True},
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        request = Request(
+            base + "/api/chat",
+            data=json.dumps({"message": "سؤال تجريبي", "session_id": "fallback_test"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            urlopen(request, timeout=3)
+            assert False, "quality fallback unexpectedly accepted"
+        except HTTPError as exc:
+            assert exc.code == 503
+            payload = json.loads(exc.read().decode("utf-8"))
+            assert payload["error"] == "native_inference_rejected"
     finally:
         server.shutdown()
         server.server_close()
