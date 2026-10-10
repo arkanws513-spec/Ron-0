@@ -29,13 +29,15 @@ jobs:
       - name: Run tests
         run: python -m pytest
       - name: Validate browser JavaScript
-        run: node --check app.js
+        run: |
+          node --check app.js
+          node --check ron-inference-client.js
       - name: Validate Ron Core
         run: node --check ron-core.js
       - name: Run Ron Core tests
         run: node --test ron-core.test.js tests/test_core_browser_runtime.mjs
       - name: Smoke-test browser runtime
-        run: node --test tests/test_frontend_runtime.mjs tests/test_reasoner_runtime.mjs
+        run: node --test tests/test_frontend_runtime.mjs tests/test_reasoner_runtime.mjs tests/test_inference_client.mjs
       - name: Validate repository
         shell: bash
         run: |
