@@ -51,7 +51,7 @@ def extract_facts(text: str) -> list[ExtractedFact]:
     # Questions and meta-conversation about a name are not profile facts.
     # "أنا بسألك عن اسمي" must never become the user's name.
     if re.search(r"[؟?]", normalized) or re.match(
-        r"^(?:انا\\s+)?(?:بسالك|بسألك|اسالك|اسألك)\\s+عن\\s+اسمي\\b", normalized
+        r"^(?:انا\s+)?(?:بسالك|بسألك|اسالك|اسألك)\s+عن\s+اسمي\b", normalized
     ):
         return []
 
@@ -119,14 +119,14 @@ def extract_facts(text: str) -> list[ExtractedFact]:
         if match:
             value = match.group(1).strip(" .،,؛;؟؟")
             # A correction clause belongs to the conversation, not to the name.
-            value = re.split(r"\\s+(?:وليس|ومش|مش|مو|لكن|ولكن|بس|وانا|واسمك|اسمك)\\b", value, maxsplit=1)[0].strip()
+            value = re.split(r"\s+(?:وليس|ومش|مش|مو|لكن|ولكن|بس|وانا|واسمك|اسمك)\b", value, maxsplit=1)[0].strip()
             if _valid_name_candidate(value):
                 return [ExtractedFact("user.name", value, "name")]
 
-    natural_name = re.match(r"^انا\\s+(.+?)$", normalized, re.I)
+    natural_name = re.match(r"^انا\s+(.+?)$", normalized, re.I)
     if natural_name:
         value = natural_name.group(1).strip(" .،,؛;؟؟")
-        if not re.match(r"^(?:عمري|سني|احب|لا احب|بسالك|بسألك|اسالك|اسألك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\\b", value):
+        if not re.match(r"^(?:عمري|سني|احب|لا احب|بسالك|بسألك|اسالك|اسألك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\b", value):
             if _valid_name_candidate(value):
                 return [ExtractedFact("user.name", value, "name")]
     return []
@@ -139,7 +139,7 @@ def _valid_name_candidate(value: str) -> bool:
         return False
     if re.search(r"[؟?]", value):
         return False
-    if re.search(r"\\b(?:عن اسمي|ما اسمي|اسمك|اسمي|بسالك|بسألك|اسالك|اسألك)\\b", value):
+    if re.search(r"\b(?:عن اسمي|ما اسمي|اسمك|اسمي|بسالك|بسألك|اسالك|اسألك)\b", value):
         return False
     return True
 
