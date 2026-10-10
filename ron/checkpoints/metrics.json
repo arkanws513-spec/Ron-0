@@ -1,91 +1,217 @@
 {
   "experiment": "ron0-native-character-lm",
   "status": "completed",
-  "checkpoint_source": "initialized_ron_native_model_no_checkpoint_found",
-  "prior_selected_step": 0,
-  "vocabulary_expanded": false,
+  "checkpoint_source": "continued_existing_ron_checkpoint",
+  "prior_selected_step": 600,
+  "vocabulary_expanded": true,
   "seed": 1701,
-  "training_steps_this_run": 600,
-  "selected_checkpoint_step_this_run": 600,
-  "parameters": 110016,
-  "vocab_size": 59,
-  "corpus_characters": 9698,
-  "train_characters": 8728,
-  "validation_characters": 970,
-  "initial_train_loss": 42.20725758870443,
-  "initial_validation_loss": 41.706201235453285,
-  "best_validation_loss": 2.2635974287986755,
-  "last_train_loss": 2.004444509744644,
-  "last_validation_loss": 2.2635974287986755,
-  "train_loss_reduction_percent": 95.25094823909839,
-  "validation_loss_reduction_percent": 94.5725159286997,
-  "elapsed_seconds": 7.33,
+  "training_steps_this_run": 1800,
+  "selected_checkpoint_step_this_run": 1800,
+  "best_validation_step_this_run": 800,
+  "training_steps_total": 2400,
+  "final_train_loss": 1.0643307119607925,
+  "final_validation_loss": 2.4293901175260544,
+  "weights_persisted_from_final_training_step": true,
+  "optimizer_state_persisted": true,
+  "parameters": 110080,
+  "vocab_size": 60,
+  "corpus_characters": 16122,
+  "train_characters": 14509,
+  "validation_characters": 1613,
+  "initial_train_loss": 2.0929282009601593,
+  "initial_validation_loss": 2.395489752292633,
+  "best_validation_loss": 2.08439040184021,
+  "last_train_loss": 1.0643307119607925,
+  "last_validation_loss": 2.4293901175260544,
+  "train_loss_reduction_percent": 49.146334237719365,
+  "validation_loss_reduction_percent": 12.986878785629603,
+  "elapsed_seconds": 11.91,
   "history": [
     {
       "step": 50,
-      "train_loss": 2.9012972911198935,
-      "validation_loss": 3.018617033958435
+      "train_loss": 2.071661631266276,
+      "validation_loss": 2.3468428254127502
     },
     {
       "step": 100,
-      "train_loss": 2.629806856314341,
-      "validation_loss": 2.7138239592313766
+      "train_loss": 1.9754595160484314,
+      "validation_loss": 2.334291949868202
     },
     {
       "step": 150,
-      "train_loss": 2.511575162410736,
-      "validation_loss": 2.640668496489525
+      "train_loss": 1.9777522881825764,
+      "validation_loss": 2.394481971859932
     },
     {
       "step": 200,
-      "train_loss": 2.483854273955027,
-      "validation_loss": 2.6511191725730896
+      "train_loss": 1.878017673889796,
+      "validation_loss": 2.2738116532564163
     },
     {
       "step": 250,
-      "train_loss": 2.3920549750328064,
-      "validation_loss": 2.496279314160347
+      "train_loss": 1.8356958130995433,
+      "validation_loss": 2.276265613734722
     },
     {
       "step": 300,
-      "train_loss": 2.320452392101288,
-      "validation_loss": 2.442209556698799
+      "train_loss": 1.8958780765533447,
+      "validation_loss": 2.2209724485874176
     },
     {
       "step": 350,
-      "train_loss": 2.298089027404785,
-      "validation_loss": 2.4453305304050446
+      "train_loss": 1.8735548555850983,
+      "validation_loss": 2.31087389588356
     },
     {
       "step": 400,
-      "train_loss": 2.1968385179837546,
-      "validation_loss": 2.4489519596099854
+      "train_loss": 1.8079837262630463,
+      "validation_loss": 2.2374971732497215
     },
     {
       "step": 450,
-      "train_loss": 2.1737226049105325,
-      "validation_loss": 2.3981477171182632
+      "train_loss": 1.6767750879128773,
+      "validation_loss": 2.2074147537350655
     },
     {
       "step": 500,
-      "train_loss": 2.1324919561545053,
-      "validation_loss": 2.3418232053518295
+      "train_loss": 1.8001047770182292,
+      "validation_loss": 2.2994352281093597
     },
     {
       "step": 550,
-      "train_loss": 2.079829384883245,
-      "validation_loss": 2.312746688723564
+      "train_loss": 1.7433466911315918,
+      "validation_loss": 2.2424732074141502
     },
     {
       "step": 600,
-      "train_loss": 2.004444509744644,
-      "validation_loss": 2.2635974287986755
+      "train_loss": 1.6881870130697887,
+      "validation_loss": 2.2087031081318855
+    },
+    {
+      "step": 650,
+      "train_loss": 1.6417402923107147,
+      "validation_loss": 2.183138817548752
+    },
+    {
+      "step": 700,
+      "train_loss": 1.6048697630564372,
+      "validation_loss": 2.2999551966786385
+    },
+    {
+      "step": 750,
+      "train_loss": 1.5782498915990193,
+      "validation_loss": 2.3050916716456413
+    },
+    {
+      "step": 800,
+      "train_loss": 1.529310941696167,
+      "validation_loss": 2.08439040184021
+    },
+    {
+      "step": 850,
+      "train_loss": 1.5475041568279266,
+      "validation_loss": 2.1738829016685486
+    },
+    {
+      "step": 900,
+      "train_loss": 1.5153867204984028,
+      "validation_loss": 2.171810060739517
+    },
+    {
+      "step": 950,
+      "train_loss": 1.5117840866247814,
+      "validation_loss": 2.3048650696873665
+    },
+    {
+      "step": 1000,
+      "train_loss": 1.4487063189347584,
+      "validation_loss": 2.3114647641777992
+    },
+    {
+      "step": 1050,
+      "train_loss": 1.441162755091985,
+      "validation_loss": 2.161970593035221
+    },
+    {
+      "step": 1100,
+      "train_loss": 1.4260146617889404,
+      "validation_loss": 2.2186803370714188
+    },
+    {
+      "step": 1150,
+      "train_loss": 1.412805179754893,
+      "validation_loss": 2.27041607350111
+    },
+    {
+      "step": 1200,
+      "train_loss": 1.335954080025355,
+      "validation_loss": 2.256684750318527
+    },
+    {
+      "step": 1250,
+      "train_loss": 1.2866684595743816,
+      "validation_loss": 2.2067432329058647
+    },
+    {
+      "step": 1300,
+      "train_loss": 1.259703367948532,
+      "validation_loss": 2.2605519890785217
+    },
+    {
+      "step": 1350,
+      "train_loss": 1.305493672688802,
+      "validation_loss": 2.3388094678521156
+    },
+    {
+      "step": 1400,
+      "train_loss": 1.2986982762813568,
+      "validation_loss": 2.3637072890996933
+    },
+    {
+      "step": 1450,
+      "train_loss": 1.2852893869082134,
+      "validation_loss": 2.1874094903469086
+    },
+    {
+      "step": 1500,
+      "train_loss": 1.2704388598601024,
+      "validation_loss": 2.3269523978233337
+    },
+    {
+      "step": 1550,
+      "train_loss": 1.203440989057223,
+      "validation_loss": 2.3319613486528397
+    },
+    {
+      "step": 1600,
+      "train_loss": 1.194316307703654,
+      "validation_loss": 2.327615238726139
+    },
+    {
+      "step": 1650,
+      "train_loss": 1.1125454952319462,
+      "validation_loss": 2.555734485387802
+    },
+    {
+      "step": 1700,
+      "train_loss": 1.103905697663625,
+      "validation_loss": 2.4289969205856323
+    },
+    {
+      "step": 1750,
+      "train_loss": 1.090840811530749,
+      "validation_loss": 2.4750600457191467
+    },
+    {
+      "step": 1800,
+      "train_loss": 1.1072836816310883,
+      "validation_loss": 2.316021241247654
     }
   ],
   "limitations": [
     "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
     "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
-    "The selected checkpoint is the best validation checkpoint, including the starting weights, to avoid promoting a regression.",
+    "The persisted checkpoint is the final state after this training run so each run continues from newly updated weights; validation metrics are reported separately and may worsen.",
     "No external inference model or paid API is used."
   ]
 }
