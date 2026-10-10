@@ -27,7 +27,7 @@ test('name meta-question never becomes a profile fact',async()=>{
  await say(r,'اسمي اي');
  await say(r,'انا بسألك عن اسمي');
  assert.strictEqual(r.store.get('$user','اسم').o,'اي');
- assert.strictEqual(r.store.get('$self','اسم'),undefined);
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
 });
 test('explicit name correction is a single user update',async()=>{
  const r=new RonCore();
