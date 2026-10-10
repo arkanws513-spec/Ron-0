@@ -43,7 +43,7 @@ function createRuleNLU(cfg=DEFAULTS){
   if(QSTART.test(n)){
    // Resolve capital-city questions before the generic subject/property parser.
    // normalize() maps Arabic taa marbuta to haa, so match "عاصمه" here.
-   const capitalQuestion=/^(?:ما|ماذا)\\s+(?:هي\\s+)?عاصمه\\s+(.+)$/.exec(n);
+   const capitalQuestion=/^(?:ما|ماذا)\s+(?:هي\s+)?عاصمه\s+(.+)$/.exec(n);
    if(capitalQuestion)return[{type:'ask',s:key(capitalQuestion[1]),p:key('عاصمة'),sd:capitalQuestion[1],pd:'عاصمة',text:c}];
    if(/^من\s+انا$/.test(n))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
    if(/^من\s+انت$/.test(n))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
