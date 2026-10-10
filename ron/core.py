@@ -13,7 +13,7 @@ from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
 from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
-from .arithmetic import answer_arithmetic
+from .arithmetic import answer_arithmetic, answer_linear_equation
 from .knowledge import CuratedKnowledgeBase
 
 @dataclass
@@ -77,6 +77,9 @@ class RonCore:
         arithmetic_answer=answer_arithmetic(text)
         if arithmetic_answer is not None:
             return self._finish(text,arithmetic_answer,"ron-arithmetic",{"runtime":"ron-0","deterministic_tool":"arithmetic","external_model_used":False})
+        equation_answer=answer_linear_equation(text)
+        if equation_answer is not None:
+            return self._finish(text,equation_answer,"ron-algebra",{"runtime":"ron-0","deterministic_tool":"linear-equation","external_model_used":False})
         facts=extract_facts(text)
         if facts:
             for fact in facts:self.memory.remember(fact.memory)
