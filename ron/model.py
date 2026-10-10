@@ -13,7 +13,6 @@ class CausalSelfAttention(nn.Module):
         self.head_dim = config.hidden_size // config.num_heads
         self.qkv = nn.Linear(config.hidden_size, 3 * config.hidden_size)
         self.out = nn.Linear(config.hidden_size, config.hidden_size)
-        self.residual_dropout = nn.Dropout(config.dropout)
         mask = torch.triu(torch.ones(config.max_sequence_length, config.max_sequence_length, dtype=torch.bool), diagonal=1)
         self.register_buffer("causal_mask", mask, persistent=False)
 
@@ -33,6 +32,7 @@ class TransformerBlock(nn.Module):
         self.attention = CausalSelfAttention(config)
         self.norm2 = nn.LayerNorm(config.hidden_size)
         self.mlp = nn.Sequential(nn.Linear(config.hidden_size, ff), nn.GELU(), nn.Linear(ff, config.hidden_size))
+        self.residual_dropout = nn.Dropout(config.dropout)
 
     def forward(self, x: Tensor) -> Tensor:
         x = x + self.residual_dropout(self.attention(self.norm1(x)))
