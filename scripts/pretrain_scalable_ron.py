@@ -7,12 +7,12 @@ import time
 from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, Dataset
-from tokenizers import Tokenizer
 from ron.scalable_model import ScalableRonConfig, ScalableRonLM, count_parameters
 
 class PackedTextDataset(Dataset):
     def __init__(self, corpus: Path, tokenizer_path: Path, sequence_length: int,
                  max_documents: int | None = None) -> None:
+        from tokenizers import Tokenizer
         self.tokenizer = Tokenizer.from_file(str(tokenizer_path))
         vocab = self.tokenizer.get_vocab()
         bos_id, eos_id = vocab.get("<bos>", 2), vocab.get("<eos>", 3)
@@ -91,6 +91,7 @@ def main() -> None:
         p.error("--max-documents must be positive")
     random.seed(args.seed)
     torch.manual_seed(args.seed)
+    from tokenizers import Tokenizer
     tokenizer = Tokenizer.from_file(str(args.tokenizer))
     vocab_size = tokenizer.get_vocab_size()
     pad_id = tokenizer.token_to_id("<pad>")
