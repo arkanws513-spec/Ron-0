@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_facts
+from .deterministic import answer_deterministic
 from .intent import detect_intent
 from .memory import InMemoryStore
 from .providers import LocalTeachingProvider
@@ -78,6 +79,15 @@ class RonCore:
         remembered_answer=answer_fact_question(text,self.memory)
         if remembered_answer is not None:
             return self._finish(text,remembered_answer,"ron-memory",{"runtime":"ron-0","memory_read":True})
+        deterministic_result=answer_deterministic(text)
+        if deterministic_result is not None:
+            deterministic_answer, deterministic_route = deterministic_result
+            return self._finish(
+                text,
+                deterministic_answer,
+                "ron-deterministic-core",
+                {"runtime":"ron-0","deterministic_route":deterministic_route,"external_model_used":False},
+            )
         memories=self.memory.recall(text,limit=5)
         related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories
         reasoning_facts=[]
