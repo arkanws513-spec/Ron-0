@@ -19,7 +19,7 @@ from ron.native_provider import NativeCheckpointProvider
 
 def normalize_match(text: str) -> str:
     value = normalize_arabic(text)
-    return re.sub(r"[\\W_]+", " ", value, flags=re.UNICODE).strip()
+    return re.sub(r"[\W_]+", " ", value, flags=re.UNICODE).strip()
 
 
 def run_benchmark(benchmark_path: Path) -> dict:
