@@ -25,3 +25,14 @@ console.log("browser Ron Core runtime smoke test passed");
 assert.match((await ron.handle("وما اسمي")).reply,/زيريوس/);
 assert.match((await ron.handle("ما اسمي وما اسمك")).reply,/زيريوس.*رون/);
 assert.match((await ron.handle("وانت كم عمرك")).reply,/ليس لدي عمر بشري/);
+
+const followupRon = new context.RonCore({
+  adapter: new context.RonCoreAdapters.LocalStorageAdapter("followup-context-test")
+});
+await followupRon.handle("ما اسمك");
+for (const prompt of ["ليه؟", "لماذا؟", "ازاي؟", "كيف ذلك؟", "ما السبب؟", "ماذا تقصد؟"]) {
+  const response = await followupRon.handle(prompt);
+  assert.equal(response.frames[0]?.type, "context", prompt);
+  assert.equal(response.frames[0]?.kind, "why-previous", prompt);
+  assert.match(response.reply, /ردي السابق|أخطأت|لا أجد/, prompt);
+}
