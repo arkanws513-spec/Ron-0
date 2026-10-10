@@ -22,6 +22,8 @@ def validate_promotion(candidate: Path, report_path: Path, metrics_path: Path) -
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
     if report.get("passed") is not True:
         return False, "blind_conversational_gate_failed"
+    if int(report.get("case_count", 0)) < 20 or int(report.get("critical_case_count", 0)) < 8:
+        return False, "blind_evaluation_coverage_insufficient"
     if metrics.get("validation_loss_improved") is not True:
         return False, "validation_loss_gate_failed"
     with candidate.open("rb") as candidate_file:
