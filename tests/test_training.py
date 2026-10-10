@@ -63,7 +63,10 @@ def test_native_evaluation_is_deterministic_and_restores_training_mode():
     tokens = torch.arange(0, 512, dtype=torch.long) % config.vocab_size
     first = evaluate(model, tokens, count=8)
     second = evaluate(model, tokens, count=8)
+    default_count = evaluate(model, tokens)
+    explicit_default_count = evaluate(model, tokens, count=16)
     assert first == second
+    assert default_count == explicit_default_count
     assert model.training is True
 
 def test_best_validation_checkpoint_survives_a_regressing_training_run():
