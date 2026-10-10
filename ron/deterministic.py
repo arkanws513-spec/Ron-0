@@ -7,15 +7,21 @@ go to the configured model provider.
 from __future__ import annotations
 
 import re
+import unicodedata
 from fractions import Fraction
 
 
 def _normalize(text: str) -> str:
     value = str(text or "").strip().lower()
+    value = "".join(char for char in value if unicodedata.category(char) != "Mn")
     value = value.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ى", "ي")
     value = value.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789"))
-    value = re.sub(r"[ًٌٍَُِّْـ]", "", value)
-    return re.sub(r"\s+", " ", value).strip(" \t\r\n؟?!.،,")
+    value = re.sub(r"\s+", " ", value).strip(" \t\r\n؟?!.،,")
+    for prefix in ("كم يساوي ", "ما حاصل ", "احسب ", "calculate ", "what is "):
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip()
+            break
+    return value
 
 
 _CAPITALS = (
