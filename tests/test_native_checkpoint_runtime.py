@@ -19,4 +19,5 @@ def test_saved_native_checkpoint_is_used_by_default_core():
     assert response.metadata["external_model_used"] is False
     assert response.metadata["selected_training_step"] >= 0
     assert response.metadata["training_steps_this_run"] >= 600
+    assert response.metadata["training_steps_total"] >= response.metadata["selected_training_step"]
     assert response.metadata["checkpoint_source"] != "unknown"
