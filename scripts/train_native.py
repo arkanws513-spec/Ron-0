@@ -75,7 +75,7 @@ def batch(tokens: torch.Tensor, size: int, length: int):
 
 
 @torch.no_grad()
-def evaluate(model, tokens: torch.Tensor, count: int = 12) -> float:
+def evaluate(model, tokens: torch.Tensor, count: int = 16) -> float:
     """Evaluate on fixed, evenly spaced windows so checkpoint selection is reproducible."""
     was_training = model.training
     model.eval()
