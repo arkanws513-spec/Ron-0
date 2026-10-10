@@ -1,7 +1,7 @@
 import hashlib
 import json
 
-from scripts.evaluate_native_checkpoint import assess_case
+from scripts.evaluate_native_checkpoint import assess_case, validate_cases
 from scripts.promote_native_checkpoint import validate_promotion
 
 
@@ -76,3 +76,43 @@ def test_promotion_accepts_only_a_matching_candidate_that_passed_both_gates(tmp_
     allowed, reason = validate_promotion(candidate, report_path, metrics_path)
     assert allowed is True
     assert reason == "all_promotion_gates_passed"
+
+
+def test_blind_evaluation_requires_enough_cases_and_critical_cases():
+    too_small = [
+        {"id": str(i), "prompt": "question", "contains": ["answer"], "critical": i < 2}
+        for i in range(4)
+    ]
+    try:
+        validate_cases(too_small)
+    except ValueError as exc:
+        assert "at least 20 cases" in str(exc)
+    else:
+        raise AssertionError("small evaluation set must be rejected")
+
+    enough = [
+        {"id": str(i), "prompt": "question", "contains": ["answer"], "critical": i < 8}
+        for i in range(20)
+    ]
+    assert len(validate_cases(enough)) == 20
+
+    not_enough_critical = [
+        {"id": str(i), "prompt": "question", "contains": ["answer"], "critical": i < 7}
+        for i in range(20)
+    ]
+    try:
+        validate_cases(not_enough_critical)
+    except ValueError as exc:
+        assert "at least 8 critical cases" in str(exc)
+    else:
+        raise AssertionError("evaluation set with too few critical cases must be rejected")
+
+
+def test_repository_blind_evaluation_set_has_unique_ids_and_required_coverage():
+    from pathlib import Path
+
+    cases_path = Path(__file__).resolve().parents[1] / "training" / "eval_cases.json"
+    cases = validate_cases(json.loads(cases_path.read_text(encoding="utf-8")))
+    ids = {case["id"] for case in cases}
+    assert {"egypt_capital_short", "egypt_capital_variant", "france_capital", "context_followup"} <= ids
+    assert sum(bool(case.get("critical")) for case in cases) >= 8
