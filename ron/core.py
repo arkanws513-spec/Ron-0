@@ -55,7 +55,10 @@ class RonCore:
         self.provider = LocalTeachingProvider()
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
-        response=ModelResponse(content=content,model=model,metadata=metadata)
+        # Keep observability consistent for model, memory, retrieval, and tool responses.
+        details={"runtime":"ron-0","active_skills":sorted(self.self_improvement.registry.snapshot())}
+        details.update(metadata or {})
+        response=ModelResponse(content=content,model=model,metadata=details)
         self.conversation.add("assistant",content)
         return response
 
