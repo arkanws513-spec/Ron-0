@@ -71,6 +71,7 @@ def main() -> None:
     p.add_argument("--validation-data", type=Path, help="Separate held-out reviewed JSONL; never reuse training records")
     p.add_argument("--tokenizer", type=Path, default=Path("artifacts/ron-tokenizer/tokenizer.json"))
     p.add_argument("--output", type=Path, default=Path("artifacts/ron-scalable"))
+    p.add_argument("--init-checkpoint", type=Path, help="Optional compatible scalable Ron pretraining checkpoint")
     p.add_argument("--vocab-size", type=int, help="Expected tokenizer vocabulary size; defaults to the tokenizer file's actual size")
     p.add_argument("--hidden-size", type=int, default=256)
     p.add_argument("--layers", type=int, default=4)
@@ -89,6 +90,8 @@ def main() -> None:
         p.error("both --data and --tokenizer must point to existing files")
     if args.validation_data is not None and not args.validation_data.is_file():
         p.error("--validation-data must point to an existing file")
+    if args.init_checkpoint is not None and not args.init_checkpoint.is_file():
+        p.error("--init-checkpoint must point to an existing checkpoint")
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -106,6 +109,15 @@ def main() -> None:
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False) if val_ds is not None else None
     model = ScalableRonLM(config).to(device)
+    if args.init_checkpoint is not None:
+        try:
+            initial_state = torch.load(args.init_checkpoint, map_location=device, weights_only=True)
+        except TypeError:
+            initial_state = torch.load(args.init_checkpoint, map_location=device)
+        saved_config = initial_state.get("config", {})
+        if saved_config != config.__dict__:
+            p.error("initial checkpoint config must exactly match the requested student config")
+        model.load_state_dict(initial_state["model"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     args.output.mkdir(parents=True, exist_ok=True)
     config.save(args.output / "config.json")
@@ -150,6 +162,7 @@ def main() -> None:
         "parameters": count_parameters(model), "device": str(device), "dataset_records": len(ds),
         "validation_records": len(val_ds) if val_ds is not None else 0, "epochs": args.epochs,
         "history": history, "elapsed_seconds": round(time.time() - started, 2),
+        "initialized_from_pretraining_checkpoint": args.init_checkpoint is not None,
         "limitations": ["This is a pilot SFT run, not pretraining from scratch.", "Only assistant response tokens contribute to loss.", "All training and validation records must be reviewed and marked review_status=approved.", "Held-out loss does not replace task-based quality, factuality, Arabic/English coverage, safety, or regression evaluations.", "Do not treat the checkpoint as production-ready without independent evaluation."]}
     (args.output / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(metrics, indent=2))
