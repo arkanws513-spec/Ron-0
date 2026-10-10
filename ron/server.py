@@ -176,9 +176,13 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
         metadata.setdefault("runtime", "ron-0-python-core")
         metadata["native_weights_loaded"] = self.state.native_loaded
         metadata["external_model_used"] = False
-        # A loaded checkpoint is not enough: if generation actually fell back, reject the turn.
-        if self.state.require_native and metadata.get("fallback") is True:
-            self._json(503, {"error": "native_inference_failed", "metadata": metadata, "health": self.state.health()})
+        # A loaded checkpoint is not enough: reject provider exceptions and low-quality fallback text.
+        if self.state.require_native and (
+            metadata.get("fallback") is True
+            or metadata.get("generation_quality_fallback") is True
+            or metadata.get("native_generated_answer_rejected") is True
+        ):
+            self._json(503, {"error": "native_inference_rejected", "metadata": metadata, "health": self.state.health()})
             return
         self._json(200, {
             "reply": response.content,
