@@ -32,3 +32,23 @@ def test_semantic_query_uses_relations_not_token_similarity():
     ])
     assert engine.answer_query("ما هي عاصمة مصر", result) == "القاهرة عاصمة مصر."
     assert engine.answer_query("ما هي عاصمة مصر القديمة", result) == "طيبة عاصمة مصر القديمة."
+
+def test_arabic_causal_chain_is_inferred_with_provenance():
+    engine = ReasoningEngine()
+    rain = engine.parse_fact("المطر يسبب البلل", source="verified-example", confidence=.9)
+    wet = engine.parse_fact("البلل يسبب انزلاق الطريق", source="verified-example", confidence=.85)
+    assert rain is not None and wet is not None
+    result = engine.reason([rain, wet])
+    assert any("المطر causes انزلاق الطريق" == item for item in result.conclusions)
+    assert any(item.rule == "causal_chain" for item in result.inferences)
+
+
+def test_reasoning_keeps_conflicting_facts_visible():
+    engine = ReasoningEngine()
+    result = engine.reason([
+        Fact("الماء", "is", "سائل", .9, "reference-a"),
+        Fact("الماء", "is", "غاز", .3, "unverified-claim"),
+    ])
+    assert result.contradictions
+    assert {fact.source for fact in result.facts} == {"reference-a", "unverified-claim"}
+
