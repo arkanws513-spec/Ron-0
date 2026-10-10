@@ -21,6 +21,11 @@ def test_http_api_uses_python_core_and_reports_native_status():
         assert health["runtime"] == "ron-0-python-core"
         assert health["single_core"] is True
         assert health["external_model_used"] is False
+        assert health["parameter_count"] >= 0
+        assert health["target_size_reached"] is (health["parameter_count"] >= 8_000_000)
+        if health["native_weights_loaded"]:
+            assert health["parameter_count"] > 0
+            assert len(health["checkpoint_sha256"]) == 64
 
         request = Request(
             base + "/api/chat",
