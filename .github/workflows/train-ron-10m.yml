@@ -1,6 +1,15 @@
 name: Train Ron-10M (manual)
 
 on:
+  push:
+    branches: [feat/native-core-audit]
+    paths:
+      - 'scripts/train_native_10m.py'
+      - 'scripts/prepare_corpus.py'
+      - 'scripts/download_english_corpus.py'
+      - '.github/workflows/train-ron-10m.yml'
+      - 'ron/model.py'
+      - 'ron/model_config.py'
   workflow_dispatch:
     inputs:
       training_steps:
