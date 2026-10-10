@@ -32,13 +32,13 @@ function createRuleNLU(cfg=DEFAULTS){
   if(/^(?:و\s*)?(?:ما|ايه|اي)\s+اسمي\s+و\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0)||/^(?:ما|ايه|اي)\s+اسمي\s+و?\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0))return[{type:'ask-both-names',text:c}];
   // Parse profile assertions before the generic relation parser.
   if(/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+رون\s+(?:فعلا|حقا)$/.test(n0))return[{type:'identity-confirm',text:c}];
-  if(/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي\b/.test(n0))return[{type:'unknown',text:c}];
-  let correction=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)\b.*$/);
+  if(/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي(?=\s|$)/.test(n0))return[{type:'unknown',text:c}];
+  let correction=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)(?=\s|$).*$/);
   if(correction){const value=correction[1].trim();if(value)return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
   let namedBoth=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
   if(namedBoth){const userName=namedBoth[1].trim(),selfName=namedBoth[2].trim();return[{type:'assert',s:'$user',p:'اسم',o:key(userName),sd:'',pd:'اسم',od:userName},{type:'assert',s:'$self',p:'اسم',o:key(selfName),sd:'',pd:'اسم',od:selfName}];}
   let explicitName=n0.match(/^(?:انا\s+)?اسمي\s+(?:هو\s+)?(.+?)$/);
-  if(explicitName){const value=explicitName[1].trim();if(value&&!/^(?:بسالك|اسالك)\b/.test(value))return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
+  if(explicitName){const value=explicitName[1].trim();if(value&&!/^(?:بسالك|اسالك)(?=\s|$)/.test(value))return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
   if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:و\s*)?(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
   if(/^(?:و\s*)?(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
   if(/^(?:و\s*)?(?:انت\s+)?(?:كم\s+عمرك|ما\s+عمرك|ما\s+هو\s+عمرك)$/.test(n0))return[{type:'self-age',text:c}];
