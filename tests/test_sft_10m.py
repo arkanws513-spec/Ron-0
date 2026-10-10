@@ -1,6 +1,6 @@
 import torch
 
-from scripts.train_sft_10m import candidate_starts, encode_examples, make_batch, split_examples
+from scripts.train_sft_10m import candidate_starts, encode_examples, make_batch, make_mixed_batch, split_examples
 
 
 def test_sft_masks_user_text_and_trains_only_ron_response_characters():
@@ -50,3 +50,35 @@ def test_sft_split_is_reproducible_and_keeps_examples_disjoint():
     assert train_a == train_b
     assert val_a == val_b
     assert set(train_a).isdisjoint(set(val_a))
+
+
+def test_arabic_sft_split_accepts_small_reviewed_curriculum_without_leakage():
+    corpus = "\n\n".join(
+        f"المستخدم: سؤال عربي {i}\nرون: إجابة عربية مفيدة {i}."
+        for i in range(20)
+    )
+    train, validation = split_examples(corpus, seed=19, min_examples=10)
+    assert len(train) + len(validation) == 20
+    assert set(train).isdisjoint(set(validation))
+    assert train
+    assert validation
+
+
+def test_mixed_sft_batch_contains_examples_from_both_languages():
+    english = [
+        "User: What should Ron do?\nRon: Ron should check the evidence before answering.",
+        "User: What is memory?\nRon: Memory stores useful context from earlier messages.",
+    ]
+    arabic = [
+        "المستخدم: ما عاصمة مصر؟\nرون: عاصمة مصر هي القاهرة.",
+        "المستخدم: ماذا يفعل رون إذا لم يعرف؟\nرون: يوضح أنه لا يعرف ولا يخمن.",
+    ]
+    vocab = {char: index for index, char in enumerate(sorted(set("\n".join(english + arabic) + "\n")))}
+    en_tokens, en_mask, _, _ = encode_examples(english, vocab)
+    ar_tokens, ar_mask, _, _ = encode_examples(arabic, vocab)
+    en = (en_tokens, en_mask, candidate_starts(en_mask, length=16))
+    ar = (ar_tokens, ar_mask, candidate_starts(ar_mask, length=16))
+    x, y = make_mixed_batch(en, ar, size=2, length=16, arabic_fraction=0.5)
+    assert x.shape == (2, 16)
+    assert y.shape == (2, 16)
+    assert (y != -100).any()
