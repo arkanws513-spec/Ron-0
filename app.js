@@ -224,7 +224,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  if(!local&&shouldWebSearch){try{const searchQuery=resolveFollowUp(t)||t;webResult=await globalThis.RonWebSearch.answer(searchQuery);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
  const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);
 
- if(!String(r||"").trim()){
+ if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up")){
    const semantic=browserReasoningAnswer(t)?.answer;
    if(semantic)r=semantic;
  }
