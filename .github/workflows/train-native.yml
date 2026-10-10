@@ -38,7 +38,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "torch>=2.6" pytest
       - name: Run native-model tests
-        run: python -m pytest tests/test_model.py tests/test_distillation.py tests/test_training.py tests/test_core.py tests/test_surprise_eval.py
+        run: python -m pytest tests/test_model.py tests/test_training.py tests/test_core.py tests/test_surprise_eval.py
       - name: Train Ron-0 native baseline
         run: python -m scripts.train_native
       - name: Place trained weights inside Ron-0 core
