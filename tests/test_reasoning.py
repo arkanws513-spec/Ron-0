@@ -61,4 +61,4 @@ def test_temporal_rules_infer_reverse_and_transitive_relations():
     assert "A precedes C" in result.conclusions
     assert "B follows A" in result.conclusions
     assert "C follows A" in result.conclusions
-\n
+
