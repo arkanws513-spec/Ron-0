@@ -27,17 +27,20 @@ PRETRAINED = ROOT / "artifacts" / "native-10m" / "ron_native_10m.pt"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_10m.pt"
 OUT = ROOT / "artifacts" / "native-10m"
 SEED = 1702
-STEPS = int(os.environ.get("RON_SFT_STEPS") or "1000")
+STEPS = int(os.environ.get("RON_SFT_STEPS") or "3000")
 BATCH = int(os.environ.get("RON_SFT_BATCH_SIZE") or "2")
 LENGTH = int(os.environ.get("RON_SFT_SEQUENCE_LENGTH") or "256")
+ARABIC_BATCH_FRACTION = float(os.environ.get("RON_ARABIC_BATCH_FRACTION") or "0.5")
 if STEPS < 1 or BATCH < 1 or LENGTH < 8:
     raise ValueError("SFT steps and batch size must be positive and sequence length at least 8")
+if not 0 < ARABIC_BATCH_FRACTION < 1:
+    raise ValueError("RON_ARABIC_BATCH_FRACTION must be between 0 and 1")
 
 
-def split_examples(corpus: str, seed: int = SEED, validation_fraction: float = 0.1):
+def split_examples(corpus: str, seed: int = SEED, validation_fraction: float = 0.1, min_examples: int = 100):
     examples = [part.strip() for part in corpus.replace("\r\n", "\n").split("\n\n") if part.strip()]
-    if len(examples) < 100:
-        raise ValueError(f"Expected at least 100 dialogue examples; found {len(examples)}")
+    if len(examples) < min_examples:
+        raise ValueError(f"Expected at least {min_examples} dialogue examples; found {len(examples)}")
     validation_count = max(1, min(len(examples) - 1, round(len(examples) * validation_fraction)))
     validation_ids = set(random.Random(seed).sample(range(len(examples)), validation_count))
     train = [example for index, example in enumerate(examples) if index not in validation_ids]
@@ -110,6 +113,18 @@ def make_batch(tokens, response_mask, valid_starts, size: int, length: int):
     masks = torch.stack([response_mask[start + 1:start + length + 1] for start in starts])
     targets[~masks] = -100
     return inputs, targets
+
+
+def make_mixed_batch(english, arabic, size: int, length: int, arabic_fraction: float):
+    """Sample both languages every batch instead of letting English corpus size dominate."""
+    if size == 1:
+        source = arabic if random.random() < arabic_fraction else english
+        return make_batch(*source, 1, length)
+    arabic_size = max(1, min(size - 1, round(size * arabic_fraction)))
+    english_size = size - arabic_size
+    x_en, y_en = make_batch(*english, english_size, length)
+    x_ar, y_ar = make_batch(*arabic, arabic_size, length)
+    return torch.cat((x_en, x_ar), dim=0), torch.cat((y_en, y_ar), dim=0)
 
 
 @torch.no_grad()
@@ -189,17 +204,37 @@ def main() -> None:
         expanded_model.load_state_dict(expanded_state)
         model = expanded_model
         config = model.config
-    train_examples, validation_examples = split_examples(dialogue_text)
-    train_tokens, train_mask, train_unknown, train_total = encode_examples(train_examples, vocab)
-    val_tokens, val_mask, val_unknown, val_total = encode_examples(validation_examples, vocab)
-    if train_unknown / max(1, train_total) > 0.05 or val_unknown / max(1, val_total) > 0.05:
+    if not arabic_dialogues.strip():
+        raise ValueError("Arabic SFT curriculum is required; refusing English-only instruction tuning.")
+    english_train, english_val = split_examples(english_dialogues, seed=SEED)
+    arabic_train, arabic_val = split_examples(arabic_dialogues, seed=SEED + 1, min_examples=10)
+    train_examples = english_train + arabic_train
+    validation_examples = english_val + arabic_val
+
+    train_tokens_en, train_mask_en, train_unknown_en, train_total_en = encode_examples(english_train, vocab)
+    train_tokens_ar, train_mask_ar, train_unknown_ar, train_total_ar = encode_examples(arabic_train, vocab)
+    val_tokens_en, val_mask_en, val_unknown_en, val_total_en = encode_examples(english_val, vocab)
+    val_tokens_ar, val_mask_ar, val_unknown_ar, val_total_ar = encode_examples(arabic_val, vocab)
+    unknown_rates = (
+        train_unknown_en / max(1, train_total_en),
+        train_unknown_ar / max(1, train_total_ar),
+        val_unknown_en / max(1, val_total_en),
+        val_unknown_ar / max(1, val_total_ar),
+    )
+    if max(unknown_rates) > 0.05:
         raise ValueError("More than 5% of dialogue characters are missing from the pretraining vocabulary; rebuild with a compatible tokenizer.")
 
-    train_starts = candidate_starts(train_mask, LENGTH)
-    val_starts = candidate_starts(val_mask, LENGTH)
+    train_en = (train_tokens_en, train_mask_en, candidate_starts(train_mask_en, LENGTH))
+    train_ar = (train_tokens_ar, train_mask_ar, candidate_starts(train_mask_ar, LENGTH))
+    val_starts_en = candidate_starts(val_mask_en, LENGTH)
+    val_starts_ar = candidate_starts(val_mask_ar, LENGTH)
     initial_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
-    start_val = evaluate(model, val_tokens, val_mask, val_starts)
+    start_val_en = evaluate(model, val_tokens_en, val_mask_en, val_starts_en)
+    start_val_ar = evaluate(model, val_tokens_ar, val_mask_ar, val_starts_ar)
+    start_val = (start_val_en + start_val_ar) / 2
     best_val = start_val
+    best_val_en = start_val_en
+    best_val_ar = start_val_ar
     best_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     best_step = 0
 
@@ -219,7 +254,7 @@ def main() -> None:
         lr = base_lr * warmup * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * progress)))
         for group in optimizer.param_groups:
             group["lr"] = lr
-        x, y = make_batch(train_tokens, train_mask, train_starts, BATCH, LENGTH)
+        x, y = make_mixed_batch(train_en, train_ar, BATCH, LENGTH, ARABIC_BATCH_FRACTION)
         optimizer.zero_grad(set_to_none=True)
         loss = model(x, y).loss
         if loss is None or not torch.isfinite(loss):
@@ -229,11 +264,25 @@ def main() -> None:
         optimizer.step()
 
         if step % 50 == 0:
-            val_loss = evaluate(model, val_tokens, val_mask, val_starts)
-            history.append({"step": step, "validation_response_loss": val_loss, "learning_rate": lr})
-            print(f"sft_step={step} validation_response_loss={val_loss:.4f}", flush=True)
+            val_loss_en = evaluate(model, val_tokens_en, val_mask_en, val_starts_en)
+            val_loss_ar = evaluate(model, val_tokens_ar, val_mask_ar, val_starts_ar)
+            val_loss = (val_loss_en + val_loss_ar) / 2
+            history.append({
+                "step": step,
+                "validation_response_loss": val_loss,
+                "validation_english_loss": val_loss_en,
+                "validation_arabic_loss": val_loss_ar,
+                "learning_rate": lr,
+            })
+            print(
+                f"sft_step={step} balanced_validation_loss={val_loss:.4f} "
+                f"english={val_loss_en:.4f} arabic={val_loss_ar:.4f}",
+                flush=True,
+            )
             if val_loss < best_val:
                 best_val = val_loss
+                best_val_en = val_loss_en
+                best_val_ar = val_loss_ar
                 best_step = step
                 best_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
                 stale = 0
@@ -246,6 +295,12 @@ def main() -> None:
     final_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     changed_tensors = sum(not torch.equal(final_state[name], initial_state[name]) for name in final_state)
     corpus_text = dialogue_text
+    train_tokens_total = int(train_tokens_en.numel() + train_tokens_ar.numel())
+    val_tokens_total = int(val_tokens_en.numel() + val_tokens_ar.numel())
+    train_unknown = train_unknown_en + train_unknown_ar
+    train_total = train_total_en + train_total_ar
+    val_unknown = val_unknown_en + val_unknown_ar
+    val_total = val_total_en + val_total_ar
     checkpoint = {
         "state_dict": final_state,
         "best_state_dict": best_state,
@@ -281,13 +336,22 @@ def main() -> None:
         "promotion_reason": "awaiting_blind_conversational_evaluation" if validation_improved else "assistant_validation_gate_not_passed",
         "live_checkpoint": str(LIVE_CHECKPOINT.relative_to(ROOT)) if promoted else None,
         "training_examples": len(train_examples),
+        "training_examples_english": len(english_train),
+        "training_examples_arabic": len(arabic_train),
         "validation_examples": len(validation_examples),
-        "train_characters": len(train_tokens),
-        "validation_characters": len(val_tokens),
+        "validation_examples_english": len(english_val),
+        "validation_examples_arabic": len(arabic_val),
+        "arabic_batch_fraction": ARABIC_BATCH_FRACTION,
+        "train_characters": train_tokens_total,
+        "validation_characters": val_tokens_total,
         "train_unknown_character_rate": train_unknown / max(1, train_total),
         "validation_unknown_character_rate": val_unknown / max(1, val_total),
         "initial_validation_response_loss": start_val,
+        "initial_validation_english_loss": start_val_en,
+        "initial_validation_arabic_loss": start_val_ar,
         "best_validation_response_loss": best_val,
+        "best_validation_english_loss": best_val_en,
+        "best_validation_arabic_loss": best_val_ar,
         "best_step": best_step,
         "training_steps": steps_completed,
         "early_stopped": early_stopped,
