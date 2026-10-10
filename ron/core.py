@@ -13,6 +13,7 @@ from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
 from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
+from .arithmetic import answer_arithmetic
 
 @dataclass
 class RonCore:
@@ -71,6 +72,9 @@ class RonCore:
         intent_state=self.understanding.analyze(text,previous_user=previous_topic)
         topic=intent_state.topic
         intent=intent_state.intent or detect_intent(text,topic=topic)
+        arithmetic_answer=answer_arithmetic(text)
+        if arithmetic_answer is not None:
+            return self._finish(text,arithmetic_answer,"ron-arithmetic",{"runtime":"ron-0","deterministic_tool":"arithmetic","external_model_used":False})
         facts=extract_facts(text)
         if facts:
             for fact in facts:self.memory.remember(fact.memory)
