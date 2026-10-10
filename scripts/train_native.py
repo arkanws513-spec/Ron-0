@@ -1,6 +1,7 @@
 """Train or continue training Ron's native character-level Transformer."""
 from __future__ import annotations
 
+import copy
 import json
 import random
 import time
@@ -55,7 +56,7 @@ def load_or_initialize(corpus: str):
             num_layers=int(old_cfg["num_layers"]),
             num_heads=int(old_cfg["num_heads"]),
             max_sequence_length=int(old_cfg["max_sequence_length"]),
-            dropout=float(old_cfg.get("dropout", 0.0)),
+            dropout=0.1,
         )
         if cfg.hidden_size != HIDDEN or cfg.num_layers != LAYERS or cfg.num_heads != HEADS or cfg.max_sequence_length != LENGTH:
             raise RuntimeError("Existing Ron checkpoint architecture differs from this training recipe; refusing to overwrite it.")
@@ -82,7 +83,7 @@ def load_or_initialize(corpus: str):
 
     vocab = {char: index for index, char in enumerate(sorted(set(corpus)))}
     cfg = RonModelConfig(vocab_size=len(vocab), hidden_size=HIDDEN, num_layers=LAYERS,
-                         num_heads=HEADS, max_sequence_length=LENGTH)
+                         num_heads=HEADS, max_sequence_length=LENGTH, dropout=0.1)
     return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False, None
 
 
@@ -98,8 +99,10 @@ def main():
     if len(train) < LENGTH + 2 or len(val) < LENGTH + 2:
         raise ValueError("Training corpus is too small for the configured sequence length; expand training/seed_corpus.txt.")
 
+    initial_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     start_train, start_val = evaluate(model, train), evaluate(model, val)
     best_val, best_step = start_val, 0
+    best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
     if prior_optimizer_state and not vocab_expanded:
         try:
@@ -126,14 +129,24 @@ def main():
             print(f"step={step} train_loss={train_loss:.4f} validation_loss={validation_loss:.4f}", flush=True)
             if validation_loss < best_val:
                 best_val, best_step = validation_loss, step
+                best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
 
     # Persist the final state after this run, not the starting/best snapshot.
     # This guarantees the next run continues from weights actually updated by this training pass.
     final_train, final_validation = evaluate(model, train), evaluate(model, val, count=16)
     OUT.mkdir(parents=True, exist_ok=True)
     total_steps = prior_step + STEPS
+    final_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
+    delta_squared = sum(float((final_state_dict[name].float() - initial_state[name].float()).pow(2).sum().item())
+                        for name in final_state_dict)
+    changed_tensors = sum(not torch.equal(final_state_dict[name], initial_state[name]) for name in final_state_dict)
     checkpoint = {
-        "state_dict": model.state_dict(),
+        # Training resumes from the final weights and matching optimizer state.
+        "state_dict": final_state_dict,
+        # Inference uses the best validation snapshot to reduce overfitting.
+        "best_state_dict": best_state_dict,
+        "best_selected_step": prior_step + best_step,
+        "best_validation_loss": best_val,
         "config": model.config.__dict__,
         "vocab": vocab,
         "seed": SEED,
@@ -160,7 +173,11 @@ def main():
         "final_train_loss": final_train,
         "final_validation_loss": final_validation,
         "weights_persisted_from_final_training_step": True,
+        "best_validation_weights_persisted": True,
+        "best_selected_step_total": prior_step + best_step,
         "optimizer_state_persisted": True,
+        "changed_parameter_tensors": changed_tensors,
+        "parameter_delta_l2": delta_squared ** 0.5,
         "parameters": parameters,
         "vocab_size": len(vocab),
         "corpus_characters": len(ids),
