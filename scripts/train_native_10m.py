@@ -31,7 +31,7 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
     """Split at document/paragraph boundaries to reduce train-validation leakage."""
     if not 0 < train_fraction < 1:
         raise ValueError("train_fraction must be between 0 and 1")
-    documents = [part.strip() for part in corpus.replace("\\r\\n", "\\n").split("\\n\\n") if part.strip()]
+    documents = [part.strip() for part in corpus.replace("\r\n", "\n").split("\n\n") if part.strip()]
     if len(documents) < 10:
         raise ValueError("prepared corpus must contain at least 10 non-empty documents/paragraphs separated by blank lines")
     validation_count = max(1, min(len(documents) - 1, round(len(documents) * (1 - train_fraction))))
@@ -39,8 +39,8 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
     train_documents = [doc for index, doc in enumerate(documents) if index not in validation_indices]
     validation_documents = [doc for index, doc in enumerate(documents) if index in validation_indices]
     return (
-        "\\n\\n".join(train_documents) + "\\n",
-        "\\n\\n".join(validation_documents) + "\\n",
+        "\n\n".join(train_documents) + "\n",
+        "\n\n".join(validation_documents) + "\n",
         len(train_documents),
         len(validation_documents),
     )
