@@ -199,7 +199,9 @@ const isBothNamesQuestion=n=>/^(?=.*(?:ما|ايه|اي)\s*اسمي)(?=.*(?:ما
 const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");
 const isReadinessQuestion=n=>/^(?:هل\s+)?انت\s+جاهز[؟?!.]*$/.test(n);
 const isIncompleteMathQuestion=n=>/^(?:و\s*)?كم\s+(?:تساوي|يساوي)[؟?!.]*$/.test(n)||/^(?:و\s*)?ما\s+الناتج[؟?!.]*$/.test(n);
-const isEgyptCapitalQuestion=n=>/^(?:(?:ما|ايه|اي)\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+مصر[؟?!.]*$/.test(n)||/^(?:ما|ايه|اي)\s+(?:هي\s+)?عاصم(?:ة|ه)\s+مصر[؟?!.]*$/.test(n);
+const capitalQuestionPlace=n=>{const m=n.match(/^(?:(?:ما|ايه|اي)\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+(.+?)[؟?!.]*$/);return m?norm(m[1]):null;};
+const isEgyptCapitalQuestion=n=>capitalQuestionPlace(n)==="مصر";
+const knownCapitalAnswer=n=>{const place=capitalQuestionPlace(n);const capitals={"مصر":"القاهرة","فرنسا":"باريس","بريطانيا":"لندن","المملكة المتحدة":"لندن","الولايات المتحدة":"واشنطن","امريكا":"واشنطن","السعودية":"الرياض","اليابان":"طوكيو","الصين":"بكين","المانيا":"برلين","إسبانيا":"مدريد","اسبانيا":"مدريد","ايطاليا":"روما","روسيا":"موسكو","كندا":"أوتاوا","استراليا":"كانبرا"};const city=capitals[place];return city?"عاصمة "+place+" هي "+city+".":null;};
 const isEgyptCapitalPreference=n=>/^(?:حين|عندما|لما)\s+اسالك\s+(?:ما\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+مصر[،,]?\s+(?:قول|قل)\s+القاهرة\s+فقط[.!؟?]*$/.test(n);
 const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
 const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestion(n)&&isAgeQuestion(n));
@@ -243,6 +245,15 @@ const explainPreviousReply=()=>{
 };
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ // Answer stable, high-confidence facts before memory/retrieval can hijack the question.
+ if(/^(?:هل\s+)?(?:اسمك\s+رون|اسمك\s+هو\s+رون|انت\s+اسمك\s+رون)[؟?!.]*$/.test(n))return "نعم، اسمي رون.";
+ if(/^(?:ماذا فهمت|ما فهمت|فهمت ايه|ماذا استنتجت)[؟?!.]*$/.test(n)){
+  const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim());
+  if(!previous)return "لم تذكر لي فكرة سابقة واضحة لألخّصها.";
+  const prior=norm(previous.text);
+  if(/عاصم.*مصر|مصر.*عاصم/.test(prior))return "فهمت أن عاصمة مصر هي القاهرة، وأن عليّ الإجابة عن السؤال مباشرة وبشكل متسق حتى لو تغيّرت صياغته. إذا أجبت سابقًا بإجابة مختلفة أو غير مفهومة، فهذا خطأ مني.";
+  return "فهمت أنك قلت: «"+String(previous.text).trim().slice(0,220)+"». سأتعامل معها باعتبارها سياقًا للمحادثة، لا مجرد نص أعيده.";
+ }
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
  if(isReadinessQuestion(n))return "أيوه، جاهز.";
  if(isWithMeQuestion(n))return "أيوه، أنا معاك. قولّي نكمل منين.";
@@ -251,6 +262,8 @@ const answer=t=>{
  if(isCommentCommand(n))return commentOnPreviousUserMessage();
  if(isIncompleteMathQuestion(n))return "ما العملية الحسابية التي تريد حسابها؟";
  if(isEgyptCapitalQuestion(n)&&preferences.shortEgyptCapital)return "القاهرة";
+ const knownCapital=knownCapitalAnswer(n);if(knownCapital)return knownCapital;
+ const askedCapital=capitalQuestionPlace(n);if(askedCapital)return "لا أملك إجابة موثوقة عن عاصمة "+askedCapital+" الآن.";
  if(/^(?:اسمك|اسمك هو|انت اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(n))return "نعم، اسمي رون.";
  if(/^(مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا)([!！،,. ]*)$/.test(n))return "مرحبًا. أنا رون، وجاهز لمساعدتك.";
  if(/^(ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)([؟? !،,.]*)$/.test(n))return "أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟";
@@ -309,8 +322,18 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
- const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
+ const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||!!capitalQuestionPlace(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
+ if(!String(r||"").trim()){
+  const inferenceEndpoint=String(globalThis.RON_INFERENCE_ENDPOINT||localStorage.getItem("ron-inference-endpoint")||"").trim();
+  if(inferenceEndpoint&&!deterministicInput&&extractFacts(t).length===0&&extractRonFacts(t).length===0&&globalThis.RonInferenceClient?.chat){
+   try{
+    const history=messages.slice(-12).map(m=>({role:m.role==="ron"?"assistant":m.role,content:m.text}));
+    const nativeResponse=await globalThis.RonInferenceClient.chat(inferenceEndpoint,history);
+    if(nativeResponse?.content)r=nativeResponse.content;
+   }catch(error){console.warn("Ron native inference unavailable",error);}
+  }
+ }
  if(!String(r||"").trim()){
   const core=globalThis.ronCore;
   if(core){

@@ -73,7 +73,9 @@ jobs:
             git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json ron/checkpoints/latest_training_attempt.json
             commit_message="Promote validated Ron-0 native checkpoint"
           else
-            # Preserve the failed attempt's metrics and blind evaluation without promoting candidate weights.
+            # Keep failed candidate weights out of main and leave a clean worktree for the report commit.
+            git restore --worktree -- ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json || true
+            git clean -f -- ron/checkpoints/ron_native_baseline.pt
             git add ron/checkpoints/latest_training_attempt.json
             commit_message="Record Ron-0 native training attempt (checkpoint not promoted)"
             echo "::warning::Anti-degeneration gate failed; candidate weights were not promoted."
@@ -85,7 +87,12 @@ jobs:
             git rebase origin/main
             git push origin HEAD:main
           fi
+          if ! python -c 'import json,sys; r=json.load(open("ron/checkpoints/latest_training_attempt.json", encoding="utf-8")); sys.exit(0 if r.get("checkpoint_promoted") else 1)'; then
+            echo "::error::Native checkpoint failed the blind anti-degeneration gate and was not promoted."
+            exit 1
+          fi
       - name: Archive training run and surprise evaluation
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: ron0-native-baseline
