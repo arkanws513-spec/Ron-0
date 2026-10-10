@@ -23,6 +23,7 @@ def normalize_match(text: str) -> str:
 
 
 def run_benchmark(benchmark_path: Path) -> dict:
+    benchmark_path = benchmark_path.resolve()
     benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
     bootstrap = RonCore()
     provider = bootstrap.provider
