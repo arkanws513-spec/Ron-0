@@ -74,3 +74,27 @@ def test_contradiction_detection_normalizes_arabic_article_variants():
     ])
     assert not any("ازدحام" in c.left and "ازدحام" in c.right for c in result.contradictions)
     assert any("سائل" in c.left and "غاز" in c.right for c in result.contradictions)
+
+
+def test_hypothesis_scoring_counts_negation_as_opposition_not_support():
+    from ron.reasoning_advanced import AdvancedReasoner, WeightedEvidence
+
+    scores = AdvancedReasoner().score_hypotheses(
+        ["rain causes flooding"],
+        [
+            WeightedEvidence("rain causes flooding", .9, 1.0, "source-a"),
+            WeightedEvidence("not rain causes flooding", .8, 1.0, "source-b"),
+        ],
+    )
+    assert scores[0].support == .9
+    assert scores[0].opposition == .8
+    assert abs(scores[0].confidence - (.9 / 1.7)) < 1e-9
+
+
+def test_hypothesis_without_matching_evidence_has_zero_confidence():
+    from ron.reasoning_advanced import AdvancedReasoner, WeightedEvidence
+
+    score = AdvancedReasoner().score_hypotheses(
+        ["hypothesis"], [WeightedEvidence("unrelated evidence", .9, 1.0)]
+    )[0]
+    assert score.confidence == 0.0
