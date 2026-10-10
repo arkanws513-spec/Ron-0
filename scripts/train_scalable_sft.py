@@ -68,6 +68,7 @@ class PromptResponseDataset(Dataset):
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--data", type=Path, required=True, help="Reviewed JSONL containing prompt/response and review_status=approved")
+    p.add_argument("--validation-data", type=Path, help="Separate held-out reviewed JSONL; never reuse training records")
     p.add_argument("--tokenizer", type=Path, default=Path("artifacts/ron-tokenizer/tokenizer.json"))
     p.add_argument("--output", type=Path, default=Path("artifacts/ron-scalable"))
     p.add_argument("--vocab-size", type=int, help="Expected tokenizer vocabulary size; defaults to the tokenizer file's actual size")
@@ -86,10 +87,13 @@ def main() -> None:
         p.error("epochs, batch-size and learning-rate must be positive")
     if not args.data.is_file() or not args.tokenizer.is_file():
         p.error("both --data and --tokenizer must point to existing files")
+    if args.validation_data is not None and not args.validation_data.is_file():
+        p.error("--validation-data must point to an existing file")
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ds = PromptResponseDataset(args.data, args.tokenizer, args.sequence_length, args.limit)
+    val_ds = PromptResponseDataset(args.validation_data, args.tokenizer, args.sequence_length) if args.validation_data else None
     # Validate tokenizer/model vocabulary agreement before allocating training batches.
     from tokenizers import Tokenizer
     actual_vocab = Tokenizer.from_file(str(args.tokenizer)).get_vocab_size()
@@ -100,6 +104,7 @@ def main() -> None:
         num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads,
         max_sequence_length=args.sequence_length)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True)
+    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False) if val_ds is not None else None
     model = ScalableRonLM(config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -124,14 +129,28 @@ def main() -> None:
             total += float(loss.detach())
             count += 1
         epoch_loss = total / max(count, 1)
-        history.append({"epoch": epoch + 1, "train_loss": epoch_loss})
+        row = {"epoch": epoch + 1, "train_loss": epoch_loss}
+        if val_loader is not None:
+            model.eval()
+            val_total, val_count = 0.0, 0
+            with torch.inference_mode():
+                for batch in val_loader:
+                    result = model(batch["input_ids"].to(device), batch["labels"].to(device))
+                    val_loss = result["loss"]
+                    if val_loss is None or not torch.isfinite(val_loss):
+                        raise RuntimeError("non-finite or missing validation loss")
+                    val_total += float(val_loss)
+                    val_count += 1
+            row["validation_loss"] = val_total / max(val_count, 1)
+        history.append(row)
         torch.save({"model": model.state_dict(), "config": config.__dict__, "epoch": epoch + 1,
                     "optimizer": optimizer.state_dict(), "seed": args.seed}, args.output / "checkpoint.pt")
         print(json.dumps(history[-1]))
-    metrics = {"status": "training_completed_no_independent_evaluation", "parameters": count_parameters(model),
-        "device": str(device), "dataset_records": len(ds), "epochs": args.epochs,
+    metrics = {"status": "training_completed_with_held_out_loss" if val_ds is not None else "training_completed_no_independent_evaluation",
+        "parameters": count_parameters(model), "device": str(device), "dataset_records": len(ds),
+        "validation_records": len(val_ds) if val_ds is not None else 0, "epochs": args.epochs,
         "history": history, "elapsed_seconds": round(time.time() - started, 2),
-        "limitations": ["This is a pilot SFT run, not pretraining from scratch.", "Only assistant response tokens contribute to loss.", "Generated teacher examples must be reviewed and marked review_status=approved.", "No independent benchmark has been run; checkpoint must not be treated as production-ready."]}
+        "limitations": ["This is a pilot SFT run, not pretraining from scratch.", "Only assistant response tokens contribute to loss.", "All training and validation records must be reviewed and marked review_status=approved.", "Held-out loss does not replace task-based quality, factuality, Arabic/English coverage, safety, or regression evaluations.", "Do not treat the checkpoint as production-ready without independent evaluation."]}
     (args.output / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(metrics, indent=2))
 
