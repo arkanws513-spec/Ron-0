@@ -227,7 +227,10 @@ def main():
         prior_best_validation,
         prior_best_step,
     )
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
+    base_lr = 1.5e-4 if checkpoint_source.startswith("continued") else 3e-4
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=base_lr, betas=(0.9, 0.95), weight_decay=0.1
+    )
     if prior_optimizer_state and not vocab_expanded:
         try:
             optimizer.load_state_dict(prior_optimizer_state)
@@ -235,6 +238,7 @@ def main():
         except (ValueError, RuntimeError) as exc:
             # A vocabulary expansion changes embedding shapes; reset optimizer moments but retain every compatible model weight.
             print(f"optimizer_state_reset_due_to_shape_change={exc}", flush=True)
+    warmup_steps = min(100, max(1, STEPS // 10))
     started = time.time()
     history = []
     stale_evaluations = 0
@@ -243,6 +247,12 @@ def main():
     model.train()
     for step in range(1, STEPS + 1):
         steps_completed = step
+        warmup_factor = min(1.0, step / warmup_steps)
+        progress = (step - 1) / max(1, STEPS - 1)
+        cosine_factor = 0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * progress))
+        current_lr = base_lr * warmup_factor * cosine_factor
+        for group in optimizer.param_groups:
+            group["lr"] = current_lr
         x, y = batch(train, BATCH, LENGTH)
         optimizer.zero_grad(set_to_none=True)
         loss = model(x, y).loss
@@ -253,7 +263,7 @@ def main():
         optimizer.step()
         if step % 50 == 0:
             train_loss, validation_loss = evaluate(model, train), evaluate(model, val, count=16)
-            history.append({"step": step, "train_loss": train_loss, "validation_loss": validation_loss})
+            history.append({"step": step, "train_loss": train_loss, "validation_loss": validation_loss, "learning_rate": current_lr})
             print(f"step={step} train_loss={train_loss:.4f} validation_loss={validation_loss:.4f}", flush=True)
             if validation_loss < best_val:
                 best_val, best_step = validation_loss, step
@@ -325,6 +335,10 @@ def main():
         "prior_selected_step": prior_step,
         "vocabulary_expanded": vocab_expanded,
         "seed": SEED,
+        "optimizer": "AdamW",
+        "base_learning_rate": base_lr,
+        "learning_rate_schedule": "linear_warmup_then_cosine_decay_to_10_percent",
+        "warmup_steps": warmup_steps,
         "training_steps_this_run": steps_completed,
         "selected_checkpoint_step_this_run": steps_completed,
         "corpus_sha256": hashlib.sha256(corpus.encode("utf-8")).hexdigest(),
