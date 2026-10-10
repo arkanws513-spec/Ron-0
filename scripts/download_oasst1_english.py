@@ -84,8 +84,6 @@ def main() -> None:
     digest = hashlib.sha256(compressed).hexdigest()
     examples: set[str] = set()
     tree_count = 0
-    with gzip.decompress(compressed) as _unused:
-        pass
     import io
     with gzip.GzipFile(fileobj=io.BytesIO(compressed), mode="rb") as stream:
         for line in stream:
