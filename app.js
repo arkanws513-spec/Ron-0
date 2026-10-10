@@ -76,7 +76,7 @@ const extractFacts=t=>{
  const corrected=n.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)\b.*$/);
  if(corrected){const value=cleanValue(corrected[1]);if(value)facts.push({key:"user.name",text:value});return facts;}
  let both=n.match(/^اسمي\s+(.+?)\s*[،,]\s*(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
- if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});}
+ if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});return facts;}
  let m=n.match(/(?:^|\s)(?:انا\s+)?(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?=\s|$)/);
  if(!m)m=n.match(/(?:^|\s)(?:انا\s+)?(\d{1,3})\s*(?:عام|سنة|سنين)(?=\s|$)/);
  if(m){const age=Number(m[1]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
@@ -99,7 +99,7 @@ const extractFacts=t=>{
  }
  if(!facts.some(x=>x.key==="user.name")){
   m=n.match(/^انا\s+(.+?)$/);
-  if(m&&!/^(?:عمري|سني|احب|لا احب)\b/.test(m[1])){
+  if(m&&!/^(?:عمري|سني|احب|لا احب|بسالك|اسالك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\b/.test(m[1])){
    const value=cleanValue(m[1]);
    if(value)facts.push({key:"user.name",text:value});
   }
@@ -168,6 +168,7 @@ const teach=t=>{let x=String(t||"").trim().replace(/^\s*عل[ّ]?م\s+رون\s*(
  save();return"تم حفظ التعليم في ذاكرة رون المحلية.";};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ if(/^(?:اسمك|اسمك هو|انت اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(n))return "نعم، اسمي رون.";
  if(/^(مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا)([!！،,. ]*)$/.test(n))return "مرحبًا. أنا رون، وجاهز لمساعدتك.";
  if(/^(ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)([؟? !،,.]*)$/.test(n))return "أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟";
  if(/^(ماذا تستطيع|ايه اللي تقدر تعمله|ماذا يمكنك ان تفعل|ماذا يمكنك|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(n))return "أستطيع فهم المحادثة، حفظ ما تعلّمني إياه، استخدام معرفتي المحلية، إجراء استدلال بسيط، والبحث في الإنترنت عندما أحتاج معلومة غير موجودة لدي. وويمكنني الاعتماد على نواتي المحلية والبحث في الإنترنت عند الحاجة.";
@@ -236,7 +237,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  // This prevents stale memory from inventing a user name or answering a compliment with unrelated text.
  const normalizedInput=norm(t);
  const deterministicInput=analyzeIntent(t)==="greeting"||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
- if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\\s+هو|انت\\s+اسمك)\\s+رون\\s+(?:فعلا|حقا)$/.test(normalizedInput))r=answer(t);
+ if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim())r=answer(t);
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;
