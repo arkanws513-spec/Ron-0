@@ -62,3 +62,15 @@ def test_temporal_rules_infer_reverse_and_transitive_relations():
     assert "B follows A" in result.conclusions
     assert "C follows A" in result.conclusions
 
+
+
+def test_contradiction_detection_normalizes_arabic_article_variants():
+    engine = ReasoningEngine()
+    result = engine.reason([
+        Fact("ازدحام", "causes", "تأخير", .8, "source-a"),
+        Fact("الازدحام", "causes", "التأخير", .7, "source-b"),
+        Fact("الماء", "is", "سائل", .9, "source-c"),
+        Fact("الماء", "is", "غاز", .4, "source-d"),
+    ])
+    assert not any("ازدحام" in c.left and "ازدحام" in c.right for c in result.contradictions)
+    assert any("سائل" in c.left and "غاز" in c.right for c in result.contradictions)
