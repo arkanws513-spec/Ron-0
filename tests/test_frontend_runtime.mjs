@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 
-const ids = ["chat","composer","input","send","menu","settings","close-settings","new-chat","clear-data","export","import"];
+const ids = ["chat","composer","input","send","menu","settings","close-settings","new-chat","clear-data","export","import","start-ron","startup","main-app"];
 const nodes = new Map();
 const listeners = new Map();
 for (const id of ids) {
