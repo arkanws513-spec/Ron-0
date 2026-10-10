@@ -33,10 +33,22 @@ def batch(tokens: torch.Tensor, size: int, length: int):
 
 @torch.no_grad()
 def evaluate(model, tokens: torch.Tensor, count: int = 12) -> float:
+    """Evaluate on fixed, evenly spaced windows so checkpoint selection is reproducible."""
+    was_training = model.training
     model.eval()
-    values = [float(model(*batch(tokens, min(4, max(1, len(tokens) // (LENGTH + 2))), LENGTH)).loss.item())
-              for _ in range(count)]
-    model.train()
+    top = len(tokens) - LENGTH - 1
+    if top < 1:
+        raise ValueError(f"evaluation split has {len(tokens)} tokens; needs at least {LENGTH + 2}")
+    starts = torch.linspace(0, top - 1, steps=max(1, min(count, top))).long().unique().tolist()
+    values = []
+    for start in starts:
+        x = tokens[start:start + LENGTH].unsqueeze(0)
+        y = tokens[start + 1:start + LENGTH + 1].unsqueeze(0)
+        loss = model(x, y).loss
+        if loss is None or not torch.isfinite(loss):
+            raise RuntimeError("non-finite evaluation loss")
+        values.append(float(loss.item()))
+    model.train(was_training)
     return sum(values) / len(values)
 
 
