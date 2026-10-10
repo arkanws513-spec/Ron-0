@@ -28,9 +28,10 @@ The output JSONL is **not approved training data**. Check each answer for correc
       --data training/distillation/qwen25_7b_teacher.jsonl \
       --tokenizer artifacts/ron-tokenizer/tokenizer.json \
       --output artifacts/ron-scalable \
+      --validation-data training/distillation/heldout_reviewed.jsonl \
       --epochs 1 --batch-size 2 --limit 64
 
-The loss is applied to assistant response tokens only, not user prompt tokens. A checkpoint, config, tokenizer copy, and training metrics are saved locally. CPU execution is supported but can be slow. Start with a small limit and short sequence length; measure memory before scaling.
+The loss is applied to assistant response tokens only, not user prompt tokens. A checkpoint, config, tokenizer copy, and training metrics are saved locally. If you provide a genuinely separate `--validation-data` file, response-only validation loss is measured each epoch. Never reuse training examples in that file. CPU execution is supported but can be slow. Start with a small limit and short sequence length; measure memory before scaling.
 
 This is **SFT of a newly initialized student**, not Qwen-to-Ron weight conversion and not general pretraining. It will not inherit the teacher's full capabilities. The generated metrics explicitly say that independent evaluation is still required.
 
