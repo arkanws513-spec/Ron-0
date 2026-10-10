@@ -148,3 +148,49 @@ const migratedKnowledge=JSON.parse(storage2.get("ron-learning-core-v1")||"{}");
 assert.equal(migratedKnowledge.knowledge.some(x=>x.kind==="fact"&&x.text==="اسمك هو اركانوس وليس"),false);
 assert.equal(migratedKnowledge.knowledge.some(x=>x.kind==="fact"&&x.text==="اسمي هو كوين"),false);
 assert.equal(migratedKnowledge.knowledge.some(x=>x.kind==="fact"&&x.text==="اسمك هو اركانوس"),true);
+
+
+// Regression: deterministic routing beats unrelated retrieval; concise preference survives a fresh runtime.
+input.value = "هل أنت جاهز؟";
+submit({preventDefault(){}});
+assert.equal(nodes.get("chat").children.at(-1).children.at(-1).textContent, "أيوه، جاهز.");
+
+input.value = "حين أسألك ما هي عاصمة مصر، قول القاهرة فقط";
+submit({preventDefault(){}});
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /القاهرة/);
+input.value = "ما هي عاصمة مصر؟";
+submit({preventDefault(){}});
+assert.equal(nodes.get("chat").children.at(-1).children.at(-1).textContent, "القاهرة");
+assert.equal(JSON.parse(storage.get("ron-preferences-v1") || "{}").shortEgyptCapital, true);
+
+const nodes3 = new Map();
+const listeners3 = new Map();
+for (const id of ids) {
+  nodes3.set(id, {
+    id, value:"", disabled:false, scrollTop:0, scrollHeight:0, style:{},
+    children:[], className:"", textContent:"",
+    append(...items){this.children.push(...items);},
+    appendChild(item){this.children.push(item);},
+    replaceChildren(...items){this.children=[...items];},
+    addEventListener(type,fn){listeners3.set(id+":"+type,fn);},
+    classList:{add(){},remove(){}}
+  });
+}
+const context3 = {
+  document:{
+    getElementById(id){return nodes3.get(id)??null;},
+    createElement(tag){return {tag,className:"",textContent:"",children:[],append(...items){this.children.push(...items);},click(){},style:{}};}
+  },
+  localStorage:{
+    getItem:k=>storage.has(k)?storage.get(k):null,
+    setItem:(k,v)=>storage.set(k,v),
+    clear:()=>storage.clear(),
+    removeItem:k=>storage.delete(k)
+  },
+  console,setTimeout:fn=>{fn();return 1;},Blob:class{constructor(parts){this.parts=parts;}},
+  URL:{createObjectURL:()=>"blob:test"},confirm:()=>true,alert:()=>{},Date,JSON,Math
+};
+vm.runInNewContext(fs.readFileSync("app.js","utf8"),context3);
+nodes3.get("input").value = "ما هي عاصمة مصر؟";
+listeners3.get("composer:submit")({preventDefault(){}});
+assert.equal(nodes3.get("chat").children.at(-1).children.at(-1).textContent, "القاهرة");
