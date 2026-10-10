@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "description": "25-turn RonCore dialogue benchmark. Expected phrases are lightweight checks, not a substitute for human semantic review.",
+  "normalization": "Arabic diacritics removed; alef variants normalized; case-folded; punctuation ignored for matching.",
+  "cases": [
+    {
+      "id": "greeting",
+      "session": "general",
+      "prompt": "مرحبا",
+      "contains_any": [
+        "مرحبا",
+        "أهلا",
+        "اهلا"
+      ],
+      "critical": false
+    },
+    {
+      "id": "identity",
+      "session": "general",
+      "prompt": "ما اسمك؟",
+      "contains_any": [
+        "رون"
+      ],
+      "critical": true
+    },
+    {
+      "id": "remember_name",
+      "session": "profile",
+      "prompt": "اسمي أركانوس",
+      "contains_any": [
+        "أركانوس"
+      ],
+      "critical": true
+    },
+    {
+      "id": "recall_name",
+      "session": "profile",
+      "prompt": "ما اسمي؟",
+      "contains_any": [
+        "أركانوس"
+      ],
+      "critical": true
+    },
+    {
+      "id": "remember_age",
+      "session": "profile",
+      "prompt": "عمري 23 سنة",
+      "contains_any": [
+        "23"
+      ],
+      "critical": true
+    },
+    {
+      "id": "recall_age",
+      "session": "profile",
+      "prompt": "كم عمري؟",
+      "contains_any": [
+        "23"
+      ],
+      "critical": true
+    },
+    {
+      "id": "remember_preference",
+      "session": "preference",
+      "prompt": "أنا أحب البرمجة",
+      "contains_any": [
+        "برمجة"
+      ],
+      "critical": true
+    },
+    {
+      "id": "recall_preference",
+      "session": "preference",
+      "prompt": "ماذا أحب؟",
+      "contains_any": [
+        "برمجة"
+      ],
+      "critical": true
+    },
+    {
+      "id": "arithmetic_multiply",
+      "session": "math",
+      "prompt": "كم يساوي 5*5؟",
+      "contains_any": [
+        "25"
+      ],
+      "critical": true
+    },
+    {
+      "id": "arithmetic_precedence",
+      "session": "math",
+      "prompt": "احسب 2 + 3 * 4",
+      "contains_any": [
+        "14"
+      ],
+      "critical": true
+    },
+    {
+      "id": "arithmetic_arabic_digits",
+      "session": "math",
+      "prompt": "كم يساوي ١٢ ÷ ٣؟",
+      "contains_any": [
+        "4"
+      ],
+      "critical": true
+    },
+    {
+      "id": "arithmetic_subtract",
+      "session": "math",
+      "prompt": "10 ناقص 3",
+      "contains_any": [
+        "7"
+      ],
+      "critical": true
+    },
+    {
+      "id": "arithmetic_words",
+      "session": "math",
+      "prompt": "ما ناتج 9 ضرب 7؟",
+      "contains_any": [
+        "63"
+      ],
+      "critical": true
+    },
+    {
+      "id": "egypt_capital",
+      "session": "knowledge",
+      "prompt": "ما عاصمة مصر؟",
+      "contains_any": [
+        "القاهرة"
+      ],
+      "critical": true
+    },
+    {
+      "id": "memory_vs_training",
+      "session": "knowledge",
+      "prompt": "ما الفرق بين الذاكرة والتدريب؟",
+      "contains_any": [
+        "الذاكرة",
+        "التدريب"
+      ],
+      "critical": false
+    },
+    {
+      "id": "context_definition",
+      "session": "knowledge",
+      "prompt": "ماذا تقصد بكلمة سياق؟",
+      "contains_any": [
+        "السياق",
+        "الرسائل"
+      ],
+      "critical": false
+    },
+    {
+      "id": "uncertainty_policy",
+      "session": "knowledge",
+      "prompt": "ماذا تفعل إذا لم تعرف الإجابة؟",
+      "contains_any": [
+        "لا أعرف",
+        "لا اعرف",
+        "تحقق"
+      ],
+      "critical": true
+    },
+    {
+      "id": "equation",
+      "session": "reasoning",
+      "prompt": "حل المعادلة 2x + 4 = 10",
+      "contains_any": [
+        "3"
+      ],
+      "critical": true
+    },
+    {
+      "id": "news_verification",
+      "session": "reasoning",
+      "prompt": "كيف تتحقق من خبر؟",
+      "contains_any": [
+        "مصدر",
+        "مصادر"
+      ],
+      "critical": false
+    },
+    {
+      "id": "apology_writing",
+      "session": "writing",
+      "prompt": "اكتب رسالة اعتذار مهذبة عن التأخر",
+      "contains_any": [
+        "أعتذر",
+        "اعتذر"
+      ],
+      "critical": false
+    },
+    {
+      "id": "programming_learning",
+      "session": "writing",
+      "prompt": "كيف أبدأ تعلم البرمجة؟",
+      "contains_any": [
+        "متغيرات",
+        "مشاريع",
+        "مشروعات",
+        "دوال"
+      ],
+      "critical": false
+    },
+    {
+      "id": "fact_vs_opinion",
+      "session": "knowledge",
+      "prompt": "ما الفرق بين الحقيقة والرأي؟",
+      "contains_any": [
+        "الحقيقة",
+        "الرأي"
+      ],
+      "critical": false
+    },
+    {
+      "id": "validation_loss",
+      "session": "knowledge",
+      "prompt": "هل انخفاض خسارة التدريب يعني أن النموذج أصبح ذكيًا؟",
+      "contains_any": [
+        "لا"
+      ],
+      "critical": true
+    },
+    {
+      "id": "followup_topic",
+      "session": "followup",
+      "prompt": "ما عاصمة مصر؟",
+      "contains_any": [
+        "القاهرة"
+      ],
+      "critical": true
+    },
+    {
+      "id": "followup_explain",
+      "session": "followup",
+      "prompt": "وضح كلامك السابق",
+      "contains_any": [
+        "القاهرة",
+        "عاصمة",
+        "السابق"
+      ],
+      "critical": false
+    }
+  ]
+}
