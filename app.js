@@ -70,6 +70,11 @@ const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push(
 const extractFacts=t=>{
  const n=norm(t).replace(/^\.\s*/,"");
  const facts=[];
+ // Questions/meta-conversation are not identity assertions.
+ if(/[؟?]/.test(String(t))||/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي\b/.test(n))return facts;
+ // Handle explicit corrections as one user-name fact; never parse the negated clause as Ron's name.
+ const corrected=n.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)\b.*$/);
+ if(corrected){const value=cleanValue(corrected[1]);if(value)facts.push({key:"user.name",text:value});return facts;}
  let both=n.match(/^اسمي\s+(.+?)\s*[،,]\s*(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
  if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});}
  let m=n.match(/(?:^|\s)(?:انا\s+)?(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?=\s|$)/);
@@ -134,6 +139,7 @@ const browserReasoningAnswer=(text)=>{
 };
 const extractRonFacts=t=>{
  const n=norm(t).replace(/^رون\s+/,"").trim(),facts=[];
+ if(/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+رون\s+(?:فعلا|حقا)$/.test(n))return facts;
  let m=n.match(/(?:تذكر|سجل|احفظ|تعلم)\s+(?:ان\s+)?(?:عمرك|سنك|عمر رون)\s+(?:هو\s+)?(.+)$/);
  if(!m)m=n.match(/^(?:انت\s+)?(?:عمرك|سنك)\s+(?:هو\s+)?(.+)$/);
  if(m){const v=cleanValue(m[1]);if(v)facts.push({key:"ron.age",text:v});}
@@ -230,7 +236,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  // This prevents stale memory from inventing a user name or answering a compliment with unrelated text.
  const normalizedInput=norm(t);
  const deterministicInput=analyzeIntent(t)==="greeting"||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
- if(deterministicInput)r=answer(t);
+ if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\\s+هو|انت\\s+اسمك)\\s+رون\\s+(?:فعلا|حقا)$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim())r=answer(t);
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;
