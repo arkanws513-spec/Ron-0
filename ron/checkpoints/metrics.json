@@ -1,0 +1,91 @@
+{
+  "experiment": "ron0-native-character-lm",
+  "status": "completed",
+  "checkpoint_source": "initialized_ron_native_model_no_checkpoint_found",
+  "prior_selected_step": 0,
+  "vocabulary_expanded": false,
+  "seed": 1701,
+  "training_steps_this_run": 600,
+  "selected_checkpoint_step_this_run": 600,
+  "parameters": 110016,
+  "vocab_size": 59,
+  "corpus_characters": 9698,
+  "train_characters": 8728,
+  "validation_characters": 970,
+  "initial_train_loss": 42.20725758870443,
+  "initial_validation_loss": 41.706201235453285,
+  "best_validation_loss": 2.2635974287986755,
+  "last_train_loss": 2.004444509744644,
+  "last_validation_loss": 2.2635974287986755,
+  "train_loss_reduction_percent": 95.25094823909839,
+  "validation_loss_reduction_percent": 94.5725159286997,
+  "elapsed_seconds": 7.33,
+  "history": [
+    {
+      "step": 50,
+      "train_loss": 2.9012972911198935,
+      "validation_loss": 3.018617033958435
+    },
+    {
+      "step": 100,
+      "train_loss": 2.629806856314341,
+      "validation_loss": 2.7138239592313766
+    },
+    {
+      "step": 150,
+      "train_loss": 2.511575162410736,
+      "validation_loss": 2.640668496489525
+    },
+    {
+      "step": 200,
+      "train_loss": 2.483854273955027,
+      "validation_loss": 2.6511191725730896
+    },
+    {
+      "step": 250,
+      "train_loss": 2.3920549750328064,
+      "validation_loss": 2.496279314160347
+    },
+    {
+      "step": 300,
+      "train_loss": 2.320452392101288,
+      "validation_loss": 2.442209556698799
+    },
+    {
+      "step": 350,
+      "train_loss": 2.298089027404785,
+      "validation_loss": 2.4453305304050446
+    },
+    {
+      "step": 400,
+      "train_loss": 2.1968385179837546,
+      "validation_loss": 2.4489519596099854
+    },
+    {
+      "step": 450,
+      "train_loss": 2.1737226049105325,
+      "validation_loss": 2.3981477171182632
+    },
+    {
+      "step": 500,
+      "train_loss": 2.1324919561545053,
+      "validation_loss": 2.3418232053518295
+    },
+    {
+      "step": 550,
+      "train_loss": 2.079829384883245,
+      "validation_loss": 2.312746688723564
+    },
+    {
+      "step": 600,
+      "train_loss": 2.004444509744644,
+      "validation_loss": 2.2635974287986755
+    }
+  ],
+  "limitations": [
+    "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
+    "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
+    "The selected checkpoint is the best validation checkpoint, including the starting weights, to avoid promoting a regression.",
+    "No external inference model or paid API is used."
+  ]
+}
