@@ -115,6 +115,7 @@ class RonServerState:
             "model_stage": "native-10m" if self.parameter_count >= 8_000_000 else ("native-baseline-prototype" if native else "teaching-fallback"),
             "checkpoint": str(provider.checkpoint_path) if native else None,
             "checkpoint_sha256": self.checkpoint_sha256,
+            "checkpoint_source": getattr(provider, "checkpoint_source", None),
             "inference_checkpoint": getattr(provider, "inference_checkpoint", None),
             "selected_training_step": getattr(provider, "selected_step", None),
             "training_steps_total": getattr(provider, "training_steps_total", None),
