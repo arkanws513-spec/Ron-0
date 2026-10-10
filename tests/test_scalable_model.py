@@ -45,3 +45,23 @@ def test_sft_dataset_requires_approved_records(tmp_path: Path) -> None:
     data.write_text(json.dumps({"prompt":"hello", "response":"world", "review_status":"needs_human_review"}) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="reviewed records"):
         PromptResponseDataset(data, tok_path, 16)
+
+
+def test_scalable_generation_stays_within_vocabulary() -> None:
+    config = ScalableRonConfig(vocab_size=32, hidden_size=32, num_layers=1, num_heads=4,
+        num_kv_heads=2, max_sequence_length=8)
+    model = ScalableRonLM(config).eval()
+    prompt = torch.tensor([[1, 2, 3]])
+    generated = model.generate(prompt, max_new_tokens=3, eos_token_id=31)
+    assert generated.shape[0] == 1
+    assert generated.shape[1] >= prompt.shape[1]
+    assert int(generated.min()) >= 0 and int(generated.max()) < config.vocab_size
+
+
+def test_scalable_estimator_is_separate_from_legacy() -> None:
+    from scripts.estimate_model_scale import estimate
+    legacy = estimate(1024, 128, 2, 4, 64)
+    scalable = estimate(1024, 128, 2, 4, 64, architecture="scalable", num_kv_heads=2)
+    assert scalable["architecture"] == "scalable"
+    assert scalable["estimated_parameters"] > 0
+    assert legacy["architecture"] == "legacy"
