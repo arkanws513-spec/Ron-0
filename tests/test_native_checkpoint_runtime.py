@@ -27,3 +27,21 @@ def test_saved_native_checkpoint_is_used_by_default_core():
     assert response.metadata["training_steps_total"] >= 2400
     assert response.metadata["optimizer_state_persisted"] is True
     assert response.metadata["checkpoint_source"] == "continued_existing_ron_checkpoint"
+
+
+def test_native_provider_builds_bounded_prompt_from_recent_dialogue():
+    checkpoint = Path(__file__).resolve().parents[1] / "ron" / "checkpoints" / "ron_native_baseline.pt"
+    provider = NativeCheckpointProvider(checkpoint)
+    from ron.contracts import Message, ModelRequest
+
+    request = ModelRequest(messages=(
+        Message(role="system", content="large system context that is intentionally not copied into the character prompt"),
+        Message(role="user", content="ما الفرق بين التدريب والذاكرة؟"),
+        Message(role="assistant", content="التدريب يغير الأوزان والذاكرة تحفظ معلومات."),
+        Message(role="user", content="اشرح أكثر"),
+    ), metadata={})
+    prompt = provider._build_dialogue_prompt(request, "اشرح أكثر")
+    assert len(prompt) <= provider.config.max_sequence_length
+    assert prompt.endswith("\\nرون:")
+    assert "ما الفرق بين التدريب والذاكرة؟" in prompt
+    assert "اشرح أكثر" in prompt
