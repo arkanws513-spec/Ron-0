@@ -46,7 +46,7 @@ class NativeCheckpointProvider:
             dialogue.append(f"{label}: {message.content.strip()}")
         latest_line = next((line for line in reversed(dialogue) if line.startswith("المستخدم: ")),
                            f"المستخدم: {user_text}")
-        suffix = "\\nرون:"
+        suffix = "\nرون:"
         budget = max(0, self.config.max_sequence_length - len(latest_line) - len(suffix))
         prior_lines = []
         for line in reversed(dialogue):
@@ -55,7 +55,7 @@ class NativeCheckpointProvider:
             if len(line) + 1 <= budget:
                 prior_lines.insert(0, line)
                 budget -= len(line) + 1
-        prompt = "\\n".join(prior_lines + [latest_line]) + suffix
+        prompt = "\n".join(prior_lines + [latest_line]) + suffix
         if len(prompt) > self.config.max_sequence_length:
             prompt = latest_line[-(self.config.max_sequence_length - len(suffix)):] + suffix
         return prompt
