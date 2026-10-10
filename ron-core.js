@@ -271,3 +271,202 @@ if(typeof module!=='undefined'&&module.exports)module.exports={RonCore,FactStore
 if(typeof globalThis!=='undefined'){globalThis.RonCore=RonCore;globalThis.RonCoreAdapters={MemoryAdapter,JsonFileAdapter,LocalStorageAdapter};}
 
 if(typeof require==='function'&&typeof module!=='undefined'&&require.main===module){const readline=require('readline');const core=new RonCore({adapter:new JsonFileAdapter(process.argv[2]||'./ron-data.json')});const rl=readline.createInterface({input:process.stdin,output:process.stdout,prompt:'أنت> '});console.log('رون جاهز. (Ctrl+C للخروج)');rl.prompt();(async()=>{for await(const line of rl){if(line.trim())console.log('رون> '+(await core.handle(line)).reply);rl.prompt();}})();}
+
+/* === RonCore integrated capabilities: cognition, knowledge, reasoning, and learning === */
+
+/* Integrated capability: RonAgent cognition/orchestration */
+/* Ron Agent Core — unified cognition/orchestration layer
+ * Ron remains one brain: understand -> retrieve -> reason -> answer.
+ * Other modules are capabilities used by this core, not separate agents.
+ */
+(()=>{"use strict";
+const norm=s=>String(s||"").toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
+const stop=new Set(["ما","ماذا","ماهو","ماهي","هل","هو","هي","من","في","عن","الى","إلى","هذا","هذه","ذلك","تلك","اي","ايه","اية","يا","رون","انا","ان","و","او","ال","التي","الذي","كان","كانت","مع","على"]);
+const words=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>2&&!stop.has(w));
+const overlap=(q,t)=>{const a=new Set(words(q)),b=words(t);return a.size?b.filter(w=>a.has(w)).length/a.size:0};
+const memory=(q,limit=8)=>{try{return globalThis.RonLearning?.search?.(q,limit)||[]}catch{return[]}};
+const arithmetic=s=>{const q=norm(s).replace(/×/g,"*").replace(/÷/g,"/").replace(/[^0-9+\-*/().%\s]/g,"").trim();if(!q||!/[+\-*/%]/.test(q)||!/\d/.test(q))return null;const ts=q.match(/\d+(?:\.\d+)?|[()+\-*/%]/g)||[];if(ts.join("")!==q.replace(/\s+/g,""))return null;let i=0;const primary=()=>{if(ts[i]==="("){i++;const v=expr();if(ts[i]!==")")throw 0;i++;return v;}if(ts[i]==="-"){i++;return-primary();}if(!/^\d/.test(ts[i]||""))throw 0;return Number(ts[i++]);};const term=()=>{let v=primary();while(["*","/","%"].includes(ts[i])){const op=ts[i++],b=primary();if(op==="*")v*=b;else if(op==="/"){if(b===0)throw 0;v/=b;}else v%=b;}return v;};const expr=()=>{let v=term();while(["+","-"].includes(ts[i])){const op=ts[i++],b=term();v=op==="+"?v+b:v-b;}return v;};try{const v=expr();return i===ts.length&&Number.isFinite(v)?String(v):null;}catch{return null;}};
+const intent=s=>{const n=norm(s);if(/^(مرحبا|اهلا|السلام عليكم|هاي|هلا)/.test(n))return"greeting";if(/^(شكرا|عظيم|رائع|ممتاز|جميل|تمام|احسنت)/.test(n))return"social";if(/^عل[ّ]?م رون/.test(n))return"learning";if(/^(ليه|لماذا|ازاي|كيف|ماذا|ما هو|ما هي|هل|كم|اين|متى|من هو|من هي|عايز|اريد|ممكن)/.test(n)||/[؟?]/.test(s))return"question";return"statement"};
+const localKnowledgeAnswer=q=>{
+ const k=globalThis.RonKnowledge;
+ if(k?.retrieve){const hits=k.retrieve(q,10);const best=hits[0];if(best){
+   const n=norm(q),t=norm(best.text);
+   let m=n.match(/^(?:ما هي|ما هو|ماهو|ماهي|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+)$/);
+   if(m){const place=m[1].trim(),z=t.match(new RegExp("^(.+?)\\s+(?:هي\\s+)?عاصمة\\s+"+place+"$"));if(z)return{answer:z[1]+" هي عاصمة "+place+".",confidence:Math.min(1,best.score||.8),source:best.source||"ron-knowledge"}}
+   m=n.match(/^(?:ما هو|ما هي|ماهو|ماهي)\s+(.+)$/);
+   if(m){const subject=m[1].trim(),z=t.match(/^(.+?)\s+(?:هي|هو)\s+(.+)$/);if(z&&norm(z[1])===subject)return{answer:z[2]+".",confidence:best.confidence??.8,source:best.source||"ron-knowledge"}}
+   if((best.relevance??0)>=.5)return{answer:String(best.text).replace(/^سؤال:\s*[^|]+\|\s*(?:معلومة|إجابة):\s*/,""),confidence:best.confidence??.7,source:best.source||"ron-knowledge"};
+ }}
+ return null;
+};
+const reason=q=>{
+ try{
+  const r=globalThis.RonReasoner;
+  if(r?.answer){
+   const learned=memory(q,30),knowledge=globalThis.RonKnowledge?.retrieve?.(q,20)||[];
+   const all=[...learned,...knowledge].map(x=>x?.text?x.text:x).filter(Boolean);
+   const seen=new Set(),facts=all.filter(x=>{const n=norm(x);if(seen.has(n))return false;seen.add(n);return true});
+   const result=r.answer(q,r.parseAll(facts));
+   if(result?.answer)return result;
+  }
+ }catch{}
+ return null;
+};
+const api={
+ normalize:norm,
+ classify:intent,
+ plan(q){const i=intent(q),calc=arithmetic(q);return{intent:i,steps:calc?["local-arithmetic"]:i==="question"?["memory","knowledge","reasoning","web-search-if-needed"]:["local"]}},
+ retrieve(q){return memory(q,12)},
+ answer(q){
+   const calc=arithmetic(q);if(calc!==null)return"النتيجة: "+calc;
+   const reasoned=reason(q);if(reasoned?.answer)return reasoned.answer;
+   const known=localKnowledgeAnswer(q);if(known?.answer)return known.answer;
+   return null;
+ },
+ async think(q){
+   const calc=arithmetic(q);if(calc!==null)return{answer:"النتيجة: "+calc,stage:"local-arithmetic",confidence:1};
+   const reasoned=reason(q);if(reasoned?.answer)return{...reasoned,stage:"reasoning"};
+   const known=localKnowledgeAnswer(q);if(known?.answer)return{...known,stage:"knowledge"};
+   return{answer:null,stage:"needs-web-or-model",confidence:0};
+ },
+ explainUncertainty(){return"لا أملك ثقة كافية في هذه المعلومة بعد."}
+};
+globalThis.RonAgent=api;
+})();
+/* Integrated capability: RonKnowledge local retrieval */
+/* Ron Knowledge Core v1
+ * Permanent knowledge/retrieval layer of Ron's brain.
+ * It does not replace the language model; it decides what stored knowledge
+ * is relevant, fresh, trustworthy, and worth placing in Ron's reasoning path.
+ */
+(()=>{"use strict";
+const KEY="ron-knowledge-core-v1",MAX=5000;
+const clean=s=>String(s||"").replace(/\s+/g," ").trim();
+const norm=s=>clean(s).toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي");
+const stop=new Set(["ما","ماذا","ماهو","ماهي","هل","هو","هي","من","في","عن","الى","هذا","هذه","ذلك","تلك","اي","ايه","يا","رون","انا","ان","و","او","ال","التي","الذي","ما","كان","كانت","مع","على"]);
+const tokens=s=>norm(s).replace(/[؟?!.,،؛;:()\[\]{}]/g," ").split(" ").filter(w=>w.length>2&&!stop.has(w));
+const read=()=>{try{const x=JSON.parse(localStorage.getItem(KEY));return x&&typeof x==="object"?x:{documents:[],facts:[],stats:{}}}catch{return{documents:[],facts:[],stats:{}}}};
+const write=x=>{try{localStorage.setItem(KEY,JSON.stringify(x))}catch{}};
+const domain=q=>{const n=norm(q);
+ if(/طب|مرض|دواء|علاج|اعراض|تشخيص|جسم|صحة/.test(n))return"medical";
+ if(/دين|اسلام|مسلم|قران|حديث|فقه|عقيدة|مسيحي|يهودي/.test(n))return"religion";
+ if(/فلسف|منطق|وجود|اخلاق|معرف/.test(n))return"philosophy";
+ if(/برمج|كود|تقنية|تكنولوجيا|حاسوب|ذكاء اصطناعي|نموذج|api/.test(n))return"technology";
+ if(/فيزياء|كيمياء|احياء|رياضيات|فلك|علم|علوم/.test(n))return"science";
+ if(/تاريخ|حضارة|ثقافة|لغة|ادب/.test(n))return"culture";
+ return"general";
+};
+const sourceScore=x=>{const s=norm(x.source||"");if(/official|government|edu|university|who|nih|nasa|arxiv/.test(s))return .25;if(/wikipedia/.test(s))return .1;return 0};
+const freshness=x=>{const t=Date.parse(x.at||x.publishedAt||"");if(!Number.isFinite(t))return 0;const days=Math.max(0,(Date.now()-t)/86400000);return Math.max(0,Math.min(.15, .15*Math.exp(-days/365)))};
+const relevance=(q,t)=>{const a=new Set(tokens(q)),b=tokens(t);let n=0;for(const w of b)if(a.has(w))n++;return n/(Math.max(1,a.size))};
+const add=(item={})=>{const text=clean(item.text);if(!text)return false;const v=read(),sig=norm(text);v.documents=v.documents.filter(x=>norm(x.text)!==sig);v.documents.push({...item,text,domain:item.domain||domain(text),at:item.at||new Date().toISOString()});v.documents=v.documents.slice(-MAX);write(v);return true};
+const retrieve=(q,limit=8)=>{const v=read();const d=domain(q);const local=globalThis.RonLearning?.get?.()?.knowledge||[];const all=[...v.documents,...local.map(x=>({...x,domain:x.domain||domain(x.text)}))];const seen=new Set();return all.map(x=>{const text=clean(x.text);const sig=norm(text);if(!text||seen.has(sig))return null;seen.add(sig);const r=relevance(q,text);const ds=x.domain===d?.12:0;return r?{...x,relevance:r,score:r+ds+sourceScore(x)+freshness(x)}:null}).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,limit)};
+const stats=()=>{const v=read();return{documents:v.documents.length,domainCounts:v.documents.reduce((a,x)=>(a[x.domain||"general"]=(a[x.domain||"general"]||0)+1,a),{}),retrievals:v.stats.retrievals||0}};
+const api={domain,add,retrieve,stats,rememberSearchResult:(q,r)=>{if(!r?.answer)return false;return add({text:"سؤال: "+clean(q)+" | معلومة: "+clean(r.answer),source:r.source||"web",url:r.url||"",title:r.title||"",confidence:.65})}};
+globalThis.RonKnowledge=api;
+const previous=globalThis.RonAgent;
+if(previous){
+ const oldRetrieve=previous.retrieve?.bind(previous),oldAnswer=previous.answer?.bind(previous);
+ previous.retrieve=q=>api.retrieve(q,12);
+ previous.answer=q=>{
+   const direct=oldAnswer?oldAnswer(q):null;
+   if(direct)return direct;
+   const hits=api.retrieve(q,6);
+   const best=hits[0];
+   if(best && best.relevance>=.34){
+     return clean(best.text).replace(/^سؤال:\s*[^|]+\|\s*معلومة:\s*/,"");
+   }
+   return null;
+ };
+ previous.knowledge=api;
+}
+})();
+/* Integrated capability: RonReasoner symbolic inference */
+/* Ron Browser Reasoner — one local inference engine
+ * Deterministic, explainable, browser-safe reasoning.
+ */
+(()=>{"use strict";
+const norm=s=>String(s||"").toLowerCase().replace(/[ًٌٍَُِّْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/إلى/g,"الى").replace(/\s+/g," ").trim();
+const clean=s=>String(s||"").replace(/^[\s.،,؛;:]+|[\s.!؟?،,؛;:]+$/g,"").replace(/\s+/g," ").trim();
+const inverse={precedes:"follows",follows:"precedes"};
+const patterns=[
+ [/^(.+?)\s+(هي|هو)\s+(.+)$/,"is"],
+ [/^(.+?)\s+(يسبب|تسبب|يؤدي الى|يؤدي الي)\s+(.+)$/,"causes"],
+ [/^(.+?)\s+(يدعم|تدعم)\s+(.+)$/,"supports"],
+ [/^(.+?)\s+(قبل|يسبق)\s+(.+)$/,"precedes"],
+ [/^(.+?)\s+(بعد|يتبع)\s+(.+)$/,"follows"],
+ [/^(.+?)\s+(يحتاج|يحتاج الى|يحتاج الي)\s+(.+)$/,"needs"],
+ [/^(.+?)\s+(جزء من|ضمن|ينتمي الى)\s+(.+)$/,"part_of"]
+];
+const parse=s=>{const original=clean(s),n=norm(original);
+ let m=n.match(/^عاصمة\s+(.+?)\s+(?:هي|هو)\s+(.+)$/);if(m)return{subject:clean(m[2]),relation:"is",object:clean(m[1]),surface:"هي عاصمة",source:"local",confidence:.9,text:original,derived:false};
+ m=n.match(/^(.+?)\s+(?:هي|هو)\s+عاصمة\s+(.+)$/);if(m)return{subject:clean(m[1]),relation:"is",object:clean(m[2]),surface:"هي عاصمة",source:"local",confidence:.9,text:original,derived:false};
+ m=n.match(/^(.+?)\s+ي(?:ا)?تي\s+(بعد|قبل)\s+(.+)$/);if(m)return{subject:clean(m[1]),relation:m[2]==="بعد"?"follows":"precedes",object:clean(m[3]),surface:m[2],source:"local",confidence:.85,text:original,derived:false};
+ for(const [p,r] of patterns){m=n.match(p);if(m)return{subject:clean(m[1]),relation:r,object:clean(m[3]),surface:m[2],source:"local",confidence:.8,text:original,derived:false}}return null};
+const parseAll=items=>items.flatMap(x=>{const f=parse(x?.text||x);return f?[f]:[]});
+const key=f=>norm(f.subject)+"|"+f.relation+"|"+norm(f.object);
+const derive=facts=>{
+ const out=facts.map(x=>({...x})),seen=new Set(out.map(key));
+ const add=(s,r,o,base,rule)=>{const f={subject:s,relation:r,object:o,source:base.source||"ron-core",confidence:Math.max(.5,(base.confidence??.8)*.92),derived:true,rule};const k=key(f);if(!seen.has(k)){seen.add(k);out.push(f);return true}return false};
+ for(let round=0;round<4;round++){
+  let changed=false;
+  for(const f of [...out])if(inverse[f.relation])changed=add(f.object,inverse[f.relation],f.subject,f,"inverse")||changed;
+  for(const rel of ["precedes","follows","causes","supports","needs","part_of"]){
+   const same=rel==="precedes"||rel==="follows"?out.filter(x=>x.relation===rel):[];
+   for(const a of same)for(const b of same)if(norm(a.object)===norm(b.subject)&&norm(a.subject)!==norm(b.object))changed=add(a.subject,rel,b.object,a,"chain")||changed;
+  }
+  if(!changed)break;
+ }
+ return out;
+};
+const relMap={"يسبب":"causes","تسبب":"causes","يدعم":"supports","تدعم":"supports","قبل":"precedes","يسبق":"precedes","بعد":"follows","يتبع":"follows","يحتاج":"needs","يحتاج الى":"needs","جزء من":"part_of","ضمن":"part_of"};
+const question=q=>{
+ const n=norm(q).replace(/[؟?]+$/,"").trim();let m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+)$/);
+ if(m)return{type:"capital",relation:"is",object:clean(m[1])};
+ m=n.match(/^(?:ما الذي|من الذي)\s+ي(?:ا)?تي\s+(بعد|قبل)\s+(.+)$/);if(m)return{type:"relation-object",relation:m[1]==="بعد"?"follows":"precedes",object:clean(m[2]),word:m[1]};
+ m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ما الذي|ايه|اي)\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
+ if(m)return{type:"relation",relation:relMap[m[2]],subject:clean(m[1]),object:clean(m[3]),word:m[2]};
+ m=n.match(/^هل\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
+ if(m)return{type:"yesno",relation:relMap[m[2]],subject:clean(m[1]),object:clean(m[3])};
+ m=n.match(/^(?:لماذا|ليه|لما)\s+(.+)$/);if(m)return{type:"why",subject:clean(m[1])};
+ return{type:"unknown"};
+};
+const answer=(q,rawFacts)=>{
+ const facts=derive(rawFacts||[]),ask=question(q);
+ if(ask.type==="capital"){const f=facts.find(x=>x.relation==="is"&&norm(x.object)===norm(ask.object));if(f)return{answer:f.subject+" هي عاصمة "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
+ if(ask.type==="relation-object"){const f=facts.find(x=>x.relation===ask.relation&&norm(x.object)===norm(ask.object));if(f)return{answer:f.subject+" يأتي "+ask.word+" "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
+ if(ask.type==="relation"){const f=facts.find(x=>x.relation===ask.relation&&norm(x.subject)===norm(ask.subject)&&norm(x.object)===norm(ask.object));if(f)return{answer:f.subject+" "+ask.word+" "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
+ if(ask.type==="yesno"){const f=facts.find(x=>x.relation===ask.relation&&norm(x.subject)===norm(ask.subject)&&norm(x.object)===norm(ask.object));if(f)return{answer:"نعم، لدي أساس محلي لهذا الاستنتاج.",confidence:f.confidence,source:f.source,trace:f}}
+ if(ask.type==="why"){const f=facts.find(x=>x.relation==="causes"&&norm(x.object)===norm(ask.subject));if(f)return{answer:"لأن "+f.subject+" يسبب "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
+ const n=norm(q);if(/^(?:ما هو|ما هي|ماهو|ماهي)\s+/.test(n)){const subject=clean(n.replace(/^(?:ما هو|ما هي|ماهو|ماهي)\s+/,""));const f=facts.find(x=>x.relation==="is"&&norm(x.subject)===norm(subject));if(f)return{answer:f.object+".",confidence:f.confidence,source:f.source,trace:f}}
+ return null;
+};
+globalThis.RonReasoner={normalize:norm,parse,parseAll,reason:derive,derive,answer};
+})();
+/* Integrated capability: RonLearning local experience/knowledge memory */
+/* Ron Learning Core
+ * Local, persistent learning/experience layer.
+ * It does not change model weights; it stores validated knowledge, experiences,
+ * confidence and provenance so Ron can improve across conversations.
+ */
+(()=>{"use strict";
+const KEY="ron-learning-core-v1",MAX=600;
+const BOOTSTRAP_KEY="ron-bootstrap-knowledge-v1";
+const BOOTSTRAP=[
+["مصر دولة في شمال شرق أفريقيا.","geography"],["عاصمة مصر هي القاهرة.","geography"],["القاهرة عاصمة مصر.","geography"],["أفريقيا قارة.","geography"],["آسيا قارة.","geography"],["أوروبا قارة.","geography"],["أمريكا الشمالية قارة.","geography"],["أمريكا الجنوبية قارة.","geography"],["أستراليا قارة.","geography"],["القارة القطبية الجنوبية قارة.","geography"],["المحيط الأطلسي محيط.","geography"],["المحيط الهادئ محيط.","geography"],["المحيط الهندي محيط.","geography"],["البحر المتوسط بحر.","geography"],["نهر النيل يمر عبر مصر.","geography"],["الأرض كوكب.","astronomy"],["الشمس نجم.","astronomy"],["القمر تابع طبيعي للأرض.","astronomy"],["الأرض تدور حول نفسها.","astronomy"],["الأرض تدور حول الشمس.","astronomy"],["دوران الأرض حول نفسها يرتبط بتعاقب الليل والنهار.","astronomy"],["دوران الأرض حول الشمس يرتبط بالسنة.","astronomy"],["المريخ كوكب في المجموعة الشمسية.","astronomy"],["المشتري كوكب في المجموعة الشمسية.","astronomy"],["زحل كوكب في المجموعة الشمسية.","astronomy"],["عطارد أقرب كواكب المجموعة الشمسية إلى الشمس.","astronomy"],["الزهرة كوكب في المجموعة الشمسية.","astronomy"],["نبتون كوكب في المجموعة الشمسية.","astronomy"],["أورانوس كوكب في المجموعة الشمسية.","astronomy"],["الماء مركب يتكون من الهيدروجين والأكسجين.","science"],["الهواء خليط من عدة غازات.","science"],["الأكسجين غاز.","science"],["ثاني أكسيد الكربون غاز.","science"],["النباتات تستخدم الضوء في عملية البناء الضوئي.","biology"],["البناء الضوئي يساعد النباتات على إنتاج الغذاء.","biology"],["الإنسان من الثدييات.","biology"],["الإنسان يحتاج إلى الماء والغذاء والأكسجين للبقاء.","biology"],["القلب عضو يضخ الدم في الجسم.","biology"],["الرئتان عضوان أساسيان للتنفس.","biology"],["الدم ينقل الأكسجين والمواد المختلفة داخل الجسم.","biology"],["الدماغ جزء رئيسي من الجهاز العصبي.","biology"],["العظام تدعم الجسم وتحمي أعضاء مهمة.","biology"],["النباتات كائنات حية.","biology"],["الحيوانات كائنات حية.","biology"],["الماء يتجمد عند نحو 0 درجة مئوية عند الضغط الجوي المعتاد.","physics"],["الماء يغلي عند نحو 100 درجة مئوية عند مستوى سطح البحر.","physics"],["الحرارة تنتقل من الجسم الأعلى حرارة إلى الجسم الأقل حرارة تلقائيًا.","physics"],["الجاذبية تؤثر في الأجسام ذات الكتلة.","physics"],["السرعة هي معدل تغير المسافة بالنسبة للزمن.","physics"],["الضوء ينتقل أسرع بكثير من الصوت في الهواء.","physics"],["اللغة العربية لغة سامية.","language"],["اللغة الإنجليزية من اللغات الجرمانية.","language"],["الجملة يمكن أن تتكون من كلمات تؤدي معنى.","language"],["الاسم والفعل والحرف من أقسام الكلمة في النحو العربي.","language"],["الصفر عدد.","mathematics"],["الواحد عدد.","mathematics"],["الجمع عملية حسابية.","mathematics"],["الطرح عملية حسابية.","mathematics"],["الضرب عملية حسابية.","mathematics"],["القسمة عملية حسابية.","mathematics"],["المثلث شكل له ثلاثة أضلاع.","mathematics"],["المربع شكل له أربعة أضلاع متساوية وأربع زوايا قائمة.","mathematics"],["المستطيل له أربعة أضلاع وأربع زوايا قائمة.","mathematics"],["الدائرة شكل هندسي مغلق.","mathematics"],["اليوم يتكون من 24 ساعة تقريبًا.","time"],["الساعة تتكون من 60 دقيقة.","time"],["الدقيقة تتكون من 60 ثانية.","time"],["الأسبوع يتكون من سبعة أيام.","time"],["السنة الميلادية المعتادة تتكون من 365 يومًا.","time"],["السنة الكبيسة تتكون من 366 يومًا.","time"],["الكمبيوتر جهاز إلكتروني يعالج البيانات.","technology"],["الإنترنت شبكة عالمية تربط شبكات وأجهزة.","technology"],["البرمجيات هي البرامج والتعليمات التي تشغل الحاسوب.","technology"],["HTML تستخدم لوصف بنية صفحات الويب.","technology"],["CSS تستخدم لتنسيق صفحات الويب.","technology"],["JavaScript لغة برمجة تستخدم كثيرًا في الويب.","technology"],["قاعدة البيانات تستخدم لتخزين وتنظيم البيانات.","technology"],["التاريخ يدرس أحداث الماضي.","history"],["الجغرافيا تدرس الأماكن والظواهر المرتبطة بسطح الأرض.","geography"],["العلم يعتمد على الملاحظة والاختبار والأدلة.","knowledge"],["المعلومة تحتاج إلى مصدر موثوق عندما تكون قابلة للتحقق.","knowledge"],["إذا لم تتوفر أدلة كافية يجب على رون أن يذكر عدم اليقين بدل اختلاق معلومة.","reasoning"],["عند عدم معرفة الإجابة يمكن لرون البحث في مصادر الإنترنت ثم مقارنة النتائج.","reasoning"],["رون لا يعتبر إجابة نموذج لغوي حقيقة تلقائيًا.","reasoning"],["رون يحتفظ بالمعرفة التي يتعلمها محليًا في ذاكرته.","learning"],["المعرفة الجديدة يمكن مراجعتها وتعزيز الثقة فيها مع تكرار المصادر الموثوقة.","learning"]
+];
+const clean=s=>String(s||"").trim().replace(/\s+/g," ");
+const read=()=>{try{const v=JSON.parse(localStorage.getItem(KEY));return v&&typeof v==="object"?v:{knowledge:[],experiences:[],stats:{}}}catch{return{knowledge:[],experiences:[],stats:{}}}};
+const write=v=>{try{localStorage.setItem(KEY,JSON.stringify(v))}catch{}};
+const bootstrap=()=>{try{if(localStorage.getItem(BOOTSTRAP_KEY))return;const v=read();for(const [text,domain] of BOOTSTRAP){if(!v.knowledge.some(k=>clean(k.text).toLowerCase()===text.toLowerCase()))v.knowledge.push({text,domain,source:"ron-bootstrap",confidence:.85,at:new Date().toISOString()});}v.knowledge=v.knowledge.slice(-MAX);write(v);localStorage.setItem(BOOTSTRAP_KEY,"1")}catch{}};
+bootstrap();
+const api={
+ get(){return read()},
+ addKnowledge(item){const v=read(),x={...item,text:clean(item.text),at:new Date().toISOString()};if(!x.text)return false;const sig=x.text.toLowerCase();v.knowledge=v.knowledge.filter(k=>clean(k.text).toLowerCase()!==sig);v.knowledge.push(x);v.knowledge=v.knowledge.slice(-MAX);write(v);return true},
+ addExperience(input,output,source="conversation",confidence=.5){const v=read(),i=clean(input),o=clean(output);if(!i||!o)return false;v.experiences.push({input:i,output:o,source,confidence,at:new Date().toISOString()});v.experiences=v.experiences.slice(-MAX);v.stats.interactions=(v.stats.interactions||0)+1;write(v);return true},
+ reinforce(text,delta=.05){const v=read(),q=clean(text).toLowerCase(),k=v.knowledge.find(x=>clean(x.text).toLowerCase()===q);if(k)k.confidence=Math.max(0,Math.min(1,(k.confidence??.5)+delta));write(v);return !!k},
+ search(query,limit=12){bootstrap();const v=read(),q=clean(query).toLowerCase();if(!q)return[];const words=q.split(" ").filter(x=>x.length>2);return v.knowledge.map((x,i)=>{const t=clean(x.text).toLowerCase();let s=t===q?20:(t.includes(q)?10:0);for(const w of words)if(t.includes(w))s++;return{x,s,i}}).filter(z=>z.s>0).sort((a,b)=>b.s-a.s||b.i-a.i).slice(0,limit).map(z=>z.x)},
+ summary(){const v=read();return{knowledge:v.knowledge.length,experiences:v.experiences.length,interactions:v.stats.interactions||0}}
+};
+globalThis.RonLearning=api;
+})();
