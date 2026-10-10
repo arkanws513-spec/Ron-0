@@ -11,6 +11,8 @@ import json
 import os
 import re
 import threading
+import time
+from collections import OrderedDict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -54,17 +56,40 @@ class RonServerState:
                 f"Ron-10M is required but active checkpoint has {self.parameter_count:,} parameters. "
                 "Complete and promote the Ron-10M training run before starting production."
             )
-        self.sessions: dict[str, RonCore] = {"default": bootstrap}
+        self.sessions: OrderedDict[str, RonCore] = OrderedDict({"default": bootstrap})
         self.sessions_lock = threading.RLock()
         self.inference_lock = threading.RLock()
+        self.rate_lock = threading.Lock()
+        self.rate_events: dict[str, list[float]] = {}
+        self.max_requests_per_minute = 30
+        self.max_sessions = 128
+
+    def allow_request(self, client_ip: str) -> bool:
+        now = time.monotonic()
+        with self.rate_lock:
+            recent = [stamp for stamp in self.rate_events.get(client_ip, []) if now - stamp < 60.0]
+            if len(recent) >= self.max_requests_per_minute:
+                self.rate_events[client_ip] = recent
+                return False
+            recent.append(now)
+            self.rate_events[client_ip] = recent
+            if len(self.rate_events) > 1024:
+                self.rate_events = {ip: stamps for ip, stamps in self.rate_events.items() if stamps and now - stamps[-1] < 60.0}
+            return True
 
     def core_for(self, session_id: str) -> RonCore:
         with self.sessions_lock:
             core = self.sessions.get(session_id)
-            if core is None:
-                # Reuse the exact same loaded native provider/weights across sessions.
-                core = RonCore(provider=self.provider)
-                self.sessions[session_id] = core
+            if core is not None:
+                self.sessions.move_to_end(session_id)
+                return core
+            # Bound session memory while reusing the exact same loaded model weights.
+            if len(self.sessions) >= self.max_sessions:
+                oldest = next((key for key in self.sessions if key != "default"), None)
+                if oldest is not None:
+                    self.sessions.pop(oldest, None)
+            core = RonCore(provider=self.provider)
+            self.sessions[session_id] = core
             return core
 
     def health(self) -> dict[str, Any]:
@@ -136,6 +161,10 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         if urlsplit(self.path).path != "/api/chat":
             self._json(404, {"error": "not_found"})
+            return
+        client_ip = self.client_address[0] if self.client_address else "unknown"
+        if not self.state.allow_request(client_ip):
+            self._json(429, {"error": "rate_limited", "retry_after_seconds": 60})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
