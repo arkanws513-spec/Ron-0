@@ -50,3 +50,8 @@ The current model remains character-tokenized. A BPE/SentencePiece tokenizer is 
 ## Checkpoint promotion and training provenance
 
 Training scripts must write a compatible native checkpoint to `ron/checkpoints/ron_native_10m.pt` (preferred) or `ron/checkpoints/ron_native_baseline.pt`. The native provider validates that the checkpoint vocabulary has unique contiguous IDs and matches the model's configured vocabulary size. `/api/health` exposes the selected training step so the live runtime can be checked rather than inferred from the existence of a training script.
+
+
+## Verified repository checkpoint status
+
+The checked-in baseline checkpoint contains 110,272 parameters. Its metrics show the training loss decreasing while held-out validation loss rises from 0.988 to 1.402, which is a warning against claiming a generalization improvement. The 10M checkpoint and prepared pretraining corpus are ignored artifacts and must be supplied by a training run. Use `RON_REQUIRE_10M=1` in deployment to refuse a baseline-only start; the health endpoint otherwise makes the active size and checkpoint hash explicit.
