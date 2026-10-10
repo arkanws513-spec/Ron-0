@@ -52,17 +52,17 @@ Training and evaluation reports are written under `artifacts/native-baseline/`. 
 
 The checkpoint currently tracked in the repository is the baseline model with **110,272 parameters**, not the intended 10M model. Its saved metrics show training loss falling from 1.128 to 0.893 while validation loss rises from 0.988 to 1.402; the run therefore shows an overfitting/generalization warning, not a verified quality improvement. The `ron_native_10m.pt` checkpoint and `training/corpus.txt` are ignored external artifacts and are not present in the tracked repository snapshot, so the 10M training run cannot be claimed complete from source code alone.
 
-Ron-0's native Transformer remains a small character-level prototype, not a general-purpose language model. Set `RON_REQUIRE_10M=1` when launching the server to refuse startup unless the active checkpoint has at least 8 million parameters. The default health endpoint reports the actual parameter count, checkpoint hash, selected inference step, and whether the 10M target was reached. A lower training loss alone is not evidence that responses improved; held-out validation and blind generation checks must also be reviewed.
+Ron-0's native Transformer remains a small character-level prototype, not a general-purpose language model. Set `RON_REQUIRE_10M=1` when launching the server to refuse startup unless the active checkpoint has at least 8 million parameters. The default health endpoint reports the actual parameter count, checkpoint hash, selected inference step, and whether the 10M target was reached. A lower training loss alone is not evidence that responses improved; held-out validation and unseen-phrasing generation checks must also be reviewed.
 
 
-## Ron-10M experimental training track
+## Ron-10M training track
 
-The feat/native-core-audit branch contains a separate experimental training path; it does not change main by itself.
+The 10M training recipe is present in the repository, but the pretraining corpus and promoted 10M checkpoint are not present in the tracked snapshot. A recipe is not proof that a run completed. To train a new candidate, first prepare the corpus and then run the 10M training script in an environment with sufficient compute.
 
-1. scripts/download_english_corpus.py obtains public-domain starter texts from Project Gutenberg and records source hashes.
-2. scripts/prepare_corpus.py normalizes and deduplicates the pretraining texts. OASST dialogue files are deliberately excluded from this split to avoid leakage into the later instruction-tuning validation set.
-3. scripts/train_native_10m.py trains Ron's own approximately 10M-parameter character-level Transformer using AdamW, a warmup/cosine learning-rate schedule, held-out validation, early stopping, and atomic checkpoint writes.
-4. scripts/download_oasst1_english.py downloads the English OASST1 conversation trees and records a source manifest. Check the dataset card and applicable license/terms before reuse.
+1. `scripts/download_english_corpus.py` obtains public-domain starter texts from Project Gutenberg and records source hashes.
+2. `scripts/prepare_corpus.py` normalizes and deduplicates the pretraining texts. OASST dialogue files are deliberately excluded from this split to avoid leakage into the later instruction-tuning validation set.
+3. `scripts/train_native_10m.py` trains Ron's own approximately 10M-parameter character-level Transformer using AdamW, a warmup/cosine learning-rate schedule, held-out validation, early stopping, and atomic checkpoint writes.
+4. `scripts/download_oasst1_english.py` downloads the English OASST1 conversation trees and records a source manifest. Check the dataset card and applicable license/terms before reuse.
 5. scripts/train_sft_10m.py performs assistant-response-only supervised fine-tuning on the reviewed English conversations plus training/arabic_sft_seed.txt. The seed examples are curated project data; the script expands the character vocabulary while preserving existing token IDs.
 
 The GitHub Actions workflow archives the pretraining candidate, SFT candidate, metrics, and source manifests. A lower validation loss is only a necessary signal, not proof of factual accuracy or general assistant quality. Review both reports and run blind conversation evaluations before using any candidate as the live checkpoint.
