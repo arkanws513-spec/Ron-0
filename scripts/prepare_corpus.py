@@ -18,12 +18,19 @@ MIN_PARAGRAPH_CHARS = 80
 MIN_TOTAL_CHARS = 100_000
 
 
+def is_pretraining_source(path: Path, source_dir: Path = SOURCE_DIR) -> bool:
+    """Keep instruction-tuning conversations out of the pretraining/validation corpus."""
+    relative = path.relative_to(source_dir)
+    lowered = path.name.lower()
+    return "oasst1" not in relative.parts and "dialogue" not in lowered and "conversation" not in lowered
+
+
 def main() -> None:
     if not SOURCE_DIR.is_dir():
         raise FileNotFoundError(
             f"Missing {SOURCE_DIR}. Add public-domain or appropriately licensed .txt files first."
         )
-    files = sorted(SOURCE_DIR.rglob("*.txt"))
+    files = sorted(path for path in SOURCE_DIR.rglob("*.txt") if is_pretraining_source(path))
     if not files:
         raise ValueError(f"No .txt files found under {SOURCE_DIR}")
 
