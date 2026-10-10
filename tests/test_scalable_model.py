@@ -65,3 +65,13 @@ def test_scalable_estimator_is_separate_from_legacy() -> None:
     assert scalable["architecture"] == "scalable"
     assert scalable["estimated_parameters"] > 0
     assert legacy["architecture"] == "legacy"
+
+
+def test_optional_training_and_chat_scripts_import_without_tokenizers() -> None:
+    from scripts import chat_scalable_ron, pretrain_scalable_ron
+    batch = [{"input_ids": torch.tensor([1, 2]), "labels": torch.tensor([1, 2])},
+             {"input_ids": torch.tensor([3, 4, 5]), "labels": torch.tensor([3, 4, 5])}]
+    padded = pretrain_scalable_ron.collate_blocks(batch, sequence_length=4, pad_id=0)
+    assert padded["input_ids"].shape == (2, 4)
+    assert padded["labels"][0, 2:].tolist() == [-100, -100]
+    assert chat_scalable_ron.__doc__ is not None
