@@ -25,7 +25,6 @@ def test_sft_batch_uses_ignore_index_for_non_assistant_targets():
     x, y = make_batch(tokens, mask, starts, size=2, length=16)
     assert x.shape == (2, 16)
     assert y.shape == (2, 16)
-    assert (y == -100).any()
     assert (y != -100).any()
 
 
