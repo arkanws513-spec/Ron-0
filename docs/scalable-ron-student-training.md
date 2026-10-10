@@ -45,3 +45,16 @@ Do not jump directly from a small pilot to billions of parameters. Require:
 - a staged 10M → 100M → larger pilot plan with cost and compute verified.
 
 Keep the old character-level checkpoint intact. Do not promote a checkpoint to production based only on training loss or parameter count.
+
+
+## 5. Run the trained student locally
+
+After a successful training run, start interactive local chat:
+
+    python scripts/chat_scalable_ron.py
+
+Or send one prompt:
+
+    python scripts/chat_scalable_ron.py --prompt "Explain how a neural network learns."
+
+This loads only Ron's checkpoint and its tokenizer; Qwen is not needed for inference. An untrained or tiny pilot checkpoint may produce weak or repetitive answers. That is expected and must not be described as production-grade intelligence.
