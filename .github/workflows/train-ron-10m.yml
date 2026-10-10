@@ -100,7 +100,7 @@ jobs:
       - name: Archive model, metrics, and dataset manifests
         if: always()
         uses: actions/upload-artifact@v6
-        with
+        with:
           name: ron-10m-training-${{ github.run_id }}
           path: |
             artifacts/native-10m/ron_native_10m.pt
