@@ -50,7 +50,7 @@ jobs:
         with:
           name: ron-10m-training-${{ github.run_id }}
           path: |
-            ron/checkpoints/ron_native_10m.pt
+            artifacts/native-10m/ron_native_10m.pt
             artifacts/native-10m/metrics.json
             training/corpus_manifest.json
             training/gutenberg_sources.json
