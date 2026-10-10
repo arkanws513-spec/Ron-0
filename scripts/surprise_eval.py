@@ -13,6 +13,7 @@ from pathlib import Path
 
 from ron.contracts import Message, ModelRequest
 from ron.native_provider import NativeCheckpointProvider
+from ron.generation_quality import is_degenerate_text
 
 ROOT = Path(__file__).resolve().parents[1]
 BLIND_PROMPTS = (
@@ -29,20 +30,8 @@ BLIND_PROMPTS = (
 )
 
 
-_TOKEN_RE = re.compile(r"[\w\u0600-\u06ff]+", re.UNICODE)
-
-
 def is_degenerate_answer(answer: str) -> bool:
-    """Detect obvious token loops; this is a stability check, not a correctness score."""
-    tokens = [token.casefold() for token in _TOKEN_RE.findall(str(answer))]
-    if len(tokens) < 6:
-        return False
-    counts = {}
-    for token in tokens:
-        counts[token] = counts.get(token, 0) + 1
-    dominant_ratio = max(counts.values()) / len(tokens)
-    unique_ratio = len(counts) / len(tokens)
-    return dominant_ratio >= 0.45 or unique_ratio <= 0.35
+    return is_degenerate_text(answer)
 
 
 def evaluate(checkpoint: Path | None = None) -> dict:
@@ -67,12 +56,13 @@ def evaluate(checkpoint: Path | None = None) -> dict:
             "non_empty": bool(answer),
             "not_exact_echo": answer != prompt,
             "answer_length": len(answer),
-            "degenerate": is_degenerate_answer(answer),
+            "degenerate": is_degenerate_answer(answer) or bool(response.metadata.get("native_generated_answer_rejected")),
             "model": response.model,
             "native_weights_loaded": bool(response.metadata.get("native_weights_loaded")),
             "external_model_used": bool(response.metadata.get("external_model_used", False)),
             "checkpoint": response.metadata.get("inference_checkpoint"),
             "selected_training_step": response.metadata.get("selected_training_step"),
+            "generation_quality_fallback": bool(response.metadata.get("generation_quality_fallback", False)),
         })
 
     non_empty = sum(row["non_empty"] for row in rows)
