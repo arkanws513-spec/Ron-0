@@ -101,9 +101,9 @@ const extractFacts=t=>{
  const n=norm(t).replace(/^\.\s*/,"");
  const facts=[];
  // Questions/meta-conversation are not identity assertions.
- if(/[؟?]/.test(String(t))||/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي\b/.test(n))return facts;
+ if(/[؟?]/.test(String(t))||/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي(?=\s|$)/.test(n))return facts;
  // Handle explicit corrections as one user-name fact; never parse the negated clause as Ron's name.
- const corrected=n.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)\b.*$/);
+ const corrected=n.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)(?=\s|$).*$/);
  if(corrected){const value=cleanValue(corrected[1]);if(value)facts.push({key:"user.name",text:value});return facts;}
  let both=n.match(/^اسمي\s+(.+?)\s*[،,]\s*(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
  if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});return facts;}
@@ -129,7 +129,7 @@ const extractFacts=t=>{
  }
  if(!facts.some(x=>x.key==="user.name")){
   m=n.match(/^انا\s+(.+?)$/);
-  if(m&&!/^(?:عمري|سني|احب|لا احب|بسالك|اسالك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\b/.test(m[1])){
+  if(m&&!/^(?:عمري|سني|احب|لا احب|بسالك|اسالك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)(?:\s|$)/.test(m[1])){
    const value=cleanValue(m[1]);
    if(value)facts.push({key:"user.name",text:value});
   }
