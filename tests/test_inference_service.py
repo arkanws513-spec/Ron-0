@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 import service.app as inference
 from ron.contracts import ModelResponse
+import hashlib
 
 
 def test_missing_checkpoint_is_not_ready(monkeypatch):
@@ -63,3 +64,32 @@ def test_chat_rejects_empty_or_oversized_messages(monkeypatch):
             "/v1/chat",
             json={"messages": [{"role": "user", "content": "x" * 4001}]},
         ).status_code == 422
+
+
+def test_checkpoint_download_is_sha256_pinned_and_atomic(tmp_path, monkeypatch):
+    source = tmp_path / "source.pt"
+    destination = tmp_path / "models" / "ron_native_10m.pt"
+    source.write_bytes(b"reviewed-checkpoint-bytes")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    monkeypatch.setenv("RON_CHECKPOINT_URL", source.as_uri())
+    monkeypatch.setenv("RON_CHECKPOINT_SHA256", digest)
+
+    inference.ensure_checkpoint_file(destination)
+
+    assert destination.read_bytes() == source.read_bytes()
+
+
+def test_checkpoint_download_refuses_hash_mismatch(tmp_path, monkeypatch):
+    source = tmp_path / "source.pt"
+    destination = tmp_path / "models" / "ron_native_10m.pt"
+    source.write_bytes(b"tampered-checkpoint")
+    monkeypatch.setenv("RON_CHECKPOINT_URL", source.as_uri())
+    monkeypatch.setenv("RON_CHECKPOINT_SHA256", "0" * 64)
+
+    try:
+        inference.ensure_checkpoint_file(destination)
+    except ValueError as exc:
+        assert "SHA-256" in str(exc)
+    else:
+        raise AssertionError("mismatched checkpoint hash must be rejected")
+    assert not destination.exists()
