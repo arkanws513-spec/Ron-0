@@ -90,12 +90,12 @@ def test_why_followup_reuses_previous_topic_and_dialogue():
 
     provider = CapturingProvider()
     core = RonCore(provider=provider)
-    core.respond("ما عاصمة مصر؟")
+    core.respond("ما عاصمة كوكب زيرون؟")
     core.respond("ليه؟")
     request = provider.requests[-1]
     assert request.metadata["intent"] == "follow_up"
-    assert request.metadata["topic"] == "ما عاصمة مصر؟"
-    assert any(message.content == "ما عاصمة مصر؟" for message in request.messages)
+    assert request.metadata["topic"] == "ما عاصمة كوكب زيرون؟"
+    assert any(message.content == "ما عاصمة كوكب زيرون؟" for message in request.messages)
     assert any(message.content == "رد تجريبي" for message in request.messages)
 
 
