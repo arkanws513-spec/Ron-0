@@ -23,6 +23,10 @@ on:
         default: "2"
         type: string
 
+concurrency:
+  group: ron-10m-training-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
