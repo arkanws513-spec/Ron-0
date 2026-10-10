@@ -37,7 +37,7 @@ def test_native_provider_builds_bounded_prompt_from_recent_dialogue():
     request = ModelRequest(messages=(
         Message(role="system", content="large system context that is intentionally not copied into the character prompt"),
         Message(role="user", content="ما الفرق بين التدريب والذاكرة؟"),
-        Message(role="assistant", content="التدريب يغير الأوزان والذاكرة تحفظ معلومات."),
+        Message(role="assistant", content="التدريب يغير الأوزان."),
         Message(role="user", content="اشرح أكثر"),
     ), metadata={})
     prompt = provider._build_dialogue_prompt(request, "اشرح أكثر")
