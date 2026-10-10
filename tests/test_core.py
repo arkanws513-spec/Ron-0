@@ -78,3 +78,22 @@ def test_meta_question_does_not_overwrite_profile_name():
     correction = core.respond("اسمي اركانوس وليس اسمك بسألك عن اسمي")
     assert "اركانوس" in correction.content
     assert core.respond("ما اسمي؟").content == "اسمك اركانوس."
+
+def test_why_followup_reuses_previous_topic_and_dialogue():
+    class CapturingProvider:
+        def __init__(self):
+            self.requests = []
+
+        def generate(self, request: ModelRequest) -> ModelResponse:
+            self.requests.append(request)
+            return ModelResponse(content="رد تجريبي", model="capture", metadata={})
+
+    provider = CapturingProvider()
+    core = RonCore(provider=provider)
+    core.respond("ما عاصمة مصر؟")
+    core.respond("ليه؟")
+    request = provider.requests[-1]
+    assert request.metadata["intent"] == "follow_up"
+    assert request.metadata["topic"] == "ما عاصمة مصر؟"
+    assert any(message.content == "ما عاصمة مصر؟" for message in request.messages)
+    assert any(message.content == "رد تجريبي" for message in request.messages)
