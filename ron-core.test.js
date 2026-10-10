@@ -42,3 +42,33 @@ test('confirming Ron identity does not overwrite self name',async()=>{
  assert.match(await say(r,'اسمك رون فعلا'),/اسمي رون/);
  assert.strictEqual(r.store.get('$self','اسم').o,'رون');
 });
+
+test('ambiguous and negated name statements never overwrite memory',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي أركانوس');
+ for(const text of ['اسمي ليس أركانوس','اسمي مش أركانوس','اسمي أركانوس وليس','اسمي أركانوس بسألك عن اسمي']){
+  await say(r,text);
+  assert.strictEqual(r.store.get('$user','اسم').o,'اركانوس',text);
+ }
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+});
+test('asking about the name does not save the question as a name',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي أركانوس');
+ await say(r,'أنا بسألك عن اسمي');
+ assert.strictEqual(r.store.get('$user','اسم').o,'اركانوس');
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+});
+test('paired name statement cannot silently rename Ron',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي أركانوس واسمك كوين');
+ assert.strictEqual(r.store.get('$user','اسم').o,'اركانوس');
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+ assert.match(await say(r,'ما اسمك'),/رون/);
+});
+test('multiword Arabic names remain valid',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي عبد الرحمن محمد');
+ assert.strictEqual(r.store.get('$user','اسم').o,'عبد الرحمن محمد');
+ assert.match(await say(r,'ما اسمي'),/عبد الرحمن محمد/);
+});
