@@ -28,6 +28,8 @@ class NativeCheckpointProvider:
         self.model.eval()
         self.selected_step = int(payload.get("selected_step", 0))
         self.training_steps = int(payload.get("training_steps_this_run", 0))
+        self.training_steps_total = int(payload.get("training_steps_total", self.selected_step))
+        self.optimizer_state_persisted = "optimizer_state_dict" in payload
         self.checkpoint_source = str(payload.get("checkpoint_source", "unknown"))
 
     @torch.inference_mode()
@@ -73,6 +75,8 @@ class NativeCheckpointProvider:
                 "native_weights_loaded": True,
                 "selected_training_step": self.selected_step,
                 "training_steps_this_run": self.training_steps,
+                "training_steps_total": self.training_steps_total,
+                "optimizer_state_persisted": self.optimizer_state_persisted,
                 "checkpoint_source": self.checkpoint_source,
                 "external_model_used": False,
             },
