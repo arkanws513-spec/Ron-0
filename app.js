@@ -33,6 +33,36 @@ if(localStorage.getItem(PROFILE_CLEAN)!=="1"){
  localStorage.setItem(PROFILE_CLEAN,"1");
  try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
 }
+
+// One-time cleanup for names corrupted by the older relation parser.
+const PROFILE_CLEAN_V4="ron-profile-clean-v4";
+if(localStorage.getItem(PROFILE_CLEAN_V4)!=="1"){
+ const badUserName=x=>x?.key==="user.name"&&(/(?:بسالك عن|اسالك عن|ليس اسمك|وليس اسمك|اسمك بسالك)/i.test(norm(x.text))||String(x.text||"").length>40);
+ const badRonName=x=>x?.key==="ron.name"&&(/(?:بسالك عن|اسالك عن|اسمك)/i.test(norm(x.text))||/^(?:رون فعلا|رون حقا|رون بالفعل)$/.test(norm(x.text)));
+ lessons=lessons.filter(x=>!badUserName(x)&&!badRonName(x));
+ try{
+  const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");
+  if(raw&&Array.isArray(raw.facts)){
+   raw.facts=raw.facts.filter(x=>{
+    if(!x)return false;
+    const value=norm(x.o||"");
+    if(x.s==="$user"&&norm(x.p)==="اسم")return !/(?:بسالك عن|اسالك عن|ليس اسمك|وليس اسمك|اسمك بسالك)/i.test(value)&&value.length<=40;
+    if(x.s==="$self"&&norm(x.p)==="اسم")return !/(?:بسالك عن|اسالك عن|اسمك)/i.test(value)&&!/^(?:رون فعلا|رون حقا|رون بالفعل)$/.test(value);
+    return true;
+   });
+   localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));
+  }
+ }catch{}
+ try{
+  const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");
+  if(raw&&Array.isArray(raw.knowledge)){
+   raw.knowledge=raw.knowledge.filter(x=>!/اسمك\s+(?:بسالك عن|اسالك عن)|(?:ليس اسمك|وليس اسمك)|اسمك\s+رون فعلا/i.test(norm(x?.text||"")));
+   localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));
+  }
+ }catch{}
+ localStorage.setItem(PROFILE_CLEAN_V4,"1");
+ try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
+}
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const webSearchEnabled=()=>!!globalThis.RonWebSearch;
 const initRonCore=()=>{
  if(!globalThis.RonCore||!globalThis.RonCoreAdapters?.LocalStorageAdapter)return null;
