@@ -14,3 +14,10 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Large training data and Ron-10M experiment artifacts are stored outside Git history.
+/training/corpus.txt
+/training/corpus_manifest.json
+/training/corpus/gutenberg/
+/artifacts/native-10m/
+/ron/checkpoints/ron_native_10m.pt
