@@ -1,4 +1,4 @@
-"""Ron-native decoder-only Transformer model."""
+""""Ron-native decoder-only Transformer model."""
 from __future__ import annotations
 from dataclasses import dataclass
 import torch
@@ -74,11 +74,62 @@ class RonCausalLM(nn.Module):
         return ModelOutput(logits=logits, loss=loss)
 
     @torch.no_grad()
-    def generate(self, input_ids: Tensor, max_new_tokens: int = 32) -> Tensor:
+    def generate(
+        self,
+        input_ids: Tensor,
+        max_new_tokens: int = 32,
+        *,
+        temperature: float = 0.0,
+        top_k: int | None = None,
+        top_p: float = 1.0,
+        eos_token_id: int | None = None,
+    ) -> Tensor:
+        """Generate tokens greedily (temperature=0) or by filtered sampling.
+
+        top_k and nucleus (top_p) filtering only affect sampled generation.
+        Set eos_token_id to stop once every sequence in the batch has ended.
+        """
+        if input_ids.ndim != 2 or input_ids.shape[1] < 1:
+            raise ValueError("input_ids must have shape [batch, non-empty sequence]")
         if max_new_tokens < 0:
             raise ValueError("max_new_tokens must be non-negative")
+        if temperature < 0:
+            raise ValueError("temperature must be non-negative")
+        if top_k is not None and not 1 <= top_k <= self.config.vocab_size:
+            raise ValueError("top_k must be between 1 and vocab_size")
+        if not 0 < top_p <= 1:
+            raise ValueError("top_p must be in (0, 1]")
+        if eos_token_id is not None and not 0 <= eos_token_id < self.config.vocab_size:
+            raise ValueError("eos_token_id must be between 0 and vocab_size - 1")
+
         result = input_ids
+        finished = torch.zeros(result.shape[0], dtype=torch.bool, device=result.device)
         for _ in range(max_new_tokens):
             context = result[:, -self.config.max_sequence_length:]
-            result = torch.cat((result, self(context).logits[:, -1, :].argmax(dim=-1, keepdim=True)), dim=1)
+            logits = self(context).logits[:, -1, :].float()
+            if temperature == 0:
+                next_token = logits.argmax(dim=-1, keepdim=True)
+            else:
+                logits = logits / temperature
+                if top_k is not None:
+                    threshold = torch.topk(logits, top_k, dim=-1).values[:, -1, None]
+                    logits = logits.masked_fill(logits < threshold, float("-inf"))
+                if top_p < 1:
+                    sorted_logits, sorted_indices = torch.sort(logits, descending=True, dim=-1)
+                    cumulative_probs = torch.softmax(sorted_logits, dim=-1).cumsum(dim=-1)
+                    remove = cumulative_probs - torch.softmax(sorted_logits, dim=-1) >= top_p
+                    sorted_logits = sorted_logits.masked_fill(remove, float("-inf"))
+                    filtered = torch.full_like(logits, float("-inf"))
+                    filtered.scatter_(1, sorted_indices, sorted_logits)
+                    logits = filtered
+                probabilities = torch.softmax(logits, dim=-1)
+                next_token = torch.multinomial(probabilities, num_samples=1)
+            if eos_token_id is not None:
+                eos_fill = torch.full_like(next_token, eos_token_id)
+                next_token = torch.where(finished[:, None], eos_fill, next_token)
+                finished = finished | next_token.squeeze(1).eq(eos_token_id)
+            result = torch.cat((result, next_token), dim=1)
+            if eos_token_id is not None and bool(finished.all()):
+                break
         return result
+"
