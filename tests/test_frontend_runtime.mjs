@@ -213,3 +213,46 @@ submit({preventDefault(){}});
 input.value = "نعم";
 submit({preventDefault(){}});
 assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /معك حق|أكرر ردًا عامًا|سياق المحادثة/);
+
+
+// Regression: when a user asks "what is this?" after an irrelevant long reply,
+// Ron should explain the previous reply and acknowledge the context mismatch.
+const nodes4 = new Map();
+const listeners4 = new Map();
+for (const id of ids) {
+  nodes4.set(id, {
+    id, value:"", disabled:false, scrollTop:0, scrollHeight:0, style:{},
+    children:[], className:"", textContent:"",
+    append(...items){this.children.push(...items);},
+    appendChild(item){this.children.push(item);},
+    replaceChildren(...items){this.children=[...items];},
+    addEventListener(type,fn){listeners4.set(id+":"+type,fn);},
+    classList:{add(){},remove(){}}
+  });
+}
+const previousArticle = "رونالد ويليام هاوارد صانع أفلام وممثل أمريكي. ".repeat(20);
+const storage4 = new Map([
+  ["ron-chat-v5", JSON.stringify([
+    {role:"user",text:"هل أنت معي؟"},
+    {role:"ron",text:previousArticle}
+  ])],
+  ["ron-started-v1","1"]
+]);
+const context4 = {
+  document:{
+    getElementById(id){return nodes4.get(id)??null;},
+    createElement(tag){return {tag,className:"",textContent:"",children:[],append(...items){this.children.push(...items);},click(){},style:{}};}
+  },
+  localStorage:{
+    getItem:k=>storage4.has(k)?storage4.get(k):null,
+    setItem:(k,v)=>storage4.set(k,v),
+    clear:()=>storage4.clear(),
+    removeItem:k=>storage4.delete(k)
+  },
+  console,setTimeout:fn=>{fn();return 1;},Blob:class{constructor(parts){this.parts=parts;}},
+  URL:{createObjectURL:()=>"blob:test"},confirm:()=>true,alert:()=>{},Date,JSON,Math
+};
+vm.runInNewContext(fs.readFileSync("app.js","utf8"),context4);
+nodes4.get("input").value = "ما هذا؟";
+listeners4.get("composer:submit")({preventDefault(){}});
+assert.match(nodes4.get("chat").children.at(-1).children.at(-1).textContent, /رون هاورد|غير مرتبط|غير مناسب/);
