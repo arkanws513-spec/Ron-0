@@ -94,7 +94,7 @@ const RANK={search:0,seed:1,model:1,user:2,official:3};
 class FactStore{
  constructor(adapter=new MemoryAdapter(),{multi=[]}={}){this.adapter=adapter;this.multi=new Set(multi.map(key));const d=adapter.load()||{};this.facts=d.facts||[];this.disp=d.disp||{};this.unparsed=d.unparsed||[];this.events=d.events||[];}
  display(k){return k==='$user'?'أنت':k==='$self'?'أنا':this.disp[k]??k;}
- get(s,p){return this.facts.find(f=>f.s===s&&f.p===p);}
+ get(s,p){const subject=key(s),property=key(p);return this.facts.find(f=>key(f.s)===subject&&key(f.p)===property);}
  set(s,p,o,{source='user',confidence=1,sd,pd,od,persist=true}={}){
   const i=this.facts.findIndex(f=>f.s===s&&f.p===p&&(!this.multi.has(p)||f.o===o));let status,prev;
   if(i<0){this.facts.push({s,p,o,source,confidence,ts:Date.now(),history:[]});status='added';}
