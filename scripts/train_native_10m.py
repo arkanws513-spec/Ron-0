@@ -305,29 +305,29 @@ def main():
         "prior_selected_step": prior_step,
         "optimizer_state_dict": optimizer.state_dict(),
     }
-    # Always retain the candidate as an artifact, but never replace the live model
-    # unless this run actually improves held-out validation loss.
+    # Training creates a candidate only. Loss improvement is necessary but not
+    # sufficient; a separate blind conversational gate owns promotion.
     OUT.mkdir(parents=True, exist_ok=True)
     candidate_path = OUT / "ron_native_10m.pt"
     atomic_torch_save(checkpoint, candidate_path)
-    checkpoint_promoted = bool(
+    validation_improved = bool(
         best_source == "this_run"
         and math.isfinite(best_val)
         and best_val < start_val
         and changed_tensors > 0
     )
+    checkpoint_promoted = False
     promotion_reason = (
-        "held_out_validation_improved"
-        if checkpoint_promoted
+        "awaiting_blind_conversational_evaluation"
+        if validation_improved
         else "validation_gate_not_passed_live_checkpoint_preserved"
     )
-    if checkpoint_promoted:
-        atomic_torch_save(checkpoint, LIVE_CHECKPOINT)
     parameters = sum(parameter.numel() for parameter in model.parameters())
     metrics = {
         "experiment": "ron0-native-10m-character-lm",
         "status": "completed",
         "checkpoint_promoted": checkpoint_promoted,
+        "validation_loss_improved": validation_improved,
         "promotion_reason": promotion_reason,
         "candidate_checkpoint": str(candidate_path.relative_to(ROOT)),
         "live_checkpoint": str(LIVE_CHECKPOINT.relative_to(ROOT)) if checkpoint_promoted else None,
@@ -351,7 +351,7 @@ def main():
         "final_validation_loss": final_validation,
         "weights_persisted_from_final_training_step": True,
         "best_validation_weights_persisted": True,
-        "live_checkpoint_promoted_only_after_validation_improvement": True,
+        "live_checkpoint_promoted_only_after_blind_conversational_gate": True,
         "best_selected_step_total": best_selected_step_total,
         "best_checkpoint_source": best_source,
         "optimizer_state_persisted": True,
