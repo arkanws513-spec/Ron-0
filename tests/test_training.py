@@ -109,3 +109,47 @@ def test_validation_improvement_does_not_claim_prior_checkpoint_as_this_run_gain
     assert validation_improvement_percent(1.32, 1.21, "prior_best") == 0.0
     assert round(checkpoint_delta_percent(1.32, 1.21), 2) == 8.33
     assert round(validation_improvement_percent(1.32, 1.21, "this_run"), 2) == 8.33
+
+
+def test_native_training_early_stopping_patience():
+    from scripts.train_native import should_stop_early
+
+    assert not should_stop_early(0, patience=3)
+    assert not should_stop_early(2, patience=3)
+    assert should_stop_early(3, patience=3)
+
+
+def test_native_training_resumes_from_best_weights_when_corpus_changes(tmp_path, monkeypatch):
+    import hashlib
+    import torch
+    import scripts.train_native as training
+    from ron.model import RonCausalLM
+    from ron.model_config import RonModelConfig
+
+    old_corpus = "المستخدم: Old question\nرون: Old answer\n"
+    new_corpus = "المستخدم: New English question?\nرون: New English answer.\n"
+    vocab = {char: index for index, char in enumerate(sorted(set(old_corpus)))}
+    config = RonModelConfig(vocab_size=len(vocab), hidden_size=64, num_layers=2, num_heads=4,
+                            max_sequence_length=96, dropout=0.1)
+    model = RonCausalLM(config)
+    final_state = {key: value.detach().clone() for key, value in model.state_dict().items()}
+    best_state = {key: value.detach().clone() + 0.25 for key, value in model.state_dict().items()}
+    path = tmp_path / "checkpoint.pt"
+    torch.save({
+        "config": config.__dict__, "vocab": vocab, "state_dict": final_state,
+        "best_state_dict": best_state, "training_steps_total": 500,
+        "selected_step": 500, "best_selected_step": 250,
+        "optimizer_state_dict": {"should": "be reset"},
+        "corpus_sha256": hashlib.sha256(old_corpus.encode("utf-8")).hexdigest(),
+    }, path)
+    monkeypatch.setattr(training, "LIVE_CHECKPOINT", path)
+    loaded, expanded_vocab, source, prior_step, expanded, optimizer_state, prior_best, prior_best_step = training.load_or_initialize(new_corpus)
+
+    assert source == "continued_best_checkpoint_after_corpus_change"
+    assert prior_step == 500
+    assert expanded is True
+    assert optimizer_state is None
+    assert prior_best is None
+    assert prior_best_step == 250
+    assert len(expanded_vocab) > len(vocab)
+    assert torch.equal(loaded.position_embedding.weight, best_state["position_embedding.weight"])
