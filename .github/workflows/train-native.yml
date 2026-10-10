@@ -6,11 +6,9 @@ on:
     paths:
       - "ron/model.py"
       - "ron/model_config.py"
-      - "ron/core.py"
-      - "ron/native_provider.py"
-      - "training/**"
+      - "ron/training.py"
+      - "training/seed_corpus.txt"
       - "scripts/train_native.py"
-      - ".github/workflows/train-native.yml"
   workflow_dispatch:
 
 permissions:
