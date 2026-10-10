@@ -109,3 +109,12 @@ def test_server_rejects_quality_fallback_when_native_is_required(monkeypatch):
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
+
+
+def test_server_rate_limits_per_client_without_affecting_other_clients():
+    from ron.server import RonServerState
+    state = RonServerState(require_native=False)
+    state.max_requests_per_minute = 1
+    assert state.allow_request("127.0.0.1") is True
+    assert state.allow_request("127.0.0.1") is False
+    assert state.allow_request("127.0.0.2") is True
