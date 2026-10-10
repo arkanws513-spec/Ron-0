@@ -23,7 +23,8 @@ class PackedTextDataset(Dataset):
         self.blocks: list[list[int]] = []
         for document in documents:
             ids = [bos_id, *self.tokenizer.encode(document).ids, eos_id]
-            for start in range(0, len(ids) - 1, sequence_length):
+            # Overlap one token between blocks so the next-token objective does not skip boundaries.
+            for start in range(0, len(ids) - 1, sequence_length - 1):
                 block = ids[start:start + sequence_length]
                 if len(block) >= 2:
                     self.blocks.append(block)
@@ -36,10 +37,6 @@ class PackedTextDataset(Dataset):
     def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
         ids = self.blocks[index]
         labels = list(ids)
-        pad_id = self.tokenizer.token_to_id("<pad>")
-        pad_id = 0 if pad_id is None else pad_id
-        padding = self.sequence_length - len(ids) if hasattr(self, "sequence_length") else 0
-        # Sequence length is inferred from the first block by the owning trainer.
         return {"input_ids": torch.tensor(ids, dtype=torch.long),
                 "labels": torch.tensor(labels, dtype=torch.long)}
 
