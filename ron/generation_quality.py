@@ -4,10 +4,30 @@ from __future__ import annotations
 import re
 
 _TOKEN_RE = re.compile(r"[\w\u0600-\u06ff]+", re.UNICODE)
+_COMPACT_RE = re.compile(r"[a-z0-9\u0600-\u06ff]+", re.IGNORECASE)
+
+
+def _has_repeated_character_fragment(answer: str) -> bool:
+    """Catch character-level loops that do not repeat as whole words."""
+    compact = "".join(_COMPACT_RE.findall(str(answer).casefold()))
+    if len(compact) < 18:
+        return False
+    # Look for a 3–8 character fragment repeated at least four times.
+    # Require it to account for a substantial share of the output to avoid
+    # rejecting ordinary sentences that reuse common Arabic/English fragments.
+    for width in range(3, min(8, len(compact) // 4) + 1):
+        for start in range(len(compact) - width * 4 + 1):
+            fragment = compact[start:start + width]
+            count = compact.count(fragment)
+            if count >= 4 and (width * count) / len(compact) >= 0.35:
+                return True
+    return False
 
 
 def is_degenerate_text(answer: str) -> bool:
-    """Detect obvious token loops; this does not assess factual correctness."""
+    """Detect obvious word or character-fragment loops, not factual errors."""
+    if _has_repeated_character_fragment(answer):
+        return True
     tokens = [token.casefold() for token in _TOKEN_RE.findall(str(answer))]
     if len(tokens) < 6:
         return False
