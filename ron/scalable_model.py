@@ -144,5 +144,31 @@ class ScalableRonLM(nn.Module):
                                    labels[:, 1:].contiguous().view(-1), ignore_index=-100)
         return {"logits": logits, "loss": loss}
 
+    @torch.inference_mode()
+    def generate(self, input_ids: Tensor, max_new_tokens: int = 128, *,
+                 eos_token_id: int | None = None, temperature: float = 0.0) -> Tensor:
+        if input_ids.ndim != 2 or input_ids.shape[1] < 1:
+            raise ValueError("input_ids must be a non-empty [batch, sequence] tensor")
+        if max_new_tokens < 0 or temperature < 0:
+            raise ValueError("max_new_tokens and temperature must be non-negative")
+        if eos_token_id is not None and not 0 <= eos_token_id < self.config.vocab_size:
+            raise ValueError("eos_token_id is outside the vocabulary")
+        result = input_ids
+        finished = torch.zeros(result.shape[0], dtype=torch.bool, device=result.device)
+        for _ in range(max_new_tokens):
+            context = result[:, -self.config.max_sequence_length:]
+            logits = self(context)["logits"][:, -1, :].float()
+            if temperature == 0:
+                next_token = logits.argmax(dim=-1, keepdim=True)
+            else:
+                next_token = torch.multinomial(torch.softmax(logits / temperature, dim=-1), 1)
+            if eos_token_id is not None:
+                next_token = torch.where(finished[:, None], torch.full_like(next_token, eos_token_id), next_token)
+                finished = finished | next_token.squeeze(1).eq(eos_token_id)
+            result = torch.cat((result, next_token), dim=1)
+            if eos_token_id is not None and bool(finished.all()):
+                break
+        return result
+
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
