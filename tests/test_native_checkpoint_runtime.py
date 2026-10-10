@@ -72,3 +72,15 @@ def test_native_generation_guard_rejects_obvious_token_loops():
     assert rejected is True
     assert fallback == "تعذر توليد إجابة موثوقة."
     assert guard_generated_text(safe, "fallback") == (safe, False)
+
+def test_native_generation_guard_rejects_character_level_arabic_loops():
+    from ron.generation_quality import guard_generated_text, is_degenerate_text
+
+    bad = "المالمال الم المالمال الم المالمالمالم المالمالم المالم الم المالمالمالمال"
+    safe = "عاصمة مصر هي القاهرة، ويمكنني شرح السبب إذا أردت."
+    assert is_degenerate_text(bad)
+    assert not is_degenerate_text(safe)
+    assert guard_generated_text(bad, "تعذر توليد إجابة موثوقة.") == (
+        "تعذر توليد إجابة موثوقة.",
+        True,
+    )
