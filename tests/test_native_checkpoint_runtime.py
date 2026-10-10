@@ -42,6 +42,6 @@ def test_native_provider_builds_bounded_prompt_from_recent_dialogue():
     ), metadata={})
     prompt = provider._build_dialogue_prompt(request, "اشرح أكثر")
     assert len(prompt) <= provider.config.max_sequence_length
-    assert prompt.endswith("\\nرون:")
+    assert prompt.endswith("\nرون:")
     assert "ما الفرق بين التدريب والذاكرة؟" in prompt
     assert "اشرح أكثر" in prompt
