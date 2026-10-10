@@ -41,7 +41,7 @@ def _arithmetic(value: str) -> str | None:
         (rf"^{number}\s*(?:\+|جمع|زائد|plus)\s*{number}$", "+"),
         (rf"^{number}\s*(?:-|ناقص|minus)\s*{number}$", "-"),
         (rf"^{number}\s*(?:\*|×|x|ضرب|مضروب في|times)\s*{number}$", "*"),
-        (rf"^{number}\s*(?:/|÷|مقسوم على|مقسوما على|مقسومة على|على|divided by)\s*{number}$", "/"),
+        (rf"^{number}\s*(?:/|÷|مقسوم علي|مقسوما علي|مقسومة علي|علي|مقسوم على|مقسوما على|مقسومة على|على|divided by)\s*{number}$", "/"),
     )
     for pattern, operation in patterns:
         match = re.fullmatch(pattern, value)
