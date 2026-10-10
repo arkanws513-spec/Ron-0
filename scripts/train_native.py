@@ -78,12 +78,12 @@ def load_or_initialize(corpus: str):
         model.load_state_dict(target)
         if copied == 0:
             raise RuntimeError("Existing checkpoint contained no compatible weights; refusing silent reinitialization.")
-        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("selected_step", 0)), expanded
+        return model, vocab, "continued_existing_ron_checkpoint", int(payload.get("training_steps_total", payload.get("selected_step", 0))), expanded, payload.get("optimizer_state_dict")
 
     vocab = {char: index for index, char in enumerate(sorted(set(corpus)))}
     cfg = RonModelConfig(vocab_size=len(vocab), hidden_size=HIDDEN, num_layers=LAYERS,
                          num_heads=HEADS, max_sequence_length=LENGTH)
-    return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False
+    return RonCausalLM(cfg), vocab, "initialized_ron_native_model_no_checkpoint_found", 0, False, None
 
 
 def main():
@@ -91,7 +91,7 @@ def main():
     torch.manual_seed(SEED)
     torch.set_num_threads(min(4, torch.get_num_threads()))
     corpus = (ROOT / "training" / "seed_corpus.txt").read_text(encoding="utf-8")
-    model, vocab, checkpoint_source, prior_step, vocab_expanded = load_or_initialize(corpus)
+    model, vocab, checkpoint_source, prior_step, vocab_expanded, prior_optimizer_state = load_or_initialize(corpus)
     ids = torch.tensor([vocab[char] for char in corpus], dtype=torch.long)
     split = int(len(ids) * 0.9)
     train, val = ids[:split], ids[split:]
@@ -102,6 +102,13 @@ def main():
     best_val, best_step = start_val, 0
     best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
     optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
+    if prior_optimizer_state:
+        try:
+            optimizer.load_state_dict(prior_optimizer_state)
+            print("restored_optimizer_state=true", flush=True)
+        except (ValueError, RuntimeError) as exc:
+            # A vocabulary expansion changes embedding shapes; reset optimizer moments but retain every compatible model weight.
+            print(f"optimizer_state_reset_due_to_shape_change={exc}", flush=True)
     started = time.time()
     history = []
     model.train()
@@ -122,17 +129,22 @@ def main():
                 best_val, best_step = validation_loss, step
                 best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
-    model.load_state_dict(best_state)
+    # Persist the final state after this run, not the starting/best snapshot.
+    # This guarantees the next run continues from weights actually updated by this training pass.
+    final_train, final_validation = evaluate(model, train), evaluate(model, val, count=16)
     OUT.mkdir(parents=True, exist_ok=True)
+    total_steps = prior_step + STEPS
     checkpoint = {
         "state_dict": model.state_dict(),
         "config": model.config.__dict__,
         "vocab": vocab,
         "seed": SEED,
-        "selected_step": best_step,
+        "selected_step": total_steps,
         "training_steps_this_run": STEPS,
+        "training_steps_total": total_steps,
         "checkpoint_source": checkpoint_source,
         "prior_selected_step": prior_step,
+        "optimizer_state_dict": optimizer.state_dict(),
     }
     torch.save(checkpoint, OUT / "ron_native_baseline.pt")
     parameters = sum(parameter.numel() for parameter in model.parameters())
@@ -144,7 +156,13 @@ def main():
         "vocabulary_expanded": vocab_expanded,
         "seed": SEED,
         "training_steps_this_run": STEPS,
-        "selected_checkpoint_step_this_run": best_step,
+        "selected_checkpoint_step_this_run": STEPS,
+        "best_validation_step_this_run": best_step,
+        "training_steps_total": total_steps,
+        "final_train_loss": final_train,
+        "final_validation_loss": final_validation,
+        "weights_persisted_from_final_training_step": True,
+        "optimizer_state_persisted": True,
         "parameters": parameters,
         "vocab_size": len(vocab),
         "corpus_characters": len(ids),
