@@ -83,7 +83,16 @@ class RonCore:
         reasoning_summary=self.reasoning.summarize(reasoning_result)
         evidence=tuple(WeightedEvidence(self.reasoning.describe_fact(f), f.confidence, f.confidence, f.source) for f in reasoning_result.facts)
         causal_links=tuple(CausalLink(f.subject, f.object, f.confidence, (self.reasoning.describe_fact(f),)) for f in reasoning_result.facts if f.relation=="causes")
-        advanced_confidence=self.advanced_reasoning.combine_independent_confidences(e.support for e in evidence)
+        # Only combine evidence with distinct explicit sources. Treat inferred,
+        # unknown, and conversational sources conservatively to avoid false certainty.
+        sourced_support = {}
+        for item in evidence:
+            if item.source not in {"", "unknown", "user", "model"} and not item.source.startswith("rule:"):
+                sourced_support[item.source] = max(sourced_support.get(item.source, 0.0), item.strength)
+        advanced_confidence = (
+            self.advanced_reasoning.combine_independent_confidences(sourced_support.values())
+            if sourced_support else max((item.strength for item in evidence), default=0.0)
+        )
         if causal_links and topic:
             causal_notes=[]
             for link in causal_links:
