@@ -37,7 +37,7 @@ jobs:
       - name: Run native-model tests
         run: python -m pytest tests/test_model.py tests/test_distillation.py tests/test_training.py tests/test_core.py
       - name: Train Ron-0 native baseline
-        run: python scripts/train_native.py
+        run: python -m scripts.train_native
       - name: Place trained weights inside Ron-0 core
         run: |
           mkdir -p ron/checkpoints
