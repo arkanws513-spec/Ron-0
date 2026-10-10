@@ -13,7 +13,7 @@ import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from .core import RonCore
 from .native_provider import NativeCheckpointProvider
@@ -100,7 +100,17 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
             self._json(404, {"error": "not_found"})
             return
         if path == "/":
-            self.path = "/index.html"
+            path = "/index.html"
+        # Serve only public UI assets; never expose Python source, checkpoints, or training data.
+        relative = unquote(path).lstrip("/")
+        target = (ROOT / relative).resolve()
+        assets_root = (ROOT / "assets").resolve()
+        allowed_root_asset = target.parent == ROOT and target.suffix.lower() in {".html", ".js", ".css", ".svg", ".ico", ".webmanifest"}
+        allowed_asset_tree = target == assets_root or assets_root in target.parents
+        if not (allowed_root_asset or allowed_asset_tree) or not target.is_file():
+            self._json(404, {"error": "not_found"})
+            return
+        self.path = "/" + relative
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -156,7 +166,8 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
 
 def make_server(host: str | None = None, port: int | None = None, *, require_native: bool | None = None):
     host = host or os.environ.get("RON_HOST", "127.0.0.1")
-    port = port or int(os.environ.get("PORT") or os.environ.get("RON_PORT") or "8000")
+    if port is None:
+        port = int(os.environ.get("PORT") or os.environ.get("RON_PORT") or "8000")
     if require_native is None:
         require_native = os.environ.get("RON_REQUIRE_NATIVE", "1").strip().lower() not in {"0", "false", "no"}
     state = RonServerState(require_native=require_native)
