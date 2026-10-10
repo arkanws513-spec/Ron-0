@@ -14,6 +14,7 @@ from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
 from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
 from .arithmetic import answer_arithmetic
+from .knowledge import CuratedKnowledgeBase
 
 @dataclass
 class RonCore:
@@ -26,6 +27,7 @@ class RonCore:
     understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
     reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
     advanced_reasoning:AdvancedReasoner=field(default_factory=AdvancedReasoner)
+    knowledge_base:CuratedKnowledgeBase=field(default_factory=CuratedKnowledgeBase)
     provider_startup_warnings:list[str]=field(default_factory=list,init=False)
 
     def __post_init__(self)->None:
@@ -82,6 +84,9 @@ class RonCore:
         remembered_answer=answer_fact_question(text,self.memory)
         if remembered_answer is not None:
             return self._finish(text,remembered_answer,"ron-memory",{"runtime":"ron-0","memory_read":True})
+        curated_answer=self.knowledge_base.answer(text)
+        if curated_answer is not None:
+            return self._finish(text,curated_answer,"ron-curated-knowledge",{"runtime":"ron-0","local_retrieval":True,"external_model_used":False,"knowledge_source":"reviewed-seed-corpus"})
         memories=self.memory.recall(text,limit=5)
         related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories
         reasoning_facts=[]
