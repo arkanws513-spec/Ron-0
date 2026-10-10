@@ -29,14 +29,20 @@ class RonCore:
     def __post_init__(self)->None:
         if self.provider is not None:
             return
-        checkpoint=Path(__file__).resolve().parent/"checkpoints"/"ron_native_baseline.pt"
-        if checkpoint.is_file():
-            # Load Ron's own weights when the trained checkpoint is present.
+        checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
+        # Prefer the larger native model when a validated Ron-10M checkpoint exists.
+        # Keep the baseline as a safe local fallback and never require a hosted model.
+        candidates = (
+            checkpoint_dir / "ron_native_10m.pt",
+            checkpoint_dir / "ron_native_baseline.pt",
+        )
+        checkpoint = next((path for path in candidates if path.is_file()), None)
+        if checkpoint is not None:
             from .native_provider import NativeCheckpointProvider
-            self.provider=NativeCheckpointProvider(checkpoint)
+            self.provider = NativeCheckpointProvider(checkpoint)
         else:
             # A clear offline fallback for checkouts that do not yet contain weights.
-            self.provider=LocalTeachingProvider()
+            self.provider = LocalTeachingProvider()
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)
