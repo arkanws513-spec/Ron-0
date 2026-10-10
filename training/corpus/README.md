@@ -46,3 +46,7 @@ Outputs go to artifacts/native-10m/; the resumable checkpoint is ron/checkpoints
 - Training/validation splitting by paragraph reduces direct leakage but is not an independent benchmark.
 - Review corpus licenses, factual quality, duplication, and language balance before training.
 - Compare against held-out prompts and the previous checkpoint before deciding whether to replace Ron's active model.
+
+## Automated experiment
+
+The `Train Ron-10M` GitHub Actions workflow runs on reviewed changes to the training recipe and can also be started manually from the Actions tab. It stores the candidate checkpoint and metrics as an Actions artifact rather than committing multi-megabyte weights or downloaded books to Git. The live Ron-10M checkpoint is promoted only if held-out validation loss improves; otherwise the previous live checkpoint is preserved. Review the artifact's metrics and generation behavior before deploying a candidate.
