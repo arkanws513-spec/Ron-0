@@ -23,6 +23,16 @@ const FACTS_MIGRATION="ron-facts-migration-v1";
 if(localStorage.getItem(FACTS_MIGRATION)!=="1"){lessons=lessons.filter(x=>x.key!=="user.name"&&x.key!=="user.age");localStorage.setItem(FACTS_MIGRATION,"1");}
 const save=()=>{try{localStorage.setItem(S.chat,JSON.stringify(messages.slice(-300)));localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)));localStorage.setItem(S.convos,JSON.stringify(conversations.slice(-50)))}catch(err){console.error("Ron storage error",err)}};
 if(localStorage.getItem("ron-name-clean-v2")!=="1"){lessons=lessons.filter(x=>!(x.key==="ron.name"&&/^(?:اي|انت رون|اسمك|اسمك انت رون)$/i.test(norm(x.text))));localStorage.setItem("ron-name-clean-v2","1");save();}
+
+const PROFILE_CLEAN="ron-profile-clean-v3";
+if(localStorage.getItem(PROFILE_CLEAN)!=="1"){
+ const badName=x=>x?.key==="user.name"&&/^(?:اسالك عن اسمك|اسالك|ما اسمي|ما اسمك|اسمي وما اسمك)$/i.test(norm(x.text));
+ lessons=lessons.filter(x=>!badName(x));
+ try{const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");if(raw&&Array.isArray(raw.facts)){raw.facts=raw.facts.filter(x=>!(x?.s==="$user"&&norm(x.p)==="اسم"&&/اسالك عن اسمك|اسالك|ما اسمي|ما اسمك|اسمي وما اسمك/i.test(norm(x.o))));localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));}}catch{}
+ try{const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");if(raw&&Array.isArray(raw.knowledge)){raw.knowledge=raw.knowledge.filter(x=>!/اسمك اسالك عن اسمك|اسمك ما اسمي/i.test(norm(x?.text||"")));localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));}}catch{}
+ localStorage.setItem(PROFILE_CLEAN,"1");
+ try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
+}
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const webSearchEnabled=()=>!!globalThis.RonWebSearch;
 const initRonCore=()=>{
  if(!globalThis.RonCore||!globalThis.RonCoreAdapters?.LocalStorageAdapter)return null;
