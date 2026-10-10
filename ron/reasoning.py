@@ -189,8 +189,10 @@ class ReasoningEngine:
         contradictions: list[Contradiction] = []
         for a in known:
             for b in known:
-                if a.subject == b.subject and a.relation == b.relation and a.object != b.object:
-                    if a.relation in {"is", "has", "needs", "causes"}:
+                if (self._entity_norm(a.subject) == self._entity_norm(b.subject)
+                        and a.relation.lower() == b.relation.lower()
+                        and self._entity_norm(a.object) != self._entity_norm(b.object)):
+                    if a.relation.lower() in {"is", "has", "needs", "causes"}:
                         contradictions.append(Contradiction(self.describe_fact(a), self.describe_fact(b), "same subject/relation with different object"))
         # Prefer canonical entity names when a causal object is also represented
         # as a subject elsewhere (e.g. "ازدحام" -> "الازدحام").
