@@ -64,6 +64,10 @@ def run_benchmark(benchmark_path: Path) -> dict:
     critical = [item for item in results if item["critical"]]
     passed_count = sum(item["passed"] for item in results)
     critical_passed = sum(item["passed"] for item in critical)
+    native_generation = [item for item in results if item["model"] == "ron-native-checkpoint"]
+    native_generation_passed = sum(item["passed"] for item in native_generation)
+    curated_retrieval = [item for item in results if item["model"] == "ron-curated-knowledge"]
+    deterministic = [item for item in results if item["model"] in {"ron-arithmetic", "ron-algebra", "ron-memory", "ron-reasoning"}]
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "benchmark": str(benchmark_path.relative_to(ROOT)),
@@ -82,6 +86,11 @@ def run_benchmark(benchmark_path: Path) -> dict:
         "critical_cases": len(critical),
         "critical_passed": critical_passed,
         "critical_score": round(critical_passed / max(1, len(critical)), 4),
+        "native_generation_cases": len(native_generation),
+        "native_generation_passed": native_generation_passed,
+        "native_generation_score": round(native_generation_passed / max(1, len(native_generation)), 4) if native_generation else None,
+        "curated_retrieval_cases": len(curated_retrieval),
+        "deterministic_tool_cases": len(deterministic),
         "results": results,
     }
 
@@ -97,7 +106,7 @@ def main() -> None:
     report = run_benchmark(args.benchmark)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
-    print(json.dumps({key: report[key] for key in ("runtime", "native_weights_loaded", "checkpoint", "inference_checkpoint", "selected_training_step", "parameters", "total_cases", "passed", "score", "critical_cases", "critical_passed", "critical_score")}, ensure_ascii=False, indent=2))
+    print(json.dumps({key: report[key] for key in ("runtime", "native_weights_loaded", "checkpoint", "inference_checkpoint", "selected_training_step", "parameters", "total_cases", "passed", "score", "critical_cases", "critical_passed", "critical_score", "native_generation_cases", "native_generation_passed", "native_generation_score", "curated_retrieval_cases", "deterministic_tool_cases")}, ensure_ascii=False, indent=2))
     for item in report["results"]:
         mark = "PASS" if item["passed"] else "FAIL"
         print(f"{mark} [{item['id']}] {item['prompt']} -> {item['answer']}")
