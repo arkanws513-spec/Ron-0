@@ -70,14 +70,14 @@ console.log("frontend runtime smoke test passed");
 
 input.value = "اسمي أركانوس";
 submit({preventDefault(){}});
-assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /أركانوس/);
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /اركانوس/);
 input.value = "اسمي أركانوس وليس";
 submit({preventDefault(){}});
 input.value = "ما اسمي";
 submit({preventDefault(){}});
-assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /أركانوس/);
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /اركانوس/);
 const savedLessons = JSON.parse(storage.get("ron-lessons-v5") || "[]");
-assert.equal(savedLessons.find(x => x.key === "user.name")?.text, "أركانوس");
+assert.equal(savedLessons.find(x => x.key === "user.name")?.text, "اركانوس");
 
 input.value = "اسمك كوين";
 submit({preventDefault(){}});
