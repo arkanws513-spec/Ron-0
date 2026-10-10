@@ -1,5 +1,6 @@
 """Regression tests for the dedicated Ron-10M training recipe."""
 from scripts.train_native_10m import split_corpus
+from scripts.prepare_corpus import SOURCE_DIR, is_pretraining_source
 from ron.model import RonCausalLM
 from ron.model_config import RonModelConfig
 
@@ -27,3 +28,9 @@ def test_ron_10m_profile_is_approximately_ten_million_parameters():
     model = RonCausalLM(config)
     parameter_count = sum(parameter.numel() for parameter in model.parameters())
     assert 10_000_000 <= parameter_count <= 11_500_000
+
+
+def test_instruction_dialogues_are_excluded_from_pretraining_corpus():
+    assert not is_pretraining_source(SOURCE_DIR / "oasst1" / "english_dialogues.txt")
+    assert not is_pretraining_source(SOURCE_DIR / "dialogs" / "conversation_dump.txt")
+    assert is_pretraining_source(SOURCE_DIR / "gutenberg" / "pg11.txt")
