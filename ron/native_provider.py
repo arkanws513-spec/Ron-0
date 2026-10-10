@@ -30,6 +30,7 @@ class NativeCheckpointProvider:
         self.model.load_state_dict(payload.get("best_state_dict", payload["state_dict"]))
         self.model.eval()
         self.selected_step = int(payload.get("best_selected_step", payload.get("selected_step", 0)))
+        self.final_training_step = int(payload.get("selected_step", self.selected_step))
         self.inference_checkpoint = "best_validation" if use_best else "final_training_state"
         self.training_steps = int(payload.get("training_steps_this_run", 0))
         self.training_steps_total = int(payload.get("training_steps_total", self.selected_step))
@@ -79,7 +80,7 @@ class NativeCheckpointProvider:
                 "native_weights_loaded": True,
                 "selected_training_step": self.selected_step,
                 "inference_checkpoint": self.inference_checkpoint,
-                "final_training_step": int(payload.get("selected_step", self.selected_step)),
+                "final_training_step": self.final_training_step,
                 "training_steps_this_run": self.training_steps,
                 "training_steps_total": self.training_steps_total,
                 "optimizer_state_persisted": self.optimizer_state_persisted,
