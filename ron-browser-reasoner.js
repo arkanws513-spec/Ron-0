@@ -17,6 +17,7 @@ const patterns=[
 const parse=s=>{const original=clean(s),n=norm(original);
  let m=n.match(/^عاصمة\s+(.+?)\s+(?:هي|هو)\s+(.+)$/);if(m)return{subject:clean(m[2]),relation:"is",object:clean(m[1]),surface:"هي عاصمة",source:"local",confidence:.9,text:original,derived:false};
  m=n.match(/^(.+?)\s+(?:هي|هو)\s+عاصمة\s+(.+)$/);if(m)return{subject:clean(m[1]),relation:"is",object:clean(m[2]),surface:"هي عاصمة",source:"local",confidence:.9,text:original,derived:false};
+ m=n.match(/^(.+?)\s+ي(?:ا)?تي\s+(بعد|قبل)\s+(.+)$/);if(m)return{subject:clean(m[1]),relation:m[2]==="بعد"?"follows":"precedes",object:clean(m[3]),surface:m[2],source:"local",confidence:.85,text:original,derived:false};
  for(const [p,r] of patterns){m=n.match(p);if(m)return{subject:clean(m[1]),relation:r,object:clean(m[3]),surface:m[2],source:"local",confidence:.8,text:original,derived:false}}return null};
 const parseAll=items=>items.flatMap(x=>{const f=parse(x?.text||x);return f?[f]:[]});
 const key=f=>norm(f.subject)+"|"+f.relation+"|"+norm(f.object);
@@ -38,6 +39,7 @@ const relMap={"يسبب":"causes","تسبب":"causes","يدعم":"supports","ت�
 const question=q=>{
  const n=norm(q).replace(/[؟?]+$/,"").trim();let m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ايه|اي)\s+(?:عاصمة|عاصمه)\s+(.+)$/);
  if(m)return{type:"capital",relation:"is",object:clean(m[1])};
+ m=n.match(/^(?:ما الذي|من الذي)\s+ي(?:ا)?تي\s+(بعد|قبل)\s+(.+)$/);if(m)return{type:"relation-object",relation:m[1]==="بعد"?"follows":"precedes",object:clean(m[2]),word:m[1]};
  m=n.match(/^(?:ما هي|ما هو|ماهي|ماهو|ما الذي|ايه|اي)\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
  if(m)return{type:"relation",relation:relMap[m[2]],subject:clean(m[1]),object:clean(m[3]),word:m[2]};
  m=n.match(/^هل\s+(.+?)\s+(يسبب|تسبب|يدعم|تدعم|قبل|يسبق|بعد|يتبع|يحتاج|يحتاج الى|جزء من|ضمن)\s+(.+)$/);
@@ -48,6 +50,7 @@ const question=q=>{
 const answer=(q,rawFacts)=>{
  const facts=derive(rawFacts||[]),ask=question(q);
  if(ask.type==="capital"){const f=facts.find(x=>x.relation==="is"&&norm(x.object)===norm(ask.object));if(f)return{answer:f.subject+" هي عاصمة "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
+ if(ask.type==="relation-object"){const f=facts.find(x=>x.relation===ask.relation&&norm(x.object)===norm(ask.object));if(f)return{answer:f.subject+" يأتي "+ask.word+" "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
  if(ask.type==="relation"){const f=facts.find(x=>x.relation===ask.relation&&norm(x.subject)===norm(ask.subject)&&norm(x.object)===norm(ask.object));if(f)return{answer:f.subject+" "+ask.word+" "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
  if(ask.type==="yesno"){const f=facts.find(x=>x.relation===ask.relation&&norm(x.subject)===norm(ask.subject)&&norm(x.object)===norm(ask.object));if(f)return{answer:"نعم، لدي أساس محلي لهذا الاستنتاج.",confidence:f.confidence,source:f.source,trace:f}}
  if(ask.type==="why"){const f=facts.find(x=>x.relation==="causes"&&norm(x.object)===norm(ask.subject));if(f)return{answer:"لأن "+f.subject+" يسبب "+f.object+".",confidence:f.confidence,source:f.source,trace:f}}
