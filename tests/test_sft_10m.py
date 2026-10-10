@@ -10,7 +10,7 @@ def test_sft_masks_user_text_and_trains_only_ron_response_characters():
 
     user_end = example.index("\nRon:")
     assistant_start = user_end + 1
-    response_start = assistant_start + len("Ron:")
+    response_start = assistant_start + len("Ron: ")
     assert not mask[:response_start].any()
     assert mask[response_start:assistant_start + len("Ron: Check evidence before trusting a claim.")].all()
     assert unknown == 0
@@ -27,6 +27,18 @@ def test_sft_batch_uses_ignore_index_for_non_assistant_targets():
     assert y.shape == (2, 16)
     assert (y != -100).any()
 
+
+def test_sft_preserves_line_boundaries_and_masks_arabic_user_turns():
+    example = "المستخدم: احسب خمسة زائد ثلاثة\nرون: الناتج ثمانية."
+    vocab = {char: index for index, char in enumerate(sorted(set(example + "\n")))}
+    tokens, mask, unknown, total = encode_examples([example], vocab)
+    user_end = example.index("\nرون:")
+    assistant_start = user_end + 1
+    response_start = assistant_start + len("رون: ")
+    assert not mask[:response_start].any()
+    assert mask[response_start:assistant_start + len("رون: الناتج ثمانية.")].all()
+    assert unknown == 0
+    assert len(tokens) > len(example)
 
 def test_sft_split_is_reproducible_and_keeps_examples_disjoint():
     corpus = "\n\n".join(
