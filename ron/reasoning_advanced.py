@@ -55,13 +55,17 @@ class AdvancedReasoner:
     ) -> tuple[HypothesisScore, ...]:
         ev=list(evidence)
         results=[]
+        negation_prefixes = ("not ", "not:", "not-", "ليس ", "ليست ", "لا ", "لم ", "لن ")
         for hypothesis in hypotheses:
             h=hypothesis.strip()
-            positive=sum(e.strength for e in ev if h.lower() in e.statement.lower())
-            negative=sum(e.strength for e in ev if e.statement.lower().startswith("not ") and h.lower() in e.statement.lower())
+            matching = [e for e in ev if h.casefold() in e.statement.casefold()]
+            negative_evidence = [e for e in matching if e.statement.strip().casefold().startswith(negation_prefixes)]
+            positive_evidence = [e for e in matching if e not in negative_evidence]
+            positive=sum(e.strength for e in positive_evidence)
+            negative=sum(e.strength for e in negative_evidence)
             total=positive+negative
-            confidence=positive/total if total else 0.25
-            results.append(HypothesisScore(h,min(1.0,positive),min(1.0,negative),min(1.0,confidence),tuple(e.statement for e in ev if h.lower() in e.statement.lower())))
+            confidence=positive/total if total else 0.0
+            results.append(HypothesisScore(h,min(1.0,positive),min(1.0,negative),min(1.0,confidence),tuple(e.statement for e in matching)))
         return tuple(sorted(results,key=lambda x:(x.confidence,x.support),reverse=True))
 
     @staticmethod

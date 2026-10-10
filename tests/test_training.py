@@ -19,3 +19,18 @@ def test_checkpoint_roundtrip():
         restored = RonCausalLM(config)
         load_checkpoint(restored, path)
         assert all(left.equal(right) for left, right in zip(model.parameters(), restored.parameters()))
+
+
+def test_native_evaluation_is_deterministic_and_restores_training_mode():
+    import torch
+    from scripts.train_native import evaluate
+
+    config = RonModelConfig(vocab_size=16, hidden_size=16, num_layers=1, num_heads=4,
+                            max_sequence_length=96, dropout=0.4)
+    model = RonCausalLM(config)
+    model.train()
+    tokens = torch.arange(0, 512, dtype=torch.long) % config.vocab_size
+    first = evaluate(model, tokens, count=8)
+    second = evaluate(model, tokens, count=8)
+    assert first == second
+    assert model.training is True

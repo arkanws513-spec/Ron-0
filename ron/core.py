@@ -83,7 +83,16 @@ class RonCore:
         reasoning_summary=self.reasoning.summarize(reasoning_result)
         evidence=tuple(WeightedEvidence(self.reasoning.describe_fact(f), f.confidence, f.confidence, f.source) for f in reasoning_result.facts)
         causal_links=tuple(CausalLink(f.subject, f.object, f.confidence, (self.reasoning.describe_fact(f),)) for f in reasoning_result.facts if f.relation=="causes")
-        advanced_confidence=self.advanced_reasoning.combine_independent_confidences(e.support for e in evidence)
+        # Only combine evidence with distinct explicit sources. Treat inferred,
+        # unknown, and conversational sources conservatively to avoid false certainty.
+        sourced_support = {}
+        for item in evidence:
+            if item.source not in {"", "unknown", "user", "model"} and not item.source.startswith("rule:"):
+                sourced_support[item.source] = max(sourced_support.get(item.source, 0.0), item.strength)
+        advanced_confidence = (
+            self.advanced_reasoning.combine_independent_confidences(sourced_support.values())
+            if sourced_support else max((item.strength for item in evidence), default=0.0)
+        )
         if causal_links and topic:
             causal_notes=[]
             for link in causal_links:
@@ -95,7 +104,10 @@ class RonCore:
         reasoning_summary += f"\nتجميع ثقة الأدلة المستقلة: {advanced_confidence:.2f}"
         memory_text="\n".join(f"- {item.content}" for item in related)
         recent=self.conversation.short_history()[-self.max_context_messages:]
-        history_text="\n".join(f"{m.role}: {m.content}" for m in recent)
+        # The current user turn is supplied separately below; keep only prior turns here
+        # so providers can consume dialogue history without duplicating the current question.
+        history_messages = recent[:-1] if recent and recent[-1].role == "user" and recent[-1].content == text else recent
+        history_text="\n".join(f"{m.role}: {m.content}" for m in history_messages)
         system_context=(
             "أنت رون. استخدم الذاكرة وسياق المحادثة عند الحاجة، ولا تخترع معلومات غير موجودة.\n"
             "الذاكرة ذات الصلة:\n"+(memory_text if memory_text else "- لا توجد ذكريات مرتبطة.")+
@@ -104,7 +116,7 @@ class RonCore:
             "\nملاحظة: هذه خلاصة استدلال منظمة وليست سلسلة التفكير الداخلية."
         )
         request=ModelRequest(
-            messages=(Message(role="system",content=system_context),Message(role="user",content=text)),
+            messages=(Message(role="system",content=system_context), *history_messages, Message(role="user",content=text)),
             metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
         )
         try:

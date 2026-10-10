@@ -48,3 +48,22 @@ def test_core_exposes_explicit_learning_and_active_skills():
     response = core.respond("hello")
     assert response.metadata["active_skills"] == []
     assert len(core.self_improvement.experiences) == 1
+
+
+def test_core_passes_recent_dialogue_turns_to_the_provider():
+    class CapturingProvider:
+        def __init__(self):
+            self.last_request = None
+
+        def generate(self, request: ModelRequest) -> ModelResponse:
+            self.last_request = request
+            return ModelResponse(content="رد تجريبي", model="capture", metadata={})
+
+    provider = CapturingProvider()
+    core = RonCore(provider=provider)
+    core.respond("سؤال أول")
+    core.respond("متابعة")
+    assert provider.last_request is not None
+    assert any(m.role == "user" and m.content == "سؤال أول" for m in provider.last_request.messages)
+    assert any(m.role == "assistant" and m.content == "رد تجريبي" for m in provider.last_request.messages)
+    assert provider.last_request.messages[-1].content == "متابعة"

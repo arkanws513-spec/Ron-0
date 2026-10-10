@@ -32,10 +32,11 @@ class TransformerBlock(nn.Module):
         self.attention = CausalSelfAttention(config)
         self.norm2 = nn.LayerNorm(config.hidden_size)
         self.mlp = nn.Sequential(nn.Linear(config.hidden_size, ff), nn.GELU(), nn.Linear(ff, config.hidden_size))
+        self.residual_dropout = nn.Dropout(config.dropout)
 
     def forward(self, x: Tensor) -> Tensor:
-        x = x + self.attention(self.norm1(x))
-        return x + self.mlp(self.norm2(x))
+        x = x + self.residual_dropout(self.attention(self.norm1(x)))
+        return x + self.residual_dropout(self.mlp(self.norm2(x)))
 
 @dataclass(frozen=True)
 class ModelOutput:
@@ -48,6 +49,7 @@ class RonCausalLM(nn.Module):
         self.config = config
         self.token_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
         self.position_embedding = nn.Embedding(config.max_sequence_length, config.hidden_size)
+        self.embedding_dropout = nn.Dropout(config.dropout)
         self.blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.num_layers)])
         self.norm = nn.LayerNorm(config.hidden_size)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -60,7 +62,7 @@ class RonCausalLM(nn.Module):
         if seq < 1 or seq > self.config.max_sequence_length:
             raise ValueError("sequence length is outside model limits")
         positions = torch.arange(seq, device=input_ids.device)
-        x = self.token_embedding(input_ids) + self.position_embedding(positions)[None, :, :]
+        x = self.embedding_dropout(self.token_embedding(input_ids) + self.position_embedding(positions)[None, :, :])
         for block in self.blocks:
             x = block(x)
         logits = self.lm_head(self.norm(x))

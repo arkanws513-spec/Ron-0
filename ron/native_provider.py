@@ -24,13 +24,41 @@ class NativeCheckpointProvider:
         self.vocab: dict[str, int] = payload["vocab"]
         self.id_to_char = {int(index): char for char, index in self.vocab.items()}
         self.model = RonCausalLM(self.config)
-        self.model.load_state_dict(payload["state_dict"])
+        # Use the best held-out-validation snapshot for inference when available;
+        # keep state_dict as the final state for the next training continuation.
+        use_best = "best_state_dict" in payload
+        self.model.load_state_dict(payload.get("best_state_dict", payload["state_dict"]))
         self.model.eval()
-        self.selected_step = int(payload.get("selected_step", 0))
+        self.selected_step = int(payload.get("best_selected_step", payload.get("selected_step", 0)))
+        self.final_training_step = int(payload.get("selected_step", self.selected_step))
+        self.inference_checkpoint = "best_validation" if use_best else "final_training_state"
         self.training_steps = int(payload.get("training_steps_this_run", 0))
         self.training_steps_total = int(payload.get("training_steps_total", self.selected_step))
         self.optimizer_state_persisted = "optimizer_state_dict" in payload
         self.checkpoint_source = str(payload.get("checkpoint_source", "unknown"))
+
+    def _build_dialogue_prompt(self, request: ModelRequest, user_text: str) -> str:
+        dialogue = []
+        for message in request.messages:
+            if message.role not in {"user", "assistant"} or not message.content.strip():
+                continue
+            label = "المستخدم" if message.role == "user" else "رون"
+            dialogue.append(f"{label}: {message.content.strip()}")
+        latest_line = next((line for line in reversed(dialogue) if line.startswith("المستخدم: ")),
+                           f"المستخدم: {user_text}")
+        suffix = "\nرون:"
+        budget = max(0, self.config.max_sequence_length - len(latest_line) - len(suffix))
+        prior_lines = []
+        for line in reversed(dialogue):
+            if line == latest_line or budget <= 1:
+                continue
+            if len(line) + 1 <= budget:
+                prior_lines.insert(0, line)
+                budget -= len(line) + 1
+        prompt = "\n".join(prior_lines + [latest_line]) + suffix
+        if len(prompt) > self.config.max_sequence_length:
+            prompt = latest_line[-(self.config.max_sequence_length - len(suffix)):] + suffix
+        return prompt
 
     @torch.inference_mode()
     def generate(self, request: ModelRequest) -> ModelResponse:
@@ -45,8 +73,7 @@ class NativeCheckpointProvider:
                 metadata={"runtime": "ron-0", "provider": "native-checkpoint"},
             )
 
-        # The native model was trained from scratch on Ron's Arabic dialogue corpus.
-        prompt = f"المستخدم: {user_text}\nرون:"
+        prompt = self._build_dialogue_prompt(request, user_text)
         unknown = self.vocab.get(" ", 0)
         ids = [self.vocab.get(char, unknown) for char in prompt]
         ids = ids[-self.config.max_sequence_length:]
@@ -74,6 +101,8 @@ class NativeCheckpointProvider:
                 "provider": "native-checkpoint",
                 "native_weights_loaded": True,
                 "selected_training_step": self.selected_step,
+                "inference_checkpoint": self.inference_checkpoint,
+                "final_training_step": self.final_training_step,
                 "training_steps_this_run": self.training_steps,
                 "training_steps_total": self.training_steps_total,
                 "optimizer_state_persisted": self.optimizer_state_persisted,
