@@ -58,3 +58,10 @@ Or send one prompt:
     python scripts/chat_scalable_ron.py --prompt "Explain how a neural network learns."
 
 This loads only Ron's checkpoint and its tokenizer; Qwen is not needed for inference. An untrained or tiny pilot checkpoint may produce weak or repetitive answers. That is expected and must not be described as production-grade intelligence.
+
+
+Estimate the new architecture independently from the legacy character model:
+
+    python scripts/estimate_model_scale.py --architecture scalable --vocab-size 16000 --hidden-size 256 --layers 4 --heads 4 --kv-heads 2 --sequence-length 512
+
+The memory result is a planning estimate, not a guarantee that a given machine can train that configuration. Training peak memory also depends on activations, optimizer implementation, precision, sequence length, and runtime buffers.
