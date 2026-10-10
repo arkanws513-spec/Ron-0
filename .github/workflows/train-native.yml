@@ -35,7 +35,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "torch>=2.6" pytest
       - name: Run native-model tests
-        run: python -m pytest tests/test_model.py tests/test_distillation.py tests/test_training.py tests/test_core.py
+        run: python -m pytest tests/test_model.py tests/test_distillation.py tests/test_training.py tests/test_core.py tests/test_surprise_eval.py
       - name: Train Ron-0 native baseline
         run: python -m scripts.train_native
       - name: Place trained weights inside Ron-0 core
@@ -43,6 +43,8 @@ jobs:
           mkdir -p ron/checkpoints
           cp artifacts/native-baseline/ron_native_baseline.pt ron/checkpoints/ron_native_baseline.pt
           cp artifacts/native-baseline/metrics.json ron/checkpoints/metrics.json
+      - name: Run blind surprise evaluation outside training data
+        run: python -m scripts.surprise_eval --output artifacts/native-baseline/surprise-eval.json
       - name: Commit trained weights and metrics to Ron-0
         run: |
           git config user.name "github-actions[bot]"
@@ -52,7 +54,7 @@ jobs:
             git commit -m "Add trained Ron-0 native checkpoint"
             git push
           fi
-      - name: Archive training run
+      - name: Archive training run and surprise evaluation
         uses: actions/upload-artifact@v6
         with:
           name: ron0-native-baseline
