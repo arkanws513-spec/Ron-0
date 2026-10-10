@@ -11,6 +11,9 @@ on:
       - 'scripts/train_sft_10m.py'
       - 'training/arabic_sft_seed.txt'
       - 'tests/test_sft_10m.py'
+      - 'scripts/evaluate_native_checkpoint.py'
+      - 'scripts/promote_native_checkpoint.py'
+      - 'training/eval_cases.json'
       - '.github/workflows/train-ron-10m.yml'
       - 'ron/model.py'
       - 'ron/model_config.py'
@@ -75,17 +78,46 @@ jobs:
           RON_SFT_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
           RON_SFT_SEQUENCE_LENGTH: "256"
         run: python scripts/train_sft_10m.py
+      - name: Blind conversational evaluation
+        id: conversation_eval
+        continue-on-error: true
+        run: >-
+          python scripts/evaluate_native_checkpoint.py
+          --checkpoint artifacts/native-10m/ron_native_10m_sft.pt
+          --cases training/eval_cases.json
+          --report artifacts/native-10m/conversational_eval.json
+          --min-pass-rate 0.70
+      - name: Promote only after all quality gates pass
+        id: promote_checkpoint
+        if: steps.conversation_eval.outcome == 'success'
+        continue-on-error: true
+        run: >-
+          python scripts/promote_native_checkpoint.py
+          --candidate artifacts/native-10m/ron_native_10m_sft.pt
+          --report artifacts/native-10m/conversational_eval.json
+          --metrics artifacts/native-10m/sft_metrics.json
       - name: Archive model, metrics, and dataset manifests
+        if: always()
         uses: actions/upload-artifact@v6
-        with:
+        with
           name: ron-10m-training-${{ github.run_id }}
           path: |
             artifacts/native-10m/ron_native_10m.pt
             artifacts/native-10m/metrics.json
             artifacts/native-10m/ron_native_10m_sft.pt
             artifacts/native-10m/sft_metrics.json
+            artifacts/native-10m/conversational_eval.json
+            ron/checkpoints/ron_native_10m.pt
             training/corpus_manifest.json
             training/gutenberg_sources.json
             training/oasst1_manifest.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
+      - name: Fail run if conversational quality gate did not pass
+        if: always()
+        env:
+          EVAL_OUTCOME: ${{ steps.conversation_eval.outcome }}
+          PROMOTE_OUTCOME: ${{ steps.promote_checkpoint.outcome }}
+        run: |
+          test "$EVAL_OUTCOME" = "success" || { echo "Blind conversational evaluation failed; checkpoint was not promoted."; exit 1; }
+          test "$PROMOTE_OUTCOME" = "success" || { echo "Checkpoint promotion gate failed; live checkpoint was preserved."; exit 1; }
