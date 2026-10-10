@@ -192,7 +192,24 @@ class RonCore{
   if(opts.seed!==false)for(const x of SEED)this.store.set(key(x[0]),key(x[1]),key(x[2]),{source:'seed',confidence:.9,sd:x[0],pd:x[1],od:x[2],persist:false});
   this.store.save();
  }
- async handle(text){const input=clean(text);if(!input)return{reply:'اكتب رسالة أولًا.',frames:[]};this.ctx.history.push({role:'user',text:input,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();const calc=arithmetic(input);if(calc!==null){const reply='النتيجة: '+calc;this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();globalThis.RonLearning?.addExperience?.(input,reply,'conversation',.65);return{reply,frames:[{type:'calculation',text:input,result:calc}]};}const frames=this.nlu.parse(input),out=[];for(const f of frames)out.push(await this.exec(f));const reply=out.filter(Boolean).join('\n');this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});
+ async handle(text){const input=clean(text);if(!input)return{reply:'اكتب رسالة أولًا.',frames:[]};this.ctx.history.push({role:'user',text:input,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();const calc=arithmetic(input);if(calc!==null){const reply='النتيجة: '+calc;this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});if(this.ctx.history.length>30)this.ctx.history.shift();globalThis.RonLearning?.addExperience?.(input,reply,'conversation',.65);return{reply,frames:[{type:'calculation',text:input,result:calc}]};}
+  // RonCore is the sole orchestrator. Language understanding, retrieval and inference
+  // are invoked as internal capabilities; they do not create a second agent or bypass this core.
+  const cognition=globalThis.RonAgent;
+  if(cognition&&typeof cognition.think==='function'){
+   try{
+    const thought=await cognition.think(input);
+    if(thought&&typeof thought.answer==='string'&&thought.answer.trim()&&thought.stage!=='needs-web-or-model'){
+     const reply=clean(thought.answer).slice(0,this.cfg.maxAnswerChars);
+     this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});
+     if(this.ctx.history.length>30)this.ctx.history.shift();
+     this.store.event('integrated-cognition',{stage:thought.stage||'local',confidence:thought.confidence??null});
+     globalThis.RonLearning?.addExperience?.(input,reply,'integrated-cognition',thought.confidence??.5);
+     return{reply,frames:[{type:'integrated-cognition',stage:thought.stage||'local',confidence:thought.confidence??null}]};
+    }
+   }catch(err){this.store.event('cognition_error',{message:String(err?.message||err)});}
+  }
+  const frames=this.nlu.parse(input),out=[];for(const f of frames)out.push(await this.exec(f));const reply=out.filter(Boolean).join('\n');this.ctx.history.push({role:'assistant',text:reply,ts:Date.now()});
   globalThis.RonLearning?.addExperience?.(input,reply,'conversation',.65);
   return{reply,frames};}
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
