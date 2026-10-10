@@ -325,6 +325,16 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||!!capitalQuestionPlace(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim()){
+  const inferenceEndpoint=String(globalThis.RON_INFERENCE_ENDPOINT||localStorage.getItem("ron-inference-endpoint")||"").trim();
+  if(inferenceEndpoint&&!deterministicInput&&extractFacts(t).length===0&&extractRonFacts(t).length===0&&globalThis.RonInferenceClient?.chat){
+   try{
+    const history=messages.slice(-12).map(m=>({role:m.role==="ron"?"assistant":m.role,content:m.text}));
+    const nativeResponse=await globalThis.RonInferenceClient.chat(inferenceEndpoint,history);
+    if(nativeResponse?.content)r=nativeResponse.content;
+   }catch(error){console.warn("Ron native inference unavailable",error);}
+  }
+ }
+ if(!String(r||"").trim()){
   const core=globalThis.ronCore;
   if(core){
    try{
