@@ -24,6 +24,31 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
+MIN_EVAL_CASES = 20
+MIN_CRITICAL_CASES = 8
+
+
+def validate_cases(cases: Any) -> list[dict[str, Any]]:
+    if not isinstance(cases, list) or len(cases) < MIN_EVAL_CASES:
+        raise ValueError(f"evaluation requires at least {MIN_EVAL_CASES} cases")
+    if any(not isinstance(case, dict) for case in cases):
+        raise ValueError("every evaluation case must be an object")
+    ids = [str(case.get("id", case.get("prompt", ""))).strip() for case in cases]
+    if any(not case_id for case_id in ids):
+        raise ValueError("every evaluation case needs a non-empty id or prompt")
+    if len(ids) != len(set(ids)):
+        raise ValueError("evaluation case IDs must be unique")
+    critical_count = sum(bool(case.get("critical", False)) for case in cases)
+    if critical_count < MIN_CRITICAL_CASES:
+        raise ValueError(f"evaluation requires at least {MIN_CRITICAL_CASES} critical cases")
+    for case in cases:
+        if not case.get("messages") and not str(case.get("prompt", "")).strip():
+            raise ValueError(f"evaluation case {case.get('id', '<unknown>')} needs a prompt or messages")
+        if not case.get("contains"):
+            raise ValueError(f"evaluation case {case.get('id', '<unknown>')} needs expected answer fragments")
+    return cases
+
+
 def assess_case(answer: str, case: dict[str, Any]) -> dict[str, Any]:
     actual = normalize(answer)
     required = [str(item) for item in case.get("contains", [])]
@@ -48,9 +73,7 @@ def assess_case(answer: str, case: dict[str, Any]) -> dict[str, Any]:
 
 
 def evaluate_checkpoint(checkpoint_path: Path, cases_path: Path, report_path: Path, min_pass_rate: float) -> dict[str, Any]:
-    cases = json.loads(cases_path.read_text(encoding="utf-8"))
-    if not isinstance(cases, list) or not cases:
-        raise ValueError("evaluation cases must be a non-empty JSON array")
+    cases = validate_cases(json.loads(cases_path.read_text(encoding="utf-8")))
     provider = NativeCheckpointProvider(checkpoint_path)
     parameter_count = sum(parameter.numel() for parameter in provider.model.parameters())
     results = []
