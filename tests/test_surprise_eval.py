@@ -16,7 +16,7 @@ def test_surprise_evaluation_loads_native_checkpoint_and_reports_limits():
     assert report["external_model_used"] is False
     assert len(report["cases"]) == len(BLIND_PROMPTS)
     assert all(isinstance(case["answer"], str) for case in report["cases"])
-    assert "not evidence of correctness" in report["interpretation"]
+    assert "not evidence of factual correctness" in report["interpretation"]
 
 def test_anti_degeneration_check_catches_repetitive_output_without_claiming_correctness():
     assert is_degenerate_answer("أحدد المعلومات المعلومات المعلومات المعلومات المعلومات المعلومات")
