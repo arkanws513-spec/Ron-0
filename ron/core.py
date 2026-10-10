@@ -34,7 +34,12 @@ class RonCore:
     def __post_init__(self)->None:
         if self.provider is not None:
             return
-        backend = os.getenv("RON_MODEL_BACKEND", "native").strip().lower()\n        if backend in {"hf", "huggingface", "qwen"}:\n            from .hf_provider import HuggingFaceLocalProvider\n            self.provider = HuggingFaceLocalProvider.from_environment()\n            return\n        checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
+        backend = os.getenv("RON_MODEL_BACKEND", "native").strip().lower()
+        if backend in {"hf", "huggingface", "qwen"}:
+            from .hf_provider import HuggingFaceLocalProvider
+            self.provider = HuggingFaceLocalProvider.from_environment()
+            return
+        checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
         # Prefer Ron-10M, then try the baseline. A damaged/incompatible checkpoint
         # must not prevent the offline teaching fallback from starting.
         candidates = (
