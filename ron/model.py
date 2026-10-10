@@ -1,4 +1,4 @@
-""""Ron-native decoder-only Transformer model."""
+"""Ron-native decoder-only Transformer model."""
 from __future__ import annotations
 from dataclasses import dataclass
 import torch
@@ -116,8 +116,9 @@ class RonCausalLM(nn.Module):
                     logits = logits.masked_fill(logits < threshold, float("-inf"))
                 if top_p < 1:
                     sorted_logits, sorted_indices = torch.sort(logits, descending=True, dim=-1)
-                    cumulative_probs = torch.softmax(sorted_logits, dim=-1).cumsum(dim=-1)
-                    remove = cumulative_probs - torch.softmax(sorted_logits, dim=-1) >= top_p
+                    sorted_probabilities = torch.softmax(sorted_logits, dim=-1)
+                    cumulative_probs = sorted_probabilities.cumsum(dim=-1)
+                    remove = cumulative_probs - sorted_probabilities >= top_p
                     sorted_logits = sorted_logits.masked_fill(remove, float("-inf"))
                     filtered = torch.full_like(logits, float("-inf"))
                     filtered.scatter_(1, sorted_indices, sorted_logits)
@@ -132,4 +133,3 @@ class RonCausalLM(nn.Module):
             if eos_token_id is not None and bool(finished.all()):
                 break
         return result
-"
