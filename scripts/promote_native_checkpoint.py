@@ -24,6 +24,8 @@ def validate_promotion(candidate: Path, report_path: Path, metrics_path: Path) -
         return False, "blind_conversational_gate_failed"
     if metrics.get("validation_loss_improved") is not True:
         return False, "validation_loss_gate_failed"
+    if int(report.get("case_count", 0)) < 20 or int(report.get("critical_case_count", 0)) < 8:
+        return False, "blind_evaluation_coverage_insufficient"
     with candidate.open("rb") as candidate_file:
         digest = hashlib.file_digest(candidate_file, "sha256").hexdigest()
     if digest != report.get("checkpoint_sha256"):
