@@ -20,7 +20,9 @@ def test_saved_native_checkpoint_is_used_by_default_core():
     )
     assert response.metadata["native_weights_loaded"] is True
     assert response.metadata["external_model_used"] is False
-    assert response.metadata["selected_training_step"] >= 1800
+    assert 0 < response.metadata["selected_training_step"] <= response.metadata["training_steps_total"]
+    assert response.metadata["inference_checkpoint"] == "best_validation"
+    assert response.metadata["final_training_step"] >= response.metadata["selected_training_step"]
     assert response.metadata["training_steps_this_run"] >= 1800
     assert response.metadata["training_steps_total"] >= 2400
     assert response.metadata["optimizer_state_persisted"] is True
