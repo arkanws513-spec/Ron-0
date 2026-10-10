@@ -126,12 +126,12 @@ def answer_linear_equation(text: str) -> str | None:
     if not raw or len(raw) > _MAX_INPUT_LENGTH or raw.count("=") != 1:
         return None
     value = raw.translate(_DIGITS).replace("×", "*").replace("÷", "/").replace("−", "-")
-    value = re.sub(r"^(?:حل\\s+(?:المعادلة|معادله)|solve)\\s*", "", value, flags=re.IGNORECASE)
-    value = re.sub(r"(?<=\\d)\\s*([xس])\\b", r"*\\1", value)
+    value = re.sub(r"^(?:حل\s+(?:المعادلة|معادله)|solve)\s*", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"(?<=\d)\s*([xس])\b", r"*\1", value)
     left, right = (part.strip() for part in value.split("=", 1))
     if not left or not right or not re.search(r"[xس]", value):
         return None
-    if not re.fullmatch(r"[\\dxس\\s().+*/-]+", left) or not re.fullmatch(r"[\\dxس\\s().+*/-]+", right):
+    if not re.fullmatch(r"[\dxس\s().+*/-]+", left) or not re.fullmatch(r"[\\dxس\\s().+*/-]+", right):
         return None
     try:
         left_a, left_b = _linear_form(ast.parse(left, mode="eval"))
