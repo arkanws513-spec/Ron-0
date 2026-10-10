@@ -26,6 +26,11 @@ BLIND_PROMPTS = (
     "اكتب ردًا قصيرًا يشرح معنى التعاون لطالب جديد.",
     "ما الفرق بين ملاحظة حدث واستنتاج سببه؟",
     "أعد صياغة السؤال التالي دون تغيير معناه: كيف تتكوّن السحب؟",
+    "Describe how to verify a conclusion from evidence.",
+    "What should Ron do if a request is ambiguous?",
+    "Explain why a model can overfit its training examples.",
+    "Rewrite this statement as a question: water freezes at zero degrees Celsius.",
+    "Give a short example of a cause and its effect.",
 )
 
 
