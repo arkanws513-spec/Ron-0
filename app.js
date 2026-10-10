@@ -246,7 +246,7 @@ const explainPreviousReply=()=>{
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
  // Answer stable, high-confidence facts before memory/retrieval can hijack the question.
- if(/^(?:هل\\s+)?(?:اسمك\\s+رون|اسمك\\s+هو\\s+رون|انت\\s+اسمك\\s+رون)[؟?!.]*$/.test(n))return "نعم، اسمي رون.";
+ if(/^(?:هل\s+)?(?:اسمك\s+رون|اسمك\s+هو\s+رون|انت\s+اسمك\s+رون)[؟?!.]*$/.test(n))return "نعم، اسمي رون.";
  if(/^(?:ماذا فهمت|ما فهمت|فهمت ايه|ماذا استنتجت)[؟?!.]*$/.test(n)){
   const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim());
   if(!previous)return "لم تذكر لي فكرة سابقة واضحة لألخّصها.";
