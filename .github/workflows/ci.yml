@@ -40,7 +40,7 @@ jobs:
         if: matrix.python-version == '3.11'
         run: |
           python -m scripts.eval_conversation --benchmark training/conversation_benchmark.json --output artifacts/conversation-eval-report.json --strict --min-score 0.8 --min-critical-score 0.9
-          python -m scripts.eval_conversation --benchmark training/generalization_benchmark.json --output artifacts/generalization-eval-report.json
+          python -m scripts.eval_conversation --benchmark training/generalization_benchmark.json --output artifacts/generalization-eval-report.json --strict --min-score 0.25 --min-critical-score 0.2
       - name: Upload native dialogue benchmark reports
         if: always() && matrix.python-version == '3.11'
         uses: actions/upload-artifact@v4
