@@ -96,7 +96,10 @@ def test_why_followup_reuses_previous_topic_and_dialogue():
     assert request.metadata["intent"] == "follow_up"
     assert request.metadata["topic"] == "ما عاصمة مصر؟"
     assert any(message.content == "ما عاصمة مصر؟" for message in request.messages)
-    assert any(message.content == "رد تجريبي" for message in request.messages)
+    assert any(
+        message.role == "assistant" and message.content == "عاصمة مصر هي القاهرة."
+        for message in request.messages
+    )
 
 
 
