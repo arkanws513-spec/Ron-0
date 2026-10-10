@@ -50,3 +50,7 @@ Outputs go to artifacts/native-10m/; the resumable checkpoint is ron/checkpoints
 ## Automated experiment
 
 The `Train Ron-10M` GitHub Actions workflow runs on reviewed changes to the training recipe and can also be started manually from the Actions tab. It stores the candidate checkpoint and metrics as an Actions artifact rather than committing multi-megabyte weights or downloaded books to Git. The live Ron-10M checkpoint is promoted only if held-out validation loss improves; otherwise the previous live checkpoint is preserved. Review the artifact's metrics and generation behavior before deploying a candidate.
+
+## Dialogue fine-tuning stage
+
+After a Ron-10M pretraining candidate has been created, run `python scripts/download_oasst1_english.py` to prepare reviewed English conversation prefixes, then run `python scripts/train_sft_10m.py`. The SFT script applies loss only to Ron's response characters (user prompt characters are masked), uses a separate validation split, and promotes the candidate only if held-out assistant-response loss improves. A lower loss is a training signal, not proof of factual reliability. The current automatic training workflow is being extended to include this second stage; until then, run it after the pretraining step in the same workspace.
