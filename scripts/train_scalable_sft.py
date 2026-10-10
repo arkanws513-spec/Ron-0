@@ -34,7 +34,7 @@ class PromptResponseDataset(Dataset):
                     raise ValueError(f"invalid JSON on line {line_no}") from exc
                 if not isinstance(row, dict) or not isinstance(row.get("prompt"), str) or not isinstance(row.get("response"), str):
                     raise ValueError(f"line {line_no} must contain string prompt and response fields")
-                if row.get("review_status") not in (None, "approved"):
+                if row.get("review_status") != "approved":
                     continue
                 if row["prompt"].strip() and row["response"].strip():
                     self.rows.append(row)
