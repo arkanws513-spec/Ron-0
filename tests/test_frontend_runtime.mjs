@@ -237,7 +237,7 @@ input.value = "مصر عاصمتها القاهرة، ويجب أن تجيب ب�
 submit({preventDefault(){}});
 input.value = "ماذا فهمت؟";
 submit({preventDefault(){}});
-assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /(?:عاصمة مصر هي القاهرة|^القاهرة$)/);
+assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /عاصمة مصر هي القاهرة/);
 assert.match(nodes.get("chat").children.at(-1).children.at(-1).textContent, /بشكل متسق/);
 
 // Regression: when a user asks "what is this?" after an irrelevant long reply,
