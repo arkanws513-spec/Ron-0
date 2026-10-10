@@ -12,7 +12,7 @@ Ron-0 is an independent assistant project built around Ron's own local code, rea
 
 ## Core architecture
 
-`Browser UI → Ron Core → local memory / rules / tools → Ron native model → quality checks → response`
+`Browser UI → RonCore (single orchestrator) → integrated cognition/reasoning + local memory/knowledge/tools → answer and quality checks`\n\nThe browser-side `RonAgent` and `RonReasoner` are capabilities called by `RonCore`; they are not separate agents and the UI routes each message through `RonCore` first. The native Python Transformer remains a separate runtime implementation today; this change unifies the browser-side JavaScript cognition path only and does not claim that Python checkpoint inference is now running in the browser.
 
 Clear deterministic tasks such as arithmetic should be handled by Ron's local code before general language generation. Memory stores facts; training updates model weights. They are not the same process.
 
