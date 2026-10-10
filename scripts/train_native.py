@@ -45,6 +45,24 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
     )
 
 
+def choose_best_checkpoint(
+    current_state: dict,
+    current_validation_loss: float,
+    current_selected_step: int,
+    prior_best_state: dict | None,
+    prior_best_validation_loss: float | None,
+    prior_best_step: int,
+):
+    """Keep the lower-loss inference snapshot while training may resume from final weights."""
+    if (
+        prior_best_state is not None
+        and prior_best_validation_loss is not None
+        and prior_best_validation_loss < current_validation_loss
+    ):
+        return dict(prior_best_state), prior_best_validation_loss, prior_best_step, "prior_best"
+    return dict(current_state), current_validation_loss, current_selected_step, "current_final"
+
+
 def batch(tokens: torch.Tensor, size: int, length: int):
     top = len(tokens) - length - 1
     if top < 1:
@@ -140,24 +158,22 @@ def main():
 
     initial_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     start_train, start_val = evaluate(model, train), evaluate(model, val)
-    best_val, best_step = start_val, 0
-    best_source = "current_final"
-    best_selected_step_total = prior_step
-    best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
-
-    # Training resumes from final weights, but inference promotion compares the previous
-    # best-validation snapshot on this run's exact validation pairs before considering new steps.
+    best_step = 0
+    current_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
+    prior_best_validation = None
     if prior_best_state_dict is not None:
-        current_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
         model.load_state_dict(prior_best_state_dict)
         prior_best_validation = evaluate(model, val, count=16)
-        if prior_best_validation < best_val:
-            best_val = prior_best_validation
-            best_state_dict = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
-            best_selected_step_total = prior_best_step
-            best_source = "prior_best"
         model.load_state_dict(current_state)
 
+    best_state_dict, best_val, best_selected_step_total, best_source = choose_best_checkpoint(
+        current_state,
+        start_val,
+        prior_step,
+        prior_best_state_dict,
+        prior_best_validation,
+        prior_best_step,
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
     if prior_optimizer_state and not vocab_expanded:
         try:
