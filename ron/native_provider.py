@@ -21,9 +21,25 @@ class NativeCheckpointProvider:
             raise FileNotFoundError(f"Ron native checkpoint not found: {self.checkpoint_path}")
 
         payload = torch.load(self.checkpoint_path, map_location="cpu", weights_only=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("config"), dict):
+            raise ValueError("checkpoint must contain a model config")
         self.config = RonModelConfig(**payload["config"])
-        self.vocab: dict[str, int] = payload["vocab"]
-        self.id_to_char = {int(index): char for char, index in self.vocab.items()}
+        vocab = payload.get("vocab")
+        if not isinstance(vocab, dict) or not vocab:
+            raise ValueError("checkpoint vocabulary must be a non-empty character-to-id mapping")
+        if any(not isinstance(char, str) or len(char) != 1 for char in vocab):
+            raise ValueError("native character vocabulary contains a non-character token")
+        if any(not isinstance(index, int) or isinstance(index, bool) for index in vocab.values()):
+            raise ValueError("native character vocabulary ids must be integers")
+        ids = list(vocab.values())
+        if len(set(ids)) != len(ids) or set(ids) != set(range(len(vocab))):
+            raise ValueError("native character vocabulary ids must be unique and contiguous from zero")
+        if self.config.vocab_size != len(vocab):
+            raise ValueError(f"checkpoint config vocab_size={self.config.vocab_size} does not match vocabulary size={len(vocab)}")
+        if self.config.max_sequence_length < 8:
+            raise ValueError("native checkpoint sequence length must be at least 8")
+        self.vocab: dict[str, int] = vocab
+        self.id_to_char = {index: char for char, index in self.vocab.items()}
         self.model = RonCausalLM(self.config)
         # Use the best held-out-validation snapshot for inference when available;
         # keep state_dict as the final state for the next training continuation.
