@@ -1,7 +1,6 @@
 """Train Ron-10M, a larger native character-level Transformer on a prepared corpus."""
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import os
@@ -278,7 +277,11 @@ def main():
         "prior_selected_step": prior_step,
         "optimizer_state_dict": optimizer.state_dict(),
     }
-    torch.save(checkpoint, OUT / "ron_native_baseline.pt")
+    # Keep a run artifact and a dedicated resumable checkpoint for Ron-10M.
+    OUT.mkdir(parents=True, exist_ok=True)
+    torch.save(checkpoint, OUT / "ron_native_10m.pt")
+    LIVE_CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(checkpoint, LIVE_CHECKPOINT)
     parameters = sum(parameter.numel() for parameter in model.parameters())
     metrics = {
         "experiment": "ron0-native-10m-character-lm",
@@ -309,7 +312,7 @@ def main():
         "corpus_characters": len(corpus),
         "training_pairs": train_pairs,
         "validation_pairs": validation_pairs,
-        "split_strategy": "deterministic_conversation_pair_holdout",
+        "split_strategy": "deterministic_document_paragraph_holdout",
         "train_characters": len(train),
         "validation_characters": len(val),
         "initial_train_loss": start_train,
