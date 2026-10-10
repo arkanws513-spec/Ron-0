@@ -51,7 +51,7 @@ class PromptResponseDataset(Dataset):
         prompt = self.tokenizer.encode(row["prompt"]).ids
         answer = self.tokenizer.encode(row["response"]).ids
         # Preserve some prompt and prioritize the answer; the assistant prefix is a dedicated token.
-        room = self.max_length - 3
+        room = self.max_length - 4
         if len(answer) > room - 1:
             answer = answer[:room - 1]
         prompt = prompt[:max(0, room - len(answer))]
@@ -70,7 +70,7 @@ def main() -> None:
     p.add_argument("--data", type=Path, required=True, help="Reviewed JSONL containing prompt/response and review_status=approved")
     p.add_argument("--tokenizer", type=Path, default=Path("artifacts/ron-tokenizer/tokenizer.json"))
     p.add_argument("--output", type=Path, default=Path("artifacts/ron-scalable"))
-    p.add_argument("--vocab-size", type=int, default=16000)
+    p.add_argument("--vocab-size", type=int, help="Expected tokenizer vocabulary size; defaults to the tokenizer file's actual size")
     p.add_argument("--hidden-size", type=int, default=256)
     p.add_argument("--layers", type=int, default=4)
     p.add_argument("--heads", type=int, default=4)
@@ -90,7 +90,8 @@ def main() -> None:
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ds = PromptResponseDataset(args.data, args.tokenizer, args.sequence_length, args.limit)
-    config = ScalableRonConfig(vocab_size=args.vocab_size, hidden_size=args.hidden_size,
+    config_vocab_size = args.vocab_size if args.vocab_size is not None else actual_vocab
+    config = ScalableRonConfig(vocab_size=config_vocab_size, hidden_size=args.hidden_size,
         num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads,
         max_sequence_length=args.sequence_length)
     # Validate tokenizer/model vocabulary agreement before allocating training batches.
