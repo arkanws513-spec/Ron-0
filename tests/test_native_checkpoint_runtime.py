@@ -60,3 +60,15 @@ def test_training_metrics_prove_weights_changed_and_vocab_matches_checkpoint():
     assert metrics["vocab_size"] == provider.config.vocab_size == len(provider.vocab)
     assert metrics["training_steps_total"] == provider.training_steps_total
     assert provider.inference_checkpoint == "best_validation"
+
+def test_native_generation_guard_rejects_obvious_token_loops():
+    from ron.generation_quality import guard_generated_text, is_degenerate_text
+
+    bad = "أحدد المعلومات المعلومات المعلومات المعلومات المعلومات المعلومات"
+    safe = "أراجع المعطيات ثم أشرح النتيجة باختصار واضح."
+    assert is_degenerate_text(bad)
+    assert not is_degenerate_text(safe)
+    fallback, rejected = guard_generated_text(bad, "تعذر توليد إجابة موثوقة.")
+    assert rejected is True
+    assert fallback == "تعذر توليد إجابة موثوقة."
+    assert guard_generated_text(safe, "fallback") == (safe, False)
