@@ -21,3 +21,7 @@ assert.match((await ron.handle("اسمي زيريوس")).reply,/زيريوس/);
 assert.match((await ron.handle("ما اسمي")).reply,/زيريوس/);
 assert.match((await ron.handle("ما عاصمة مصر")).reply,/القاهرة/);
 console.log("browser Ron Core runtime smoke test passed");
+
+assert.match((await ron.handle("وما اسمي")).reply,/زيريوس/);
+assert.match((await ron.handle("ما اسمي وما اسمك")).reply,/زيريوس.*رون/);
+assert.match((await ron.handle("وانت كم عمرك")).reply,/ليس لدي عمر بشري/);
