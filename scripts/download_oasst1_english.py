@@ -73,7 +73,11 @@ def iter_conversation_examples(tree: dict):
             if isinstance(child, dict):
                 yield from walk(child, current)
 
-    yield from walk(tree, [])
+    # OASST1 tree rows wrap the root prompt under a top-level "prompt" key.
+    # Walking the wrapper itself sees no role and silently yields zero examples.
+    root = tree.get("prompt", tree.get("tree", tree))
+    if isinstance(root, dict):
+        yield from walk(root, [])
 
 
 def main() -> None:
