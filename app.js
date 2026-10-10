@@ -135,7 +135,7 @@ const extractRonFacts=t=>{
 const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n)||/^انت\s+رون$/.test(n)||/^اسمك\s+انت\s+رون$/.test(n)||/^وانت\s+رون$/.test(n)||/^انت\s+اسمك\s+رون$/.test(n);
 const isNameQuestion=n=>n.includes("ما اسمي")||n.includes("ايه اسمي")||n.includes("اي اسمي")||n.includes("هل تتذكر اسمي");
 const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("اي اسمك")||n.includes("ما هو اسمك")||n.includes("اسمك اي")||n.includes("اسمك ايه")||n==="وانت"||n==="وانت؟";
-const isBothNamesQuestion=n=>n.includes("ما اسمي وما اسمك")||n.includes("اسمي واسمك")||n.includes("ما اسمي واسمك");
+const isBothNamesQuestion=n=>/^(?=.*(?:ما|ايه|اي)\s*اسمي)(?=.*(?:ما|ايه|اي)\s*اسمك).*$/.test(n)||n.includes("اسمي واسمك");
 const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");
 const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
 const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestion(n)&&isAgeQuestion(n));
@@ -212,7 +212,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  // Deterministic conversational/profile handlers must run before retrieval or model orchestration.
  // This prevents stale memory from inventing a user name or answering a compliment with unrelated text.
  const normalizedInput=norm(t);
- const deterministicInput=analyzeIntent(t)==="greeting"||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
+ const deterministicInput=analyzeIntent(t)==="greeting"||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput)r=answer(t);
  if(!String(r||"").trim())r=answer(t);
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
