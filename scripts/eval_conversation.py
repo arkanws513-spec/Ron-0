@@ -48,7 +48,12 @@ def run_benchmark(benchmark_path: Path) -> dict:
         all_expected = case.get("contains_all", [])
         any_ok = not any_expected or any(normalize_match(token) in normalized for token in any_expected)
         all_ok = all(normalize_match(token) in normalized for token in all_expected)
-        passed = bool(answer.strip()) and any_ok and all_ok
+        quality_guard_rejected = bool(
+            (response.metadata or {}).get("generation_quality_fallback")
+            or (response.metadata or {}).get("native_generated_answer_rejected")
+            or (response.metadata or {}).get("fallback")
+        )
+        passed = bool(answer.strip()) and not quality_guard_rejected and any_ok and all_ok
         results.append({
             "id": case["id"],
             "session": session,
@@ -57,6 +62,7 @@ def run_benchmark(benchmark_path: Path) -> dict:
             "model": response.model,
             "critical": bool(case.get("critical", False)),
             "passed": passed,
+            "quality_guard_rejected": quality_guard_rejected,
             "expected_any": any_expected,
             "expected_all": all_expected,
             "metadata": response.metadata,
