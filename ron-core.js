@@ -159,16 +159,16 @@ function arithmetic(text){
   .replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))
   .replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))
   .replace(/×/g,'*').replace(/÷/g,'/').replace(/[−–]/g,'-');
- s=s.replace(/^(?:(?:احسب(?:\\s+لي)?|كم\\s+(?:تساوي|يساوي)|ما\\s+الناتج(?:\\s+عن)?|ما\\s+ناتج)\\s*[:：؟?]?\\s*)/,'').trim();
- if(!s||!/[+\\-*/%]/.test(s)||!/[0-9]/.test(s)||/[^0-9+\\-*/().%\\s]/.test(s))return null;
- const compact=s.replace(/\\s+/g,'');
- const ts=s.match(/(?:\\d+(?:\\.\\d*)?|\\.\\d+|[()+\\-*/%])/g)||[];
+ s=s.replace(/^(?:(?:احسب(?:\s+لي)?|كم\s+(?:تساوي|يساوي)|ما\s+الناتج(?:\s+عن)?|ما\s+ناتج)\s*[:：؟?]?\s*)/,'').trim();
+ if(!s||!/[+\-*/%]/.test(s)||!/[0-9]/.test(s)||/[^0-9+\-*/().%\s]/.test(s))return null;
+ const compact=s.replace(/\s+/g,'');
+ const ts=s.match(/(?:\d+(?:\.\d*)?|\.\d+|[()+\-*/%])/g)||[];
  if(!ts.length||ts.length>160||ts.join('')!==compact)return null;
  let i=0;
  const primary=()=>{
   if(ts[i]==='('){i++;const v=expr();if(ts[i]!==')')throw 0;i++;return v;}
   if(ts[i]==='-'||ts[i]==='+'){const sign=ts[i++];const v=primary();return sign==='-'?-v:v;}
-  if(!/^(?:\\d+(?:\\.\\d*)?|\\.\\d+)$/.test(ts[i]||''))throw 0;
+  if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(ts[i]||''))throw 0;
   return Number(ts[i++]);
  };
  const term=()=>{let v=primary();while(['*','/','%'].includes(ts[i])){const op=ts[i++],b=primary();if((op==='/'||op==='%')&&b===0)throw 0;if(op==='*')v*=b;else if(op==='/')v/=b;else v%=b;if(!Number.isFinite(v))throw 0;}return v;};
