@@ -100,9 +100,8 @@ def main():
 
     start_train, start_val = evaluate(model, train), evaluate(model, val)
     best_val, best_step = start_val, 0
-    best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
     optimizer = torch.optim.AdamW(model.parameters(), lr=1.5e-3 if checkpoint_source.startswith("continued") else 3e-3)
-    if prior_optimizer_state:
+    if prior_optimizer_state and not vocab_expanded:
         try:
             optimizer.load_state_dict(prior_optimizer_state)
             print("restored_optimizer_state=true", flush=True)
@@ -127,7 +126,6 @@ def main():
             print(f"step={step} train_loss={train_loss:.4f} validation_loss={validation_loss:.4f}", flush=True)
             if validation_loss < best_val:
                 best_val, best_step = validation_loss, step
-                best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
     # Persist the final state after this run, not the starting/best snapshot.
     # This guarantees the next run continues from weights actually updated by this training pass.
@@ -171,16 +169,16 @@ def main():
         "initial_train_loss": start_train,
         "initial_validation_loss": start_val,
         "best_validation_loss": best_val,
-        "last_train_loss": history[-1]["train_loss"] if history else start_train,
-        "last_validation_loss": history[-1]["validation_loss"] if history else start_val,
-        "train_loss_reduction_percent": 100 * (start_train - (history[-1]["train_loss"] if history else start_train)) / max(start_train, 1e-9),
+        "last_train_loss": final_train,
+        "last_validation_loss": final_validation,
+        "train_loss_reduction_percent": 100 * (start_train - final_train) / max(start_train, 1e-9),
         "validation_loss_reduction_percent": 100 * (start_val - best_val) / max(start_val, 1e-9),
         "elapsed_seconds": round(time.time() - started, 2),
         "history": history,
         "limitations": [
             "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
             "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
-            "The selected checkpoint is the best validation checkpoint, including the starting weights, to avoid promoting a regression.",
+            "The persisted checkpoint is the final state after this training run so each run continues from newly updated weights; validation metrics are reported separately and may worsen.",
             "No external inference model or paid API is used.",
         ],
     }
