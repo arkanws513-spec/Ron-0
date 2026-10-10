@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 model = ["torch>=2.6"]
+huggingface = ["torch>=2.6", "transformers>=4.45", "safetensors>=0.4"]
 
 [tool.setuptools.packages.find]
 include = ["ron*"]

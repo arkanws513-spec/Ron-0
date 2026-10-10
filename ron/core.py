@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
+import os
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_facts
 from .intent import detect_intent
@@ -32,6 +33,11 @@ class RonCore:
 
     def __post_init__(self)->None:
         if self.provider is not None:
+            return
+        backend = os.getenv("RON_MODEL_BACKEND", "native").strip().lower()
+        if backend in {"hf", "huggingface", "qwen"}:
+            from .hf_provider import HuggingFaceLocalProvider
+            self.provider = HuggingFaceLocalProvider.from_environment()
             return
         checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
         # Prefer Ron-10M, then try the baseline. A damaged/incompatible checkpoint

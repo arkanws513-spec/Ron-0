@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlsplit
 
 from .core import RonCore
 from .native_provider import NativeCheckpointProvider
+from .hf_provider import HuggingFaceLocalProvider
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_BODY_BYTES = 32 * 1024
@@ -35,7 +36,9 @@ class RonServerState:
         self.provider = bootstrap.provider
         self.startup_warnings = list(bootstrap.provider_startup_warnings)
         self.native_loaded = isinstance(self.provider, NativeCheckpointProvider)
-        self.parameter_count = sum(parameter.numel() for parameter in self.provider.model.parameters()) if self.native_loaded else 0
+        self.huggingface_loaded = isinstance(self.provider, HuggingFaceLocalProvider)
+        self.local_model_loaded = self.native_loaded or self.huggingface_loaded
+        self.parameter_count = sum(parameter.numel() for parameter in self.provider.model.parameters()) if self.local_model_loaded else 0
         self.checkpoint_sha256 = None
         if self.native_loaded:
             digest = hashlib.sha256()
@@ -45,11 +48,11 @@ class RonServerState:
             self.checkpoint_sha256 = digest.hexdigest()
         self.require_native = require_native
         self.require_10m = require_10m
-        if require_native and not self.native_loaded:
-            details = ", ".join(self.startup_warnings) or "no native checkpoint file found"
+        if require_native and not self.local_model_loaded:
+            details = ", ".join(self.startup_warnings) or "no local model could be loaded"
             raise RuntimeError(
-                "Ron native Transformer is required but is not loaded; refusing to start "
-                f"the chat service ({details}). Train or install a compatible native checkpoint."
+                "A local language model is required but none is loaded; refusing to start "
+                f"the chat service ({details}). Install Ron native weights or configure RON_MODEL_BACKEND=hf."
             )
         if require_10m and (not self.native_loaded or self.parameter_count < 8_000_000):
             raise RuntimeError(
@@ -96,11 +99,15 @@ class RonServerState:
         provider = self.provider
         native = self.native_loaded
         return {
-            "status": "ok" if (native or not self.require_native) else "degraded",
-            "runtime": "ron-0-python-core",
+            "status": "ok" if (self.local_model_loaded or not self.require_native) else "degraded",
+            "runtime": "ron-central-brain-python",
             "single_core": True,
             "provider": type(provider).__name__,
+            "model_backend": "ron-native" if native else ("huggingface-local" if self.huggingface_loaded else "fallback"),
             "native_weights_loaded": native,
+            "pretrained_model_used": self.huggingface_loaded,
+            "local_model_loaded": self.local_model_loaded,
+            "model_id": getattr(provider, "model_id", None),
             "external_model_used": False,
             "parameter_count": self.parameter_count,
             "model_config": ({
@@ -112,7 +119,7 @@ class RonServerState:
             } if native else None),
             "target_parameter_count": 10_000_000,
             "target_size_reached": self.parameter_count >= 8_000_000,
-            "model_stage": "native-10m" if self.parameter_count >= 8_000_000 else ("native-baseline-prototype" if native else "teaching-fallback"),
+            "model_stage": "native-10m" if native and self.parameter_count >= 8_000_000 else ("native-baseline-prototype" if native else ("pretrained-local-model" if self.huggingface_loaded else "teaching-fallback")),
             "checkpoint": str(provider.checkpoint_path) if native else None,
             "checkpoint_sha256": self.checkpoint_sha256,
             "checkpoint_source": getattr(provider, "checkpoint_source", None),
@@ -198,8 +205,8 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
         if not isinstance(session_id, str) or not SESSION_PATTERN.fullmatch(session_id):
             self._json(400, {"error": "invalid_session_id"})
             return
-        if self.state.require_native and not self.state.native_loaded:
-            self._json(503, {"error": "native_model_unavailable", "health": self.state.health()})
+        if self.state.require_native and not self.state.local_model_loaded:
+            self._json(503, {"error": "local_model_unavailable", "health": self.state.health()})
             return
         core = self.state.core_for(session_id)
         try:
@@ -212,6 +219,8 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
         metadata = dict(response.metadata or {})
         metadata.setdefault("runtime", "ron-0-python-core")
         metadata["native_weights_loaded"] = self.state.native_loaded
+        metadata["pretrained_model_used"] = self.state.huggingface_loaded
+        metadata["local_model_loaded"] = self.state.local_model_loaded
         metadata["external_model_used"] = False
         # A loaded checkpoint is not enough: reject provider exceptions and low-quality fallback text.
         if self.state.require_native and (

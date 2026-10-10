@@ -2,6 +2,26 @@
 
 Ron-0 is an independent assistant project built around Ron's own local code, reasoning rules, memory, and native language model. **Ron-0 is separate from Ron-1.**
 
+
+## Optional local pretrained model (Qwen2.5-0.5B-Instruct)
+
+Ron now has an optional adapter that runs `Qwen/Qwen2.5-0.5B-Instruct` **locally** behind Ron's existing provider interface. It is an instruction-tuned model with about 494 million parameters, supports Arabic and English, and is published under Apache-2.0. This is a pretrained helper model, not Ron's own trained weights; the central Ron core still owns conversation routing, memory, deterministic tools, and response handling.
+
+The model files are intentionally **not committed to Git** because model checkpoints are large binary assets. On the first startup with this backend enabled, Transformers downloads the model into the host's Hugging Face cache; subsequent runs reuse that cache. The first download needs internet access, but inference runs locally and does not call a hosted model API.
+
+Install and run:
+```bash
+pip install -e '.[huggingface]'
+RON_MODEL_BACKEND=hf python -m ron.server
+```
+
+Optional settings:
+- `RON_HF_MODEL_ID`: model ID (default `Qwen/Qwen2.5-0.5B-Instruct`).
+- `RON_HF_MAX_NEW_TOKENS`: generation limit (default `256`, capped at `2048`).
+- Leave `RON_MODEL_BACKEND` unset to preserve Ron's native-checkpoint-first behavior.
+
+The pretrained model remains a separate model adapter; its weights are not merged into Ron's native checkpoint. This separation lets Ron switch between native and pretrained models without corrupting or mislabeling either set of weights.
+
 ## Non-negotiable design
 
 - Build and improve Ron's core, reasoning engine, learning system, and generation model inside this repository.
