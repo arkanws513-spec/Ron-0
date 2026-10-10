@@ -251,7 +251,7 @@ const answer=t=>{
   const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&String(m.text||"").trim());
   if(!previous)return "لم تذكر لي فكرة سابقة واضحة لألخّصها.";
   const prior=norm(previous.text);
-  if(/عاصم(?:ة|ه).*مصر|مصر.*عاصم(?:ة|ه)/.test(prior))return "فهمت أن عاصمة مصر هي القاهرة، وأن عليّ الإجابة عن السؤال مباشرة وبشكل متسق حتى لو تغيّرت صياغته. إذا أجبت سابقًا بإجابة مختلفة أو غير مفهومة، فهذا خطأ مني.";
+  if(/عاصم.*مصر|مصر.*عاصم/.test(prior))return "فهمت أن عاصمة مصر هي القاهرة، وأن عليّ الإجابة عن السؤال مباشرة وبشكل متسق حتى لو تغيّرت صياغته. إذا أجبت سابقًا بإجابة مختلفة أو غير مفهومة، فهذا خطأ مني.";
   return "فهمت أنك قلت: «"+String(previous.text).trim().slice(0,220)+"». سأتعامل معها باعتبارها سياقًا للمحادثة، لا مجرد نص أعيده.";
  }
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
