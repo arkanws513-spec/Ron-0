@@ -52,3 +52,13 @@ def test_reasoning_keeps_conflicting_facts_visible():
     assert result.contradictions
     assert {fact.source for fact in result.facts} == {"reference-a", "unverified-claim"}
 
+def test_temporal_rules_infer_reverse_and_transitive_relations():
+    engine = ReasoningEngine()
+    result = engine.reason([
+        Fact("A", "precedes", "B", .95),
+        Fact("B", "precedes", "C", .9),
+    ])
+    assert "A precedes C" in result.conclusions
+    assert "B follows A" in result.conclusions
+    assert "C follows A" in result.conclusions
+\n
