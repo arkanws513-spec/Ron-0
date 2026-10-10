@@ -131,7 +131,7 @@ def answer_linear_equation(text: str) -> str | None:
     left, right = (part.strip() for part in value.split("=", 1))
     if not left or not right or not re.search(r"[xس]", value):
         return None
-    if not re.fullmatch(r"[\dxس\s().+*/-]+", left) or not re.fullmatch(r"[\\dxس\\s().+*/-]+", right):
+    if not re.fullmatch(r"[\dxس\s().+*/-]+", left) or not re.fullmatch(r"[\dxس\s().+*/-]+", right):
         return None
     try:
         left_a, left_b = _linear_form(ast.parse(left, mode="eval"))
