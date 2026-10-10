@@ -98,3 +98,17 @@ def test_hypothesis_without_matching_evidence_has_zero_confidence():
         ["hypothesis"], [WeightedEvidence("unrelated evidence", .9, 1.0)]
     )[0]
     assert score.confidence == 0.0
+
+def test_contradictions_are_reported_once_per_unordered_pair():
+    engine = ReasoningEngine()
+    result = engine.reason([
+        Fact("الماء", "is", "سائل", .9, "source-a"),
+        Fact("الماء", "is", "غاز", .7, "source-b"),
+        Fact("الماء", "is", "صلب", .6, "source-c"),
+    ])
+    assert len(result.contradictions) == 3
+    pairs = {
+        frozenset((item.left, item.right))
+        for item in result.contradictions
+    }
+    assert len(pairs) == 3
