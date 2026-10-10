@@ -24,9 +24,13 @@ class NativeCheckpointProvider:
         self.vocab: dict[str, int] = payload["vocab"]
         self.id_to_char = {int(index): char for char, index in self.vocab.items()}
         self.model = RonCausalLM(self.config)
-        self.model.load_state_dict(payload["state_dict"])
+        # Use the best held-out-validation snapshot for inference when available;
+        # keep state_dict as the final state for the next training continuation.
+        use_best = "best_state_dict" in payload
+        self.model.load_state_dict(payload.get("best_state_dict", payload["state_dict"]))
         self.model.eval()
-        self.selected_step = int(payload.get("selected_step", 0))
+        self.selected_step = int(payload.get("best_selected_step", payload.get("selected_step", 0)))
+        self.inference_checkpoint = "best_validation" if use_best else "final_training_state"
         self.training_steps = int(payload.get("training_steps_this_run", 0))
         self.training_steps_total = int(payload.get("training_steps_total", self.selected_step))
         self.optimizer_state_persisted = "optimizer_state_dict" in payload
@@ -74,6 +78,8 @@ class NativeCheckpointProvider:
                 "provider": "native-checkpoint",
                 "native_weights_loaded": True,
                 "selected_training_step": self.selected_step,
+                "inference_checkpoint": self.inference_checkpoint,
+                "final_training_step": int(payload.get("selected_step", self.selected_step)),
                 "training_steps_this_run": self.training_steps,
                 "training_steps_total": self.training_steps_total,
                 "optimizer_state_persisted": self.optimizer_state_persisted,
