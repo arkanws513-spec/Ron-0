@@ -58,6 +58,7 @@ function createRuleNLU(cfg=DEFAULTS){
   while(true){const m=/^(\S+)\s+/.exec(n);if(!m||!fillers.has(m[1]))break;n=n.slice(m[0].length);t=t.slice(m[0].length);}
   if(!n)return[{type:'unknown',text:c}];
   if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
+  if(/^(?:ليه|لماذا|ازاي|كيف ذلك|لماذا ذلك|ما السبب|ما معنى ذلك|ماذا تقصد|كيف يعني)$/.test(n0))return[{type:'context',kind:'why-previous',text:c}];
   if(/^(?:اذا\s+)?(?:لماذا|ليه|ازاي)\s+(?:قلت|قولت|كتبت|ذكرت|حفظت)(?=\s|$)/.test(n0))return[{type:'context',kind:'why-previous',text:c}];
   if(/^(?:انظر|بص|شوف)\s+(?:لما|ما)\s+(?:قلته|قلت\ه|قولته)\s+(?:فوق|قبل)$/.test(n0)||/^(?:ماذا|ما)\s+(?:قلت|قلته)\s+(?:فوق|قبل)$/.test(n0))return[{type:'context',kind:'previous'}];
   if(/^(?:ماذا|ما)\s+(?:تعلم|تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0))return[{type:'context',kind:'learned'}];
