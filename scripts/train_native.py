@@ -24,7 +24,7 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
     """Hold out complete user/assistant pairs instead of the final contiguous text tail."""
     if not 0 < train_fraction < 1:
         raise ValueError("train_fraction must be between 0 and 1")
-    lines = [line.rstrip("\\r") for line in corpus.splitlines() if line.strip()]
+    lines = [line.rstrip("\r") for line in corpus.splitlines() if line.strip()]
     if len(lines) < 4 or len(lines) % 2:
         raise ValueError("corpus must contain at least two complete user/assistant pairs")
     pairs = []
@@ -32,14 +32,14 @@ def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
         user_line, assistant_line = lines[index:index + 2]
         if not user_line.startswith("المستخدم: ") or not assistant_line.startswith("رون: "):
             raise ValueError(f"invalid conversation pair near corpus line {index + 1}")
-        pairs.append(user_line + "\\n" + assistant_line)
+        pairs.append(user_line + "\n" + assistant_line)
     validation_count = max(1, min(len(pairs) - 1, round(len(pairs) * (1 - train_fraction))))
     validation_indices = set(random.Random(seed).sample(range(len(pairs)), validation_count))
     train_pairs = [pair for index, pair in enumerate(pairs) if index not in validation_indices]
     validation_pairs = [pair for index, pair in enumerate(pairs) if index in validation_indices]
     return (
-        "\\n".join(train_pairs) + "\\n",
-        "\\n".join(validation_pairs) + "\\n",
+        "\n".join(train_pairs) + "\n",
+        "\n".join(validation_pairs) + "\n",
         len(train_pairs),
         len(validation_pairs),
     )
