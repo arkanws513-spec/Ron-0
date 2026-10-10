@@ -1,6 +1,102 @@
 [
-  {"prompt":"من أنت؟","contains":["رون"]},
-  {"prompt":"ما عاصمة مصر؟","contains":["القاهرة"]},
-  {"prompt":"أحمد ذهب إلى العمل فوجده مغلقًا، ماذا يفعل؟","contains":["يتواصل"]},
-  {"prompt":"ماذا تفعل إذا لم تعرف الإجابة؟","contains":["لا أعرف"]}
+  {
+    "id": "identity_arabic",
+    "prompt": "من أنت؟",
+    "contains": [
+      "رون"
+    ],
+    "forbidden": [
+      "رون هاورد",
+      "كريستا ثيريت",
+      "ممثلة فرنسية"
+    ],
+    "critical": true
+  },
+  {
+    "id": "name_arabic",
+    "prompt": "هل اسمك رون؟",
+    "contains": [
+      "رون"
+    ],
+    "forbidden": [
+      "رون هاورد",
+      "كريستا ثيريت"
+    ],
+    "critical": true
+  },
+  {
+    "id": "egypt_capital_short",
+    "prompt": "ما عاصمة مصر؟",
+    "contains": [
+      "القاهرة"
+    ],
+    "forbidden": [
+      "كريستا ثيريت",
+      "ممثلة فرنسية"
+    ],
+    "critical": true
+  },
+  {
+    "id": "egypt_capital_rephrased",
+    "prompt": "ما هي عاصمة مصر؟",
+    "contains": [
+      "القاهرة"
+    ],
+    "forbidden": [
+      "كريستا ثيريت",
+      "ممثلة فرنسية"
+    ],
+    "critical": true
+  },
+  {
+    "id": "france_capital",
+    "prompt": "ما عاصمة فرنسا؟",
+    "contains": [
+      "باريس"
+    ],
+    "forbidden": [
+      "كريستا ثيريت",
+      "ممثلة فرنسية"
+    ],
+    "critical": true
+  },
+  {
+    "id": "uncertainty",
+    "prompt": "ماذا تفعل إذا لم تعرف الإجابة؟",
+    "contains": [
+      "لا أعرف"
+    ],
+    "forbidden": [],
+    "critical": true
+  },
+  {
+    "id": "practical_reasoning",
+    "prompt": "أحمد ذهب إلى العمل فوجده مغلقًا، ماذا يفعل؟",
+    "contains": [
+      "يتواصل"
+    ],
+    "forbidden": [],
+    "critical": false
+  },
+  {
+    "id": "english_identity",
+    "prompt": "What is your name?",
+    "contains": [
+      "Ron"
+    ],
+    "forbidden": [
+      "Ron Howard",
+      "Christa Theret"
+    ],
+    "critical": false
+  },
+  {
+    "id": "english_reasoning",
+    "prompt": "Ahmed arrived at work and found it closed. What should he do?",
+    "contains": [
+      "contact"
+    ],
+    "forbidden": [],
+    "critical": false
+  }
 ]
