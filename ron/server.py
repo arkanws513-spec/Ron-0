@@ -103,6 +103,13 @@ class RonServerState:
             "native_weights_loaded": native,
             "external_model_used": False,
             "parameter_count": self.parameter_count,
+            "model_config": ({
+                "vocab_size": provider.config.vocab_size,
+                "hidden_size": provider.config.hidden_size,
+                "num_layers": provider.config.num_layers,
+                "num_heads": provider.config.num_heads,
+                "max_sequence_length": provider.config.max_sequence_length,
+            } if native else None),
             "target_parameter_count": 10_000_000,
             "target_size_reached": self.parameter_count >= 8_000_000,
             "model_stage": "native-10m" if self.parameter_count >= 8_000_000 else ("native-baseline-prototype" if native else "teaching-fallback"),
