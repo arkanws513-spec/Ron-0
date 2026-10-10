@@ -139,7 +139,7 @@ class RonCore:
         )
         request=ModelRequest(
             messages=(Message(role="system",content=system_context), *history_messages, Message(role="user",content=text)),
-            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
+            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"knowledge":self.knowledge_base.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
         )
         try:
             assert self.provider is not None
