@@ -65,3 +65,36 @@ def test_native_evaluation_is_deterministic_and_restores_training_mode():
     second = evaluate(model, tokens, count=8)
     assert first == second
     assert model.training is True
+
+def test_best_validation_checkpoint_survives_a_regressing_training_run():
+    from scripts.train_native import choose_best_checkpoint
+
+    state, loss, step, source = choose_best_checkpoint(
+        {"weight": "final-training-state"},
+        1.40,
+        7800,
+        {"weight": "prior-best-inference-state"},
+        0.98,
+        6000,
+    )
+    assert state == {"weight": "prior-best-inference-state"}
+    assert loss == 0.98
+    assert step == 6000
+    assert source == "prior_best"
+
+
+def test_best_validation_checkpoint_uses_current_state_when_it_is_better():
+    from scripts.train_native import choose_best_checkpoint
+
+    state, loss, step, source = choose_best_checkpoint(
+        {"weight": "current-state"},
+        0.80,
+        7800,
+        {"weight": "prior-state"},
+        0.98,
+        6000,
+    )
+    assert state == {"weight": "current-state"}
+    assert loss == 0.80
+    assert step == 7800
+    assert source == "current_final"
