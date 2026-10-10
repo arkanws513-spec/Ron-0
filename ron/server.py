@@ -6,6 +6,7 @@ native checkpoint fails closed instead of silently serving the teaching fallback
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -27,18 +28,32 @@ SESSION_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 class RonServerState:
     """One shared model/provider; isolated conversation and memory per session."""
 
-    def __init__(self, *, require_native: bool = True) -> None:
+    def __init__(self, *, require_native: bool = True, require_10m: bool = False) -> None:
         bootstrap = RonCore()
         self.provider = bootstrap.provider
         self.startup_warnings = list(bootstrap.provider_startup_warnings)
         self.native_loaded = isinstance(self.provider, NativeCheckpointProvider)
+        self.parameter_count = sum(parameter.numel() for parameter in self.provider.model.parameters()) if self.native_loaded else 0
+        self.checkpoint_sha256 = None
+        if self.native_loaded:
+            digest = hashlib.sha256()
+            with self.provider.checkpoint_path.open("rb") as checkpoint_file:
+                for chunk in iter(lambda: checkpoint_file.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            self.checkpoint_sha256 = digest.hexdigest()
+        self.require_native = require_native
+        self.require_10m = require_10m
         if require_native and not self.native_loaded:
             details = ", ".join(self.startup_warnings) or "no native checkpoint file found"
             raise RuntimeError(
                 "Ron native Transformer is required but is not loaded; refusing to start "
-                f"the chat service ({details}). Train or install ron/checkpoints/ron_native_10m.pt."
+                f"the chat service ({details}). Train or install a compatible native checkpoint."
             )
-        self.require_native = require_native
+        if require_10m and (not self.native_loaded or self.parameter_count < 8_000_000):
+            raise RuntimeError(
+                f"Ron-10M is required but active checkpoint has {self.parameter_count:,} parameters. "
+                "Complete and promote the Ron-10M training run before starting production."
+            )
         self.sessions: dict[str, RonCore] = {"default": bootstrap}
         self.sessions_lock = threading.RLock()
         self.inference_lock = threading.RLock()
@@ -62,7 +77,12 @@ class RonServerState:
             "provider": type(provider).__name__,
             "native_weights_loaded": native,
             "external_model_used": False,
+            "parameter_count": self.parameter_count,
+            "target_parameter_count": 10_000_000,
+            "target_size_reached": self.parameter_count >= 8_000_000,
+            "model_stage": "native-10m" if self.parameter_count >= 8_000_000 else ("native-baseline-prototype" if native else "teaching-fallback"),
             "checkpoint": str(provider.checkpoint_path) if native else None,
+            "checkpoint_sha256": self.checkpoint_sha256,
             "inference_checkpoint": getattr(provider, "inference_checkpoint", None),
             "selected_training_step": getattr(provider, "selected_step", None),
             "training_steps_total": getattr(provider, "training_steps_total", None),
@@ -164,13 +184,21 @@ class RonRequestHandler(SimpleHTTPRequestHandler):
         })
 
 
-def make_server(host: str | None = None, port: int | None = None, *, require_native: bool | None = None):
+def make_server(
+    host: str | None = None,
+    port: int | None = None,
+    *,
+    require_native: bool | None = None,
+    require_10m: bool | None = None,
+):
     host = host or os.environ.get("RON_HOST", "127.0.0.1")
     if port is None:
         port = int(os.environ.get("PORT") or os.environ.get("RON_PORT") or "8000")
     if require_native is None:
         require_native = os.environ.get("RON_REQUIRE_NATIVE", "1").strip().lower() not in {"0", "false", "no"}
-    state = RonServerState(require_native=require_native)
+    if require_10m is None:
+        require_10m = os.environ.get("RON_REQUIRE_10M", "0").strip().lower() not in {"0", "false", "no"}
+    state = RonServerState(require_native=require_native, require_10m=require_10m)
 
     class BoundRonRequestHandler(RonRequestHandler):
         pass
