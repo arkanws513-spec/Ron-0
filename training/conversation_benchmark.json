@@ -135,11 +135,11 @@
       "id": "memory_vs_training",
       "session": "knowledge",
       "prompt": "ما الفرق بين الذاكرة والتدريب؟",
-      "contains_any": [
+      "critical": false,
+      "contains_all": [
         "الذاكرة",
         "التدريب"
-      ],
-      "critical": false
+      ]
     },
     {
       "id": "context_definition",
@@ -207,11 +207,11 @@
       "id": "fact_vs_opinion",
       "session": "knowledge",
       "prompt": "ما الفرق بين الحقيقة والرأي؟",
-      "contains_any": [
+      "critical": false,
+      "contains_all": [
         "الحقيقة",
         "الرأي"
-      ],
-      "critical": false
+      ]
     },
     {
       "id": "validation_loss",
