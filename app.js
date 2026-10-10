@@ -158,6 +158,13 @@ const answer=t=>{
  if(/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً)$/.test(n))return "شكرًا! أنا جاهز نكمل.";
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
  if(ronFacts.length&&!isRonNameQuestion(n)&&!isRonAgeQuestion(n)&&!isNameQuestion(n)&&!isAgeQuestion(n)){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
+ if(/^(?:نعم\s+)?(?:علق\s+عليه|علّق\s+عليه|اشرح\s+كلامي|حلل\s+كلامي)$/.test(n)){
+  const prior=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&!/^(?:مظبوط|صح|تمام|نعم|ايوه|أيوه|اه|اها|ممتاز|جميل|شكرا|شكرًا|نعم علق عليه|علق عليه|اشرح كلامي|حلل كلامي)$/.test(norm(m.text)));
+  const savedName=lessons.find(x=>x.key==="user.name");
+  if(prior&&/^(?:انا\s+)?اسمي\s+/.test(norm(prior.text))&&savedName)return "تعليقًا على كلامك: عرّفتني باسمك، وقد حفظت الاسم «"+savedName.text+"» لأستخدمه عند الحاجة في المحادثة.";
+  if(prior)return "تعليقًا على كلامك «"+prior.text+"»: فهمت أنك تريد مناقشته، لكن أحتاج إلى معرفة أي جانب تريد تحليله تحديدًا.";
+  return "بالتأكيد، أستطيع التعليق، لكن لا أجد في سياق المحادثة كلامًا سابقًا واضحًا لأعلّق عليه.";
+ }
  if(isBothNamesQuestion(n)){
   const name=lessons.find(x=>x.key==="user.name"),self=lessons.find(x=>x.key==="ron.name");
   return (name?("اسمك "+name.text):"لم تخبرني باسمك بعد.")+"، واسمي "+(self?self.text:"رون")+".";
