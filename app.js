@@ -199,7 +199,7 @@ const isBothNamesQuestion=n=>/^(?=.*(?:ما|ايه|اي)\s*اسمي)(?=.*(?:ما
 const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");
 const isReadinessQuestion=n=>/^(?:هل\s+)?انت\s+جاهز[؟?!.]*$/.test(n);
 const isIncompleteMathQuestion=n=>/^(?:و\s*)?كم\s+(?:تساوي|يساوي)[؟?!.]*$/.test(n)||/^(?:و\s*)?ما\s+الناتج[؟?!.]*$/.test(n);
-const capitalQuestionPlace=n=>{const m=n.match(/^(?:(?:ما|ايه|اي)\\s+(?:هي\\s+)?)?عاصم(?:ة|ه)\\s+(.+?)[؟?!.]*$/);return m?norm(m[1]):null;};
+const capitalQuestionPlace=n=>{const m=n.match(/^(?:(?:ما|ايه|اي)\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+(.+?)[؟?!.]*$/);return m?norm(m[1]):null;};
 const isEgyptCapitalQuestion=n=>capitalQuestionPlace(n)==="مصر";
 const knownCapitalAnswer=n=>{const place=capitalQuestionPlace(n);const capitals={"مصر":"القاهرة","فرنسا":"باريس","بريطانيا":"لندن","المملكة المتحدة":"لندن","الولايات المتحدة":"واشنطن","امريكا":"واشنطن","السعودية":"الرياض","اليابان":"طوكيو","الصين":"بكين","المانيا":"برلين","إسبانيا":"مدريد","اسبانيا":"مدريد","ايطاليا":"روما","روسيا":"موسكو","كندا":"أوتاوا","استراليا":"كانبرا"};const city=capitals[place];return city?"عاصمة "+place+" هي "+city+".":null;};
 const isEgyptCapitalPreference=n=>/^(?:حين|عندما|لما)\s+اسالك\s+(?:ما\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+مصر[،,]?\s+(?:قول|قل)\s+القاهرة\s+فقط[.!؟?]*$/.test(n);
