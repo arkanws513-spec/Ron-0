@@ -35,7 +35,7 @@ function createRuleNLU(cfg=DEFAULTS){
   if(!n)return[{type:'unknown',text:c}];
   if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
   if(/^(?:انظر|بص|شوف)\s+(?:لما|ما)\s+(?:قلته|قلت\ه|قولته)\s+(?:فوق|قبل)$/.test(n0)||/^(?:ماذا|ما)\s+(?:قلت|قلته)\s+(?:فوق|قبل)$/.test(n0))return[{type:'context',kind:'previous'}];
-  if(/^(?:ماذا|ما)\s+(?:تعلم|تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0)return[{type:'context',kind:'learned'}];
+  if(/^(?:ماذا|ما)\s+(?:تعلم|تعلمت|تعلمه|تعرفه)(?:\s+حتى\s+الان|\s+لحد\s+دلوقتي)?$/.test(n0)||/^هل\s+تعلمت\s+(?:ذلك|كل\s+ذلك|هذا)$/.test(n0))return[{type:'context',kind:'learned'}];
   if(/^(?:كيف\s+(?:حالك|الحال)|كيفك|شلونك|شخبارك)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'howareyou'}];
   if(/^(?:مرحبا|اهلا|هلا|سلام|السلام\s+عليكم|صباح\s+الخير|مساء\s+الخير)(?:\s+\S+)?$/.test(n))return[{type:'smalltalk',kind:'greet'}];
   let m=/^(?:ابحث|دور|فتش)(?:\s+لي)?(?:\s+عن(ها|هم|ه)?(?:\s+(.+))?)?$/.exec(n);
