@@ -34,11 +34,11 @@ test('explicit name correction is a single user update',async()=>{
  await say(r,'اسمي اي');
  await say(r,'اسمي اركانوس وليس اسمك بسألك عن اسمي');
  assert.strictEqual(r.store.get('$user','اسم').o,'اركانوس');
- assert.strictEqual(r.store.get('$self','اسم'),undefined);
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
  assert.match(await say(r,'ما اسمي'),/اركانوس/);
 });
 test('confirming Ron identity does not overwrite self name',async()=>{
  const r=new RonCore();
  assert.match(await say(r,'اسمك رون فعلا'),/اسمي رون/);
- assert.strictEqual(r.store.get('$self','اسم'),undefined);
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
 });
