@@ -75,6 +75,8 @@ def test_promotion_accepts_only_a_matching_candidate_that_passed_both_gates(tmp_
         "passed": True,
         "checkpoint_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
         "parameter_count": 11_000_000,
+        "case_count": 20,
+        "critical_case_count": 8,
     }), encoding="utf-8")
     metrics_path.write_text(json.dumps({"validation_loss_improved": True}), encoding="utf-8")
     allowed, reason = validate_promotion(candidate, report_path, metrics_path)
