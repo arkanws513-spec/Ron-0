@@ -286,7 +286,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
    try{
     const cr=await core.handle(t);
     const candidate=String(cr?.reply||"").trim();
-    const failed=/^(لم أفهم الجملة|فهمت أنه سؤال، لكن صياغته|فهمت سؤالك لكن لا أعرف الإجابة|أداة البحث غير مفعّلة)/.test(candidate);
+    const failed=/^(?:لم أفهم الجملة|فهمت أنه سؤال، لكن صياغته|فهمت سؤالك لكن لا أعرف الإجابة|أداة البحث غير مفعّلة|لا أعرف الإجابة بعد|بحثت ولم أجد نتيجة مفيدة|لم أجد نتيجة مفيدة)/.test(candidate);
     if(candidate&&!failed)r=candidate;
    }catch(error){console.warn("Ron Core response failed",error);}
   }

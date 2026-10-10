@@ -200,3 +200,47 @@ assert.equal(nodes3.get("chat").children.at(-1).children.at(-1).textContent, "ا
 input.value = "وكم تساوي؟";
 submit({preventDefault(){}});
 assert.equal(nodes.get("chat").children.at(-1).children.at(-1).textContent, "ما العملية الحسابية التي تريد حسابها؟");
+
+ 
+// Regression: an unknown-core fallback must not block RonAgent's local answer.
+const nodes4 = new Map();
+const listeners4 = new Map();
+for (const id of ids) {
+  nodes4.set(id, {
+    id, value:"", disabled:false, scrollTop:0, scrollHeight:0, style:{},
+    children:[], className:"", textContent:"",
+    append(...items){this.children.push(...items);},
+    appendChild(item){this.children.push(item);},
+    replaceChildren(...items){this.children=[...items];},
+    addEventListener(type,fn){listeners4.set(id+":"+type,fn);},
+    classList:{add(){},remove(){}}
+  });
+}
+class FallbackRonCore {
+  async handle() {
+    return {reply:"لا أعرف الإجابة بعد. يمكنك أن تقول «ابحث عنها» لإعادة البحث."};
+  }
+}
+const storage4 = new Map();
+const context4 = {
+  document:{
+    getElementById(id){return nodes4.get(id)??null;},
+    createElement(tag){return {tag,className:"",textContent:"",children:[],append(...items){this.children.push(...items);},click(){},style:{}};}
+  },
+  localStorage:{
+    getItem:k=>storage4.has(k)?storage4.get(k):null,
+    setItem:(k,v)=>storage4.set(k,v),
+    clear:()=>storage4.clear(),
+    removeItem:k=>storage4.delete(k)
+  },
+  RonCore:FallbackRonCore,
+  RonCoreAdapters:{LocalStorageAdapter:class {}},
+  RonAgent:{answer:()=>"إجابة من المعرفة المحلية"},
+  console,setTimeout:fn=>{fn();return 1;},Blob:class{constructor(parts){this.parts=parts;}},
+  URL:{createObjectURL:()=>"blob:test"},confirm:()=>true,alert:()=>{},Date,JSON,Math
+};
+vm.runInNewContext(fs.readFileSync("app.js","utf8"),context4);
+nodes4.get("input").value = "ما هو البناء الضوئي؟";
+listeners4.get("composer:submit")({preventDefault(){}});
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(nodes4.get("chat").children.at(-1).children.at(-1).textContent, "إجابة من المعرفة المحلية");
