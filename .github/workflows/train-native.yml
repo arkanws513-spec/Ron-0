@@ -9,6 +9,7 @@ on:
       - "ron/training.py"
       - "training/seed_corpus.txt"
       - "scripts/train_native.py"
+      - ".github/workflows/train-native.yml"
   workflow_dispatch:
 
 permissions:
@@ -47,21 +48,42 @@ jobs:
           cp artifacts/native-baseline/metrics.json ron/checkpoints/metrics.json
       - name: Run blind surprise evaluation outside training data
         run: python -m scripts.surprise_eval --output artifacts/native-baseline/surprise-eval.json
-      - name: Commit trained weights and metrics to Ron-0
+      - name: Record training attempt and gate outcome
         run: |
-          if python -c 'import json,sys; r=json.load(open("artifacts/native-baseline/surprise-eval.json", encoding="utf-8")); sys.exit(0 if r.get("anti_degeneration_gate_passed") else 1)'; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json
-            if ! git diff --cached --quiet; then
-              git commit -m "Add validated Ron-0 native checkpoint"
-              # Other reviewed changes may reach main while this CPU training job runs.
-              git fetch origin main
-              git rebase origin/main
-              git push origin HEAD:main
-            fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          metrics = json.loads(Path("artifacts/native-baseline/metrics.json").read_text(encoding="utf-8"))
+          evaluation = json.loads(Path("artifacts/native-baseline/surprise-eval.json").read_text(encoding="utf-8"))
+          promoted = bool(evaluation.get("anti_degeneration_gate_passed"))
+          report = {
+              "attempt_status": "completed",
+              "checkpoint_promoted": promoted,
+              "promotion_reason": "anti_degeneration_gate_passed" if promoted else "anti_degeneration_gate_failed",
+              "metrics": metrics,
+              "evaluation": evaluation,
+          }
+          Path("ron/checkpoints/latest_training_attempt.json").write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if python -c 'import json,sys; r=json.load(open("ron/checkpoints/latest_training_attempt.json", encoding="utf-8")); sys.exit(0 if r.get("checkpoint_promoted") else 1)'; then
+            git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json ron/checkpoints/latest_training_attempt.json
+            commit_message="Promote validated Ron-0 native checkpoint"
           else
-            echo "::warning::Anti-degeneration gate failed; trained weights remain an artifact candidate and were not promoted."
+            # Preserve the failed attempt's metrics and blind evaluation without promoting candidate weights.
+            git add ron/checkpoints/latest_training_attempt.json
+            commit_message="Record Ron-0 native training attempt (checkpoint not promoted)"
+            echo "::warning::Anti-degeneration gate failed; candidate weights were not promoted."
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "$commit_message"
+            # Other reviewed changes may reach main while this CPU training job runs.
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
       - name: Archive training run and surprise evaluation
         uses: actions/upload-artifact@v6
