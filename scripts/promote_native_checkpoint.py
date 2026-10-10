@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -23,7 +24,8 @@ def validate_promotion(candidate: Path, report_path: Path, metrics_path: Path) -
         return False, "blind_conversational_gate_failed"
     if metrics.get("validation_loss_improved") is not True:
         return False, "validation_loss_gate_failed"
-    digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+    with candidate.open("rb") as candidate_file:
+        digest = hashlib.file_digest(candidate_file, "sha256").hexdigest()
     if digest != report.get("checkpoint_sha256"):
         return False, "candidate_hash_does_not_match_evaluated_checkpoint"
     if int(report.get("parameter_count", 0)) < 1_000_000:
@@ -40,7 +42,7 @@ def promote(candidate: Path, report_path: Path, metrics_path: Path, destination:
     try:
         with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=destination.name + ".", suffix=".tmp", delete=False) as handle:
             temp_path = Path(handle.name)
-        temp_path.write_bytes(candidate.read_bytes())
+        shutil.copyfile(candidate, temp_path)
         os.replace(temp_path, destination)
     finally:
         if temp_path is not None and temp_path.exists():
