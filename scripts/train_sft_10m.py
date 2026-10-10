@@ -265,9 +265,10 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     candidate_path = OUT / "ron_native_10m_sft.pt"
     atomic_torch_save(checkpoint, candidate_path)
-    promoted = bool(best_val < start_val and best_step > 0 and changed_tensors > 0 and math.isfinite(best_val))
-    if promoted:
-        atomic_torch_save(checkpoint, LIVE_CHECKPOINT)
+    validation_improved = bool(best_val < start_val and best_step > 0 and changed_tensors > 0 and math.isfinite(best_val))
+    # Do not replace the live checkpoint on response loss alone. Promotion is a
+    # separate action after the blind conversational gate passes.
+    promoted = False
 
     metrics = {
         "experiment": "ron0-native-10m-sft",
@@ -276,7 +277,8 @@ def main() -> None:
         "checkpoint_source": str(checkpoint_path.relative_to(ROOT)),
         "candidate_checkpoint": str(candidate_path.relative_to(ROOT)),
         "checkpoint_promoted": promoted,
-        "promotion_reason": "assistant_validation_loss_improved" if promoted else "assistant_validation_gate_not_passed",
+        "validation_loss_improved": validation_improved,
+        "promotion_reason": "awaiting_blind_conversational_evaluation" if validation_improved else "assistant_validation_gate_not_passed",
         "live_checkpoint": str(LIVE_CHECKPOINT.relative_to(ROOT)) if promoted else None,
         "training_examples": len(train_examples),
         "validation_examples": len(validation_examples),
