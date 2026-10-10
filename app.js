@@ -33,6 +33,36 @@ if(localStorage.getItem(PROFILE_CLEAN)!=="1"){
  localStorage.setItem(PROFILE_CLEAN,"1");
  try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
 }
+
+// One-time cleanup for names corrupted by the older relation parser.
+const PROFILE_CLEAN_V4="ron-profile-clean-v4";
+if(localStorage.getItem(PROFILE_CLEAN_V4)!=="1"){
+ const badUserName=x=>x?.key==="user.name"&&(/(?:بسالك عن|اسالك عن|ليس اسمك|وليس اسمك|اسمك بسالك)/i.test(norm(x.text))||String(x.text||"").length>40);
+ const badRonName=x=>x?.key==="ron.name"&&(/(?:بسالك عن|اسالك عن|اسمك)/i.test(norm(x.text))||/^(?:رون فعلا|رون حقا|رون بالفعل)$/.test(norm(x.text)));
+ lessons=lessons.filter(x=>!badUserName(x)&&!badRonName(x));
+ try{
+  const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");
+  if(raw&&Array.isArray(raw.facts)){
+   raw.facts=raw.facts.filter(x=>{
+    if(!x)return false;
+    const value=norm(x.o||"");
+    if(x.s==="$user"&&norm(x.p)==="اسم")return !/(?:بسالك عن|اسالك عن|ليس اسمك|وليس اسمك|اسمك بسالك)/i.test(value)&&value.length<=40;
+    if(x.s==="$self"&&norm(x.p)==="اسم")return !/(?:بسالك عن|اسالك عن|اسمك)/i.test(value)&&!/^(?:رون فعلا|رون حقا|رون بالفعل)$/.test(value);
+    return true;
+   });
+   localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));
+  }
+ }catch{}
+ try{
+  const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");
+  if(raw&&Array.isArray(raw.knowledge)){
+   raw.knowledge=raw.knowledge.filter(x=>!/اسمك\s+(?:بسالك عن|اسالك عن)|(?:ليس اسمك|وليس اسمك)|اسمك\s+رون فعلا/i.test(norm(x?.text||"")));
+   localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));
+  }
+ }catch{}
+ localStorage.setItem(PROFILE_CLEAN_V4,"1");
+ try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
+}
 const makeId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);const titleOf=ms=>{const m=ms.find(x=>x.role==="user");return m?m.text.slice(0,42):"محادثة جديدة"};const saveCurrent=()=>{const u=messages.find(x=>x.role==="user");if(!u)return;const id=globalThis.ronConversationId||makeId();conversations=conversations.filter(x=>x.id!==id);conversations.push({id,title:titleOf(messages),messages:messages.slice(-300),updatedAt:new Date().toISOString()});globalThis.ronConversationId=id;save()};const webSearchEnabled=()=>!!globalThis.RonWebSearch;
 const initRonCore=()=>{
  if(!globalThis.RonCore||!globalThis.RonCoreAdapters?.LocalStorageAdapter)return null;
@@ -70,8 +100,13 @@ const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push(
 const extractFacts=t=>{
  const n=norm(t).replace(/^\.\s*/,"");
  const facts=[];
+ // Questions/meta-conversation are not identity assertions.
+ if(/[؟?]/.test(String(t))||/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي(?=\s|$)/.test(n))return facts;
+ // Handle explicit corrections as one user-name fact; never parse the negated clause as Ron's name.
+ const corrected=n.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)(?=\s|$).*$/);
+ if(corrected){const value=cleanValue(corrected[1]);if(value)facts.push({key:"user.name",text:value});return facts;}
  let both=n.match(/^اسمي\s+(.+?)\s*[،,]\s*(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
- if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});}
+ if(both){const userName=cleanValue(both[1]),ronName=cleanValue(both[2]).replace(/^انت\s+/,"").trim();if(userName)facts.push({key:"user.name",text:userName});if(ronName)facts.push({key:"ron.name",text:ronName});return facts;}
  let m=n.match(/(?:^|\s)(?:انا\s+)?(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?(?=\s|$)/);
  if(!m)m=n.match(/(?:^|\s)(?:انا\s+)?(\d{1,3})\s*(?:عام|سنة|سنين)(?=\s|$)/);
  if(m){const age=Number(m[1]);if(age>=1&&age<=120)facts.push({key:"user.age",text:String(age)});}
@@ -94,7 +129,7 @@ const extractFacts=t=>{
  }
  if(!facts.some(x=>x.key==="user.name")){
   m=n.match(/^انا\s+(.+?)$/);
-  if(m&&!/^(?:عمري|سني|احب|لا احب)\b/.test(m[1])){
+  if(m&&!/^(?:عمري|سني|احب|لا احب|بسالك|اسالك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)(?:\s|$)/.test(m[1])){
    const value=cleanValue(m[1]);
    if(value)facts.push({key:"user.name",text:value});
   }
@@ -134,6 +169,7 @@ const browserReasoningAnswer=(text)=>{
 };
 const extractRonFacts=t=>{
  const n=norm(t).replace(/^رون\s+/,"").trim(),facts=[];
+ if(/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+رون\s+(?:فعلا|حقا)$/.test(n))return facts;
  let m=n.match(/(?:تذكر|سجل|احفظ|تعلم)\s+(?:ان\s+)?(?:عمرك|سنك|عمر رون)\s+(?:هو\s+)?(.+)$/);
  if(!m)m=n.match(/^(?:انت\s+)?(?:عمرك|سنك)\s+(?:هو\s+)?(.+)$/);
  if(m){const v=cleanValue(m[1]);if(v)facts.push({key:"ron.age",text:v});}
@@ -162,6 +198,7 @@ const teach=t=>{let x=String(t||"").trim().replace(/^\s*عل[ّ]?م\s+رون\s*(
  save();return"تم حفظ التعليم في ذاكرة رون المحلية.";};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ if(/^(?:اسمك|اسمك هو|انت اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(n))return "نعم، اسمي رون.";
  if(/^(مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا)([!！،,. ]*)$/.test(n))return "مرحبًا. أنا رون، وجاهز لمساعدتك.";
  if(/^(ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)([؟? !،,.]*)$/.test(n))return "أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟";
  if(/^(ماذا تستطيع|ايه اللي تقدر تعمله|ماذا يمكنك ان تفعل|ماذا يمكنك|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(n))return "أستطيع فهم المحادثة، حفظ ما تعلّمني إياه، استخدام معرفتي المحلية، إجراء استدلال بسيط، والبحث في الإنترنت عندما أحتاج معلومة غير موجودة لدي. وويمكنني الاعتماد على نواتي المحلية والبحث في الإنترنت عند الحاجة.";
@@ -230,7 +267,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  // This prevents stale memory from inventing a user name or answering a compliment with unrelated text.
  const normalizedInput=norm(t);
  const deterministicInput=analyzeIntent(t)==="greeting"||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
- if(deterministicInput)r=answer(t);
+ if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim())r=answer(t);
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;

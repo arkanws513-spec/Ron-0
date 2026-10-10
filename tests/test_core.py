@@ -67,3 +67,14 @@ def test_core_passes_recent_dialogue_turns_to_the_provider():
     assert any(m.role == "user" and m.content == "سؤال أول" for m in provider.last_request.messages)
     assert any(m.role == "assistant" and m.content == "رد تجريبي" for m in provider.last_request.messages)
     assert provider.last_request.messages[-1].content == "متابعة"
+
+
+
+def test_meta_question_does_not_overwrite_profile_name():
+    core = RonCore(provider=FakeProvider())
+    core.respond("انا بسألك عن اسمي")
+    assert core.respond("ما اسمي؟").content == "لم تخبرني باسمك بعد."
+
+    correction = core.respond("اسمي اركانوس وليس اسمك بسألك عن اسمي")
+    assert "اركانوس" in correction.content
+    assert core.respond("ما اسمي؟").content == "اسمك اركانوس."

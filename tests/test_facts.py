@@ -75,3 +75,21 @@ def test_arabic_variants_of_name_question_are_supported():
 def test_unknown_fact_question_is_safe():
     store = InMemoryStore()
     assert answer_fact_question("ما اسمي؟", store) == "لم تخبرني باسمك بعد."
+
+
+
+def test_question_about_name_is_not_learned_as_the_name():
+    assert extract_facts("انا بسألك عن اسمي") == []
+    assert extract_facts("ما اسمي؟") == []
+
+
+def test_name_correction_does_not_store_the_rest_of_the_sentence():
+    facts = extract_facts("اسمي اركانوس وليس اسمك بسألك عن اسمي")
+    assert [(fact.key, fact.value) for fact in facts] == [
+        ("user.name", "اركانوس"),
+    ]
+
+
+def test_sentence_like_natural_statement_does_not_overwrite_name():
+    assert extract_facts("انا بسألك عن اسمي") == []
+    assert extract_facts("انا عايز اسألك عن اسمي") == []

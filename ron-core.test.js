@@ -21,3 +21,24 @@ test('smalltalk',async()=>{const r=new RonCore();assert.match(await say(r,'كي�
 test('multi-hop reasoning',()=>{const s=new FactStore();s.set('القاهرة','جزء_من','مصر');s.set('مصر','جزء_من','افريقيا');assert.ok([...new Reasoner(s).infer().values()].some(v=>v.t.join() === 'القاهرة,جزء_من,افريقيا'));});
 test('safe arithmetic',()=>{assert.strictEqual(arithmetic('2 + 3 * 4'),'14');assert.strictEqual(arithmetic('process.exit()'),null);assert.strictEqual(arithmetic('2 / 0'),null);});
 test('source scoring',()=>{const a=evaluateResult({answer:'معلومة',source:'official',url:'https://example.gov'},'معلومة');const b=evaluateResult({answer:'معلومة',source:'unknown'},'معلومة');assert.ok(a.confidence>b.confidence);});
+
+test('name meta-question never becomes a profile fact',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي اي');
+ await say(r,'انا بسألك عن اسمي');
+ assert.strictEqual(r.store.get('$user','اسم').o,'اي');
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+});
+test('explicit name correction is a single user update',async()=>{
+ const r=new RonCore();
+ await say(r,'اسمي اي');
+ await say(r,'اسمي اركانوس وليس اسمك بسألك عن اسمي');
+ assert.strictEqual(r.store.get('$user','اسم').o,'اركانوس');
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+ assert.match(await say(r,'ما اسمي'),/اركانوس/);
+});
+test('confirming Ron identity does not overwrite self name',async()=>{
+ const r=new RonCore();
+ assert.match(await say(r,'اسمك رون فعلا'),/اسمي رون/);
+ assert.strictEqual(r.store.get('$self','اسم').o,'رون');
+});
