@@ -1,36 +1,40 @@
 # Ron-0 — رون
 
-Ron is a GitHub-first AI assistant project.
+Ron-0 is an independent assistant project built around Ron's own local code, reasoning rules, memory, and native language model. **Ron-0 is separate from Ron-1.**
 
-## Principles
-- GitHub is the source of truth.
-- Ron's identity, memory, tools, learning rules, and orchestration stay separate from the model.
-- A ready-made local brain can be plugged in without turning Ron into a cloud-provider product.
-- No cloud API is required by the architecture.
-- No secrets are committed to the repository.
-- Tests and GitHub Actions are required before expansion.
+## Non-negotiable design
 
-## Current foundation
-- Web shell for GitHub Pages.
-- Provider contracts and a local HTTP model adapter.
-- Deterministic memory and natural-language fact learning.
-- Explicit tool registry.
-- Ron orchestration core.
-- Bounded, auditable self-improvement engine.
-- Local-brain knowledge transfer with provenance.
-- Automated CI and Pages deployment.
+- Build and improve Ron's core, reasoning engine, learning system, and generation model inside this repository.
+- Do not require Qwen, OpenAI, Google, or any other external model or service at runtime.
+- Train Ron's native model from Ron's own reviewed corpus; never treat a completed training run as proof of quality.
+- Keep memory, deterministic tools, model weights, and evaluation separate so failures can be located and measured.
+- Do not promote a candidate checkpoint unless it passes the repository's quality gate.
 
-## Ready-made brain strategy
+## Core architecture
 
-Ron does not need to build a useful language model entirely from zero before it
-can become capable. A compatible local model can provide the initial language
-capability while Ron owns the surrounding system: identity, memory, tools,
-learning, evaluation, and self-improvement.
+`Browser UI → Ron Core → local memory / rules / tools → Ron native model → quality checks → response`
 
-The brain is replaceable and model weights are not committed to this repository.
+Clear deterministic tasks such as arithmetic should be handled by Ron's local code before general language generation. Memory stores facts; training updates model weights. They are not the same process.
 
-See `docs/brain-architecture.md`.
+## Native model and training
 
-## Architecture
+- Model: `ron/model.py`
+- Configuration: `ron/model_config.py`
+- Training recipe: `scripts/train_native.py`
+- Reviewed seed corpus: `training/seed_corpus.txt`
+- Blind evaluation: `scripts/surprise_eval.py`
+- Runtime provider: `ron/native_provider.py`
 
-`UI → Conversation → Ron Core → Memory/Retrieval/Tools/Learning → Local Brain`
+Run the native training script in an environment with the repository's `model` extra installed:
+
+```bash
+python -m pip install -e ".[model]" pytest
+python -m scripts.train_native
+python -m scripts.surprise_eval
+```
+
+Training and evaluation reports are written under `artifacts/native-baseline/`. The workflow keeps candidate weights separate from the live checkpoint until the blind anti-degeneration gate passes.
+
+## Current limitations
+
+Ron-0's native Transformer is a small character-level prototype trained on a curated corpus. It is not yet a general-purpose language model. A lower training loss alone is not evidence that responses improved; held-out validation and blind generation checks must also be reviewed.
