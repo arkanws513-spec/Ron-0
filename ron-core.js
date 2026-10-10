@@ -30,6 +30,15 @@ function createRuleNLU(cfg=DEFAULTS){
   const c=clean(text),n0=normalize(c); let n=n0,t=c;
   // Direct conversational forms must be recognized before filler removal.
   if(/^(?:و\s*)?(?:ما|ايه|اي)\s+اسمي\s+و\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0)||/^(?:ما|ايه|اي)\s+اسمي\s+و?\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0))return[{type:'ask-both-names',text:c}];
+  // Parse profile assertions before the generic relation parser.
+  if(/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+رون\s+(?:فعلا|حقا)$/.test(n0))return[{type:'identity-confirm',text:c}];
+  if(/^(?:انا\s+)?(?:بسالك|اسالك)\s+عن\s+اسمي\b/.test(n0))return[{type:'unknown',text:c}];
+  let correction=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:وليس|لكن|ولكن|مش|مو)\s+(?:اسمك|اسم|انت|انا)\b.*$/);
+  if(correction){const value=correction[1].trim();if(value)return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
+  let namedBoth=n0.match(/^(?:انا\s+)?اسمي\s+(.+?)\s+(?:و)?اسمك\s+(?:هو\s+)?(.+)$/);
+  if(namedBoth){const userName=namedBoth[1].trim(),selfName=namedBoth[2].trim();return[{type:'assert',s:'$user',p:'اسم',o:key(userName),sd:'',pd:'اسم',od:userName},{type:'assert',s:'$self',p:'اسم',o:key(selfName),sd:'',pd:'اسم',od:selfName}];}
+  let explicitName=n0.match(/^(?:انا\s+)?اسمي\s+(?:هو\s+)?(.+?)$/);
+  if(explicitName){const value=explicitName[1].trim();if(value&&!/^(?:بسالك|اسالك)\b/.test(value))return[{type:'assert',s:'$user',p:'اسم',o:key(value),sd:'',pd:'اسم',od:value}];}
   if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:و\s*)?(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
   if(/^(?:و\s*)?(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
   if(/^(?:و\s*)?(?:انت\s+)?(?:كم\s+عمرك|ما\s+عمرك|ما\s+هو\s+عمرك)$/.test(n0))return[{type:'self-age',text:c}];
@@ -152,6 +161,7 @@ class RonCore{
   return{reply,frames};}
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
  async exec(f){
+  if(f.type==='identity-confirm')return 'نعم، اسمي '+this.cfg.selfName+'.';
   if(f.type==='smalltalk')return f.kind==='howareyou'?'أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟':f.kind==='call'?'نعم، أنا معك.':'مرحبًا، كيف أساعدك؟';
   if(f.type==='self-age')return this.store.get('$self','عمر')?'عمري المسجل هو '+this.store.display(this.store.get('$self','عمر').o)+'.':'ليس لدي عمر بشري؛ أنا برنامج، ولا أملك عمرًا شخصيًا مثل الإنسان.';
   if(f.type==='ask-both-names'){const user=this.store.get('$user','اسم'),self=this.store.get('$self','اسم');return (user?'اسمك '+this.store.display(user.o):'لم تخبرني باسمك بعد')+'، واسمي '+(self?this.store.display(self.o):this.cfg.selfName)+'.';}
