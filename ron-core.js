@@ -29,8 +29,10 @@ function createRuleNLU(cfg=DEFAULTS){
  const parse=text=>{
   const c=clean(text),n0=normalize(c); let n=n0,t=c;
   // Direct conversational forms must be recognized before filler removal.
-  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
-  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:و\s*)?(?:ما|ايه|اي)\s+اسمي\s+و\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0)||/^(?:ما|ايه|اي)\s+اسمي\s+و?\s*(?:ما|ايه|اي)\s+اسمك$/.test(n0))return[{type:'ask-both-names',text:c}];
+  if(/^(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0)||/^(?:و\s*)?(?:وانت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمك$/.test(n0))return[{type:'ask',s:'$self',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:و\s*)?(?:انت\s+)?(?:ما\s+هو|ماهو|ماهي|ما)\s+اسمي$/.test(n0))return[{type:'ask',s:'$user',p:'اسم',sd:'',pd:'اسم',text:c}];
+  if(/^(?:و\s*)?(?:انت\s+)?(?:كم\s+عمرك|ما\s+عمرك|ما\s+هو\s+عمرك)$/.test(n0))return[{type:'self-age',text:c}];
   while(true){const m=/^(\S+)\s+/.exec(n);if(!m||!fillers.has(m[1]))break;n=n.slice(m[0].length);t=t.slice(m[0].length);}
   if(!n)return[{type:'unknown',text:c}];
   if(/^(رون|يا\s+رون|رون\s*[!،,.؟?]*)$/.test(n0))return[{type:'smalltalk',kind:'call'}];
@@ -151,6 +153,8 @@ class RonCore{
  phrase(s,p,o){const pd=this.store.display(p),od=this.store.display(o);if(s==='$user')return pd+'ك هو '+od;if(s==='$self')return pd+'ي هو '+od;return pd+' '+this.store.display(s)+' '+(/[هة]$/.test(pd)?'هي':'هو')+' '+od;}
  async exec(f){
   if(f.type==='smalltalk')return f.kind==='howareyou'?'أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟':f.kind==='call'?'نعم، أنا معك.':'مرحبًا، كيف أساعدك؟';
+  if(f.type==='self-age')return this.store.get('$self','عمر')?'عمري المسجل هو '+this.store.display(this.store.get('$self','عمر').o)+'.':'ليس لدي عمر بشري؛ أنا برنامج، ولا أملك عمرًا شخصيًا مثل الإنسان.';
+  if(f.type==='ask-both-names'){const user=this.store.get('$user','اسم'),self=this.store.get('$self','اسم');return (user?'اسمك '+this.store.display(user.o):'لم تخبرني باسمك بعد')+'، واسمي '+(self?this.store.display(self.o):this.cfg.selfName)+'.';}
   if(f.type==='context'){
    if(f.kind==='previous'){
     const h=this.ctx.history.filter(x=>x.role==='user');
