@@ -2,7 +2,7 @@ name: Train Ron-10M (manual)
 
 on:
   push:
-    branches: [quality-gate-staging-disabled]
+    branches: [feat/native-core-audit]
     paths:
       - 'scripts/train_native_10m.py'
       - 'scripts/prepare_corpus.py'
