@@ -33,7 +33,7 @@ Clear deterministic tasks such as arithmetic should be handled by Ron's local co
 - Configuration: `ron/model_config.py`
 - Training recipe: `scripts/train_native.py`
 - Reviewed seed corpus: `training/seed_corpus.txt`
-- Blind evaluation: `scripts/surprise_eval.py`
+- Anti-degeneration gate: `scripts/surprise_eval.py` (checks basic generation behavior, not semantic correctness)
 - Runtime provider: `ron/native_provider.py`
 
 Run the native training script in an environment with the repository's `model` extra installed:
@@ -43,9 +43,10 @@ python -m pip install -e ".[model]" pytest
 python -m scripts.train_native
 python -m scripts.surprise_eval
 python -m scripts.eval_conversation --strict
+python -m scripts.eval_conversation --benchmark training/generalization_benchmark.json --output artifacts/generalization-eval-report.json
 ```
 
-Training and evaluation reports are written under `artifacts/native-baseline/`. The workflow keeps candidate weights separate from the live checkpoint until the blind anti-degeneration gate passes.
+Training and evaluation reports are written under `artifacts/native-baseline/`. The workflow keeps candidate weights separate from the live checkpoint until the anti-degeneration gate passes. That gate is not a semantic benchmark; use `scripts/eval_conversation.py` for the 25-case curriculum regression set and `training/generalization_benchmark.json` for unseen phrasing.
 
 ## Current limitations
 
