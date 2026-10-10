@@ -73,7 +73,8 @@ def evaluate_checkpoint(checkpoint_path: Path, cases_path: Path, report_path: Pa
     critical_failures = [
         item["id"] for item in results if item["critical"] and not item["passed"]
     ]
-    checkpoint_hash = hashlib.sha256(checkpoint_path.read_bytes()).hexdigest()
+    with checkpoint_path.open("rb") as checkpoint_file:
+        checkpoint_hash = hashlib.file_digest(checkpoint_file, "sha256").hexdigest()
     report = {
         "status": "completed",
         "passed": pass_rate >= min_pass_rate and not critical_failures,
