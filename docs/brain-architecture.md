@@ -1,35 +1,28 @@
-# Ron + Qwen base-model architecture
+# Ron-0 Native Model Architecture
 
-Ron owns identity, memory, tools, learning policy, evaluation, and source code. Qwen3 is the initial **base language/reasoning model**, not Ron's owner.
+Ron-0 is built around its own local reasoning core and native character-level Transformer. It is not a wrapper around Qwen or another ready-made language model, and it is separate from Ron-1.
 
-User → Ron Core → context/memory/reasoning → Qwen3 base model → Ron validation → response
+## Local request path
 
-## What changed
+User → Ron UI → Ron Core → local rules / memory / tools → Ron native model → generation-quality guard → response
 
-The browser bridge now treats Qwen as the base model for substantive turns. If Qwen is unavailable, Ron falls back to its local reasoning layer rather than exposing provider errors.
+Deterministic operations, including clear arithmetic expressions, should be resolved by Ron's own code before natural-language generation. A language model should not be asked to approximate calculations that a local parser can evaluate exactly.
 
-Qwen answers are **not automatically written into Ron's long-term memory**. They are recorded separately as training candidates. Explicit user teaching is also recorded with provenance, but promotion into a future model dataset is a separate approval step.
+## Learning and training
 
-## Knowledge transfer
+1. Maintain a reviewed corpus in `training/seed_corpus.txt`.
+2. Split complete conversation pairs reproducibly into training and validation data.
+3. Train Ron's native model defined in `ron/model.py`.
+4. Track train and validation loss and stop when held-out validation stops improving.
+5. Test the selected checkpoint against blind prompts that are not included in the training corpus.
+6. Promote weights only when the quality gate passes; otherwise preserve the last validated checkpoint.
 
-`ron/distillation.py` implements the controlled transfer boundary:
+The corpus includes English examples as a controlled starting curriculum while retaining Arabic examples. English does not replace the Arabic UI or the goal of Arabic support.
 
-1. collect a Qwen-generated example;
-2. keep it marked as `candidate`;
-3. approve only examples that pass Ron's evaluation/curation rules;
-4. export approved examples as chat-training JSONL;
-5. later fine-tune a Qwen base checkpoint into a Ron-specific model.
+## Memory is not training
 
-This is real training-data transfer, not copying Qwen's internal weights.
+Local memory stores retrievable facts and user-approved instructions. Training changes the model's numerical weights. A conversation is not automatically a reliable training example, and a saved checkpoint is not automatically a better checkpoint.
 
-## Independence path
+## Limits
 
-Qwen3 base → Ron Core + curated examples → Ron-specific fine-tuned model → optional Qwen removal
-
-Removing Qwen later will not delete Ron's source, memory, identity, tools, or approved training data. General capabilities encoded only in Qwen's weights do not automatically migrate; they must be learned through actual training/fine-tuning.
-
-## Model weights
-
-Model weights are deliberately not committed to Git history. The adapter is provider-agnostic and can point at a local OpenAI-compatible runtime.
-
-Qwen3's official project documents SFT, LoRA, and Q-LoRA workflows, so the approved dataset produced here is designed to become training input rather than being treated as permanent memory.
+The current native model is a small character-level prototype. It can learn basic patterns but should not be described as a capable general-purpose assistant until it demonstrates consistent results on independent tests. No external model, external weights, or cloud inference API is required by this architecture.
