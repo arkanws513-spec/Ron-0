@@ -28,6 +28,15 @@ test('safe arithmetic respects precedence, parentheses, decimals, and Arabic dig
  assert.strictEqual(arithmetic('كم تساوي 5 × (4 + 2)'),'30');
  assert.strictEqual(arithmetic('-2 + +5'),'3');
 });
+test('Arabic conjunction keeps explicit math prompts on the local arithmetic path',async()=>{
+ const r=new RonCore();
+ for(const [prompt,result] of [['كم يساوي 5*5','25'],['وكم يساوي 5*5','25'],['كم يساوي 425*525','223125'],['وكم يساوي 425*525','223125']]){
+  assert.strictEqual(arithmetic(prompt),result,prompt);
+  assert.strictEqual(await say(r,prompt),'النتيجة: '+result,prompt);
+ }
+ assert.strictEqual(r.store.unparsed.length,0);
+});
+
 test('safe arithmetic rejects prose, malformed expressions, and unsafe edge cases',()=>{
  for(const input of ['process.exit()','hello 2+2','2 / 0','2 % 0','2+','(2+3','2**3','2..3',''])assert.strictEqual(arithmetic(input),null,input);
  assert.strictEqual(arithmetic('9'.repeat(300)+'+1'),null);
