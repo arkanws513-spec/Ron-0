@@ -13,6 +13,8 @@ from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
 from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
+from .arithmetic import answer_arithmetic, answer_linear_equation
+from .knowledge import CuratedKnowledgeBase
 
 @dataclass
 class RonCore:
@@ -25,6 +27,7 @@ class RonCore:
     understanding:UnderstandingEngine=field(default_factory=UnderstandingEngine)
     reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
     advanced_reasoning:AdvancedReasoner=field(default_factory=AdvancedReasoner)
+    knowledge_base:CuratedKnowledgeBase=field(default_factory=CuratedKnowledgeBase)
     provider_startup_warnings:list[str]=field(default_factory=list,init=False)
 
     def __post_init__(self)->None:
@@ -52,7 +55,10 @@ class RonCore:
         self.provider = LocalTeachingProvider()
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
-        response=ModelResponse(content=content,model=model,metadata=metadata)
+        # Keep observability consistent for model, memory, retrieval, and tool responses.
+        details={"runtime":"ron-0","active_skills":sorted(self.self_improvement.registry.snapshot())}
+        details.update(metadata or {})
+        response=ModelResponse(content=content,model=model,metadata=details)
         self.conversation.add("assistant",content)
         return response
 
@@ -71,6 +77,12 @@ class RonCore:
         intent_state=self.understanding.analyze(text,previous_user=previous_topic)
         topic=intent_state.topic
         intent=intent_state.intent or detect_intent(text,topic=topic)
+        arithmetic_answer=answer_arithmetic(text)
+        if arithmetic_answer is not None:
+            return self._finish(text,arithmetic_answer,"ron-arithmetic",{"runtime":"ron-0","deterministic_tool":"arithmetic","external_model_used":False})
+        equation_answer=answer_linear_equation(text)
+        if equation_answer is not None:
+            return self._finish(text,equation_answer,"ron-algebra",{"runtime":"ron-0","deterministic_tool":"linear-equation","external_model_used":False})
         facts=extract_facts(text)
         if facts:
             for fact in facts:self.memory.remember(fact.memory)
@@ -78,6 +90,9 @@ class RonCore:
         remembered_answer=answer_fact_question(text,self.memory)
         if remembered_answer is not None:
             return self._finish(text,remembered_answer,"ron-memory",{"runtime":"ron-0","memory_read":True})
+        curated_answer=self.knowledge_base.answer(text)
+        if curated_answer is not None:
+            return self._finish(text,curated_answer,"ron-curated-knowledge",{"runtime":"ron-0","local_retrieval":True,"external_model_used":False,"knowledge_source":"reviewed-seed-corpus"})
         memories=self.memory.recall(text,limit=5)
         related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories
         reasoning_facts=[]
@@ -130,7 +145,7 @@ class RonCore:
         )
         request=ModelRequest(
             messages=(Message(role="system",content=system_context), *history_messages, Message(role="user",content=text)),
-            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
+            metadata={"runtime":"ron-0","intent":intent.name if intent else "unknown","intent_confidence":intent.confidence if intent else 0.0,"topic":topic,"memory_hits":len(related),"conversation_turns":len(self.conversation.messages),"tools":self.tools.describe(),"knowledge":self.knowledge_base.describe(),"active_skills":sorted(self.self_improvement.registry.snapshot()),"reasoning":{"facts":len(reasoning_result.facts),"inferences":len(reasoning_result.inferences),"contradictions":len(reasoning_result.contradictions),"confidence":reasoning_result.confidence,"advanced_confidence":advanced_confidence,"causal_links":len(causal_links)}},
         )
         try:
             assert self.provider is not None

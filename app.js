@@ -306,12 +306,44 @@ const localLessonAnswer=n=>{
  return null;
 };
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
+ // Production browser conversations must go through the Python RonCore API.
+ // If the service is absent, fail visibly instead of silently switching to a second JS brain.
+ if(typeof fetch==="function"){
+  let sessionId="";
+  try{sessionId=localStorage.getItem("ron-python-session-v1")||"";}catch{}
+  if(!/^[A-Za-z0-9_-]{1,80}$/.test(sessionId)){
+   sessionId="ron_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);
+   try{localStorage.setItem("ron-python-session-v1",sessionId);}catch{}
+  }
+  try{
+   const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:t,session_id:sessionId})});
+   let payload={};try{payload=await response.json();}catch{}
+   globalThis.ronRuntimeStatus=payload.health||null;
+   if(!response.ok)throw new Error(payload.error||("http_"+response.status));
+   const nativeReply=String(payload.reply||"").trim();
+   if(!nativeReply)throw new Error("empty_reply");
+   globalThis.ronRuntimeStatus=payload.health||null;
+   messages.push({role:"ron",text:nativeReply});bubble("ron",nativeReply);save();saveCurrent();
+   return;
+  }catch(error){
+   console.error("Ron Python core request failed",error);
+   const code=String(error?.message||"");
+   const unavailable=code==="native_inference_rejected"
+    ?"نواة رون الأصلية متصلة، لكن فاحص الجودة رفض النص المولّد من النموذج. لم أستبدله برد من عقل آخر؛ يلزم تحسين النموذج واختباره قبل اعتماد الإجابة."
+    :code==="native_model_unavailable"
+    ?"خدمة رون تعمل، لكن لم يتم تحميل نموذج Transformer أصلي صالح. راجع /api/health وملف checkpoint."
+    :"تعذّر الاتصال بخدمة نواة رون الأصلية المكتوبة بـ Python. لم أستخدم عقلًا بديلًا. شغّل خدمة رون عبر «python -m ron.server» وتأكد من نجاح فحص /api/health.";
+   messages.push({role:"ron",text:unavailable});bubble("ron",unavailable);save();saveCurrent();
+   return;
+  }
+ }
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
  const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
- if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
- if(!String(r||"").trim()){
+ // Every turn enters RonCore first. UI-specific handlers are compatibility fallbacks,
+ // never an alternate primary reasoning path.
+ {
   const core=globalThis.ronCore;
   if(core){
    try{
@@ -321,7 +353,8 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
     if(candidate&&!failed)r=candidate;
    }catch(error){console.warn("Ron Core response failed",error);}
   }
- } if(!String(r||"").trim())r=answer(t);
+ }
+ if(!String(r||"").trim())r=answer(t);
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;
  const local=String(r||"").trim();
