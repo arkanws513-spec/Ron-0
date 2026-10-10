@@ -86,3 +86,64 @@ def answer_arithmetic(text: str) -> str | None:
     else:
         rendered = format(result, ".10g")
     return f"الناتج: {rendered}"
+
+
+def _linear_form(node: ast.AST) -> tuple[float, float]:
+    """Return (coefficient_of_x, constant) for a safe linear expression."""
+    if isinstance(node, ast.Expression):
+        return _linear_form(node.body)
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        value = float(node.value)
+        if not math.isfinite(value) or abs(value) > _MAX_ABS_VALUE:
+            raise _InvalidExpression("number too large")
+        return 0.0, value
+    if isinstance(node, ast.Name) and node.id in {"x", "س"}:
+        return 1.0, 0.0
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        a, b = _linear_form(node.operand)
+        sign = -1.0 if isinstance(node.op, ast.USub) else 1.0
+        return sign * a, sign * b
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+        left_a, left_b = _linear_form(node.left)
+        right_a, right_b = _linear_form(node.right)
+        if isinstance(node.op, ast.Add):
+            return left_a + right_a, left_b + right_b
+        if isinstance(node.op, ast.Sub):
+            return left_a - right_a, left_b - right_b
+        if isinstance(node.op, ast.Mult):
+            if left_a != 0 and right_a != 0:
+                raise _InvalidExpression("non-linear equation")
+            return left_a * right_b + right_a * left_b, left_b * right_b
+        if right_a != 0 or right_b == 0:
+            raise _InvalidExpression("division by a variable or zero")
+        return left_a / right_b, left_b / right_b
+    raise _InvalidExpression("unsupported linear expression")
+
+
+def answer_linear_equation(text: str) -> str | None:
+    """Solve a single-variable linear equation using a restricted AST, never eval()."""
+    raw = str(text or "").strip()
+    if not raw or len(raw) > _MAX_INPUT_LENGTH or raw.count("=") != 1:
+        return None
+    value = raw.translate(_DIGITS).replace("×", "*").replace("÷", "/").replace("−", "-")
+    value = re.sub(r"^(?:حل\\s+(?:المعادلة|معادله)|solve)\\s*", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"(?<=\\d)\\s*([xس])\\b", r"*\\1", value)
+    left, right = (part.strip() for part in value.split("=", 1))
+    if not left or not right or not re.search(r"[xس]", value):
+        return None
+    if not re.fullmatch(r"[\\dxس\\s().+*/-]+", left) or not re.fullmatch(r"[\\dxس\\s().+*/-]+", right):
+        return None
+    try:
+        left_a, left_b = _linear_form(ast.parse(left, mode="eval"))
+        right_a, right_b = _linear_form(ast.parse(right, mode="eval"))
+        coefficient = left_a - right_a
+        constant = right_b - left_b
+        if math.isclose(coefficient, 0.0, abs_tol=1e-12):
+            return None
+        solution = constant / coefficient
+        if not math.isfinite(solution) or abs(solution) > _MAX_ABS_VALUE:
+            return None
+    except (SyntaxError, ValueError, OverflowError, ZeroDivisionError):
+        return None
+    rendered = str(int(solution)) if float(solution).is_integer() else format(solution, ".10g")
+    return f"الحل: x = {rendered}"
