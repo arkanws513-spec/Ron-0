@@ -65,10 +65,12 @@ def test_tied_embeddings_are_restored_after_assign_checkpoint_loading() -> None:
     expected_parameters = count_parameters(original)
     checkpoint_state = original.state_dict()
 
-    restored = ScalableRonLM(config)
+    with torch.device("meta"):
+        restored = ScalableRonLM(config)
     restored.load_state_dict(checkpoint_state, strict=True, assign=True)
     restored.tie_weights()
 
+    assert not restored.embed_tokens.weight.is_meta
     assert restored.lm_head.weight is restored.embed_tokens.weight
     assert count_parameters(restored) == expected_parameters
 
