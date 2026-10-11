@@ -58,6 +58,34 @@ def test_scalable_generation_stays_within_vocabulary() -> None:
     assert int(generated.min()) >= 0 and int(generated.max()) < config.vocab_size
 
 
+def test_generation_masks_untrained_vocab_rows_and_structural_tokens() -> None:
+    config = ScalableRonConfig(vocab_size=8, hidden_size=16, num_layers=1, num_heads=2,
+        num_kv_heads=1, max_sequence_length=8)
+    model = ScalableRonLM(config).eval()
+
+    # Force the model to prefer an untrained padded ID and then a structural token.
+    def fake_forward(input_ids, labels=None):
+        logits = torch.zeros((input_ids.shape[0], input_ids.shape[1], config.vocab_size))
+        logits[..., 7] = 100.0  # beyond learned tokenizer vocabulary
+        logits[..., 1] = 90.0   # structural token
+        logits[..., 2] = 80.0   # EOS, blocked for the first generated token
+        logits[..., 4] = 70.0   # first ordinary token
+        return {"logits": logits, "loss": None}
+
+    model.forward = fake_forward
+    prompt = torch.tensor([[3]])
+    generated = model.generate(
+        prompt,
+        max_new_tokens=2,
+        eos_token_id=2,
+        valid_vocab_size=6,
+        suppress_token_ids=[0, 1, 3],
+        min_new_tokens=1,
+    )
+    assert generated[0, 1].item() == 4
+    assert generated[0, 2].item() < 6
+
+
 def test_scalable_estimator_is_separate_from_legacy() -> None:
     from scripts.estimate_model_scale import estimate
     legacy = estimate(1024, 128, 2, 4, 64)
