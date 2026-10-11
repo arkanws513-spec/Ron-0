@@ -21,6 +21,7 @@ import shutil
 import tempfile
 import threading
 import time
+import unicodedata
 from collections import defaultdict, deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from operator import add, sub, mul, truediv, mod, pow
@@ -96,6 +97,25 @@ def _safe_math_node(node: ast.AST) -> float:
         if abs(value) > 1e12: raise ValueError("result too large")
         return float(value)
     raise ValueError("unsupported expression")
+
+
+def deterministic_social_reply(text: str) -> str | None:
+    """Answer common standalone greetings locally, without spending CPU on inference."""
+    normalized = unicodedata.normalize("NFKC", text).lower()
+    normalized = re.sub(r"[\u064b-\u065f\u0670\u0640]", "", normalized)
+    normalized = re.sub(r"[أإآٱ]", "ا", normalized)
+    normalized = re.sub(r"[!?؟.,،؛:]+$", "", normalized).strip()
+    if re.fullmatch(r"(?:اهلا|مرحبا|سلام|السلام عليكم|هلا|هاي)(?:\s+يا\s+رون)?", normalized):
+        if normalized.startswith("السلام عليكم"):
+            return "وعليكم السلام ورحمة الله، أهلًا بك."
+        return "أهلًا بك! أنا رون. تحب نتكلم عن إيه؟"
+    if re.fullmatch(r"(?:كيف حالك(?: يا رون)?|عامل ايه|عاملة ايه|ازيك|اخبارك ايه|كيفك)", normalized):
+        return "أنا جاهز أساعدك، شكرًا لسؤالك. إنت أخبارك إيه؟"
+    if re.fullmatch(r"(?:hello|hi|hey|good morning|good afternoon)", normalized):
+        return "Hello! I'm Ron. What would you like to talk about?"
+    if re.fullmatch(r"(?:how are you|how are you doing|how's it going)", normalized):
+        return "I'm ready to help, thanks for asking. What would you like to talk about?"
+    return None
 
 
 def deterministic_math(text: str) -> str | None:
@@ -238,10 +258,18 @@ class ScalableRuntime:
                 self.requests = defaultdict(deque, {key: val for key, val in self.requests.items() if val and now - val[-1] < 60})
             return True
 
-    def answer(self, text: str, session_id: str) -> str:
+    def answer_with_status(self, text: str, session_id: str) -> tuple[str, str]:
         math_answer = deterministic_math(text)
         if math_answer is not None:
-            return math_answer
+            return math_answer, "deterministic_math"
+
+        social_reply = deterministic_social_reply(text)
+        if social_reply is not None:
+            with self.lock:
+                self.sessions[session_id].append({"role": "user", "text": text})
+                self.sessions[session_id].append({"role": "assistant", "text": social_reply})
+            return social_reply, "deterministic_social"
+
         with self.lock:
             history = list(self.sessions[session_id])
             history.append({"role": "user", "text": text})
@@ -265,15 +293,22 @@ class ScalableRuntime:
                 eos_token_id=int(self.special["<eos>"]),
                 valid_vocab_size=self.valid_vocab_size,
                 suppress_token_ids=self.suppressed_token_ids,
-                min_new_tokens=1,
+                min_new_tokens=min(3, MAX_NEW_TOKENS),
             )[0, len(ids):].tolist()
         reply = self.tokenizer.decode(output, skip_special_tokens=True).strip()
+        status = "native_model"
         if not reply:
-            reply = "لم ينتج النموذج إجابة نصية. نحتاج إلى مراجعة التدريب والتقييم."
+            # Do not pass an empty string to the UI or misrepresent it as a model answer.
+            reply = "أنا معك، لكن النموذج لم يصغ ردًا واضحًا هذه المرة. جرّب سؤالًا أبسط."
+            status = "empty_generation_fallback"
         with self.lock:
             self.sessions[session_id].append({"role": "user", "text": text})
             self.sessions[session_id].append({"role": "assistant", "text": reply})
-        return reply
+        return reply, status
+
+    def answer(self, text: str, session_id: str) -> str:
+        """Compatibility wrapper for callers that only need the response text."""
+        return self.answer_with_status(text, session_id)[0]
 
 
 class RonHandler(SimpleHTTPRequestHandler):
@@ -338,11 +373,11 @@ class RonHandler(SimpleHTTPRequestHandler):
             self._json(400, {"error": "invalid_session_id"})
             return
         try:
-            reply = self.runtime.answer(message.strip(), session_id)
+            reply, generation_status = self.runtime.answer_with_status(message.strip(), session_id)
         except Exception:
             self._json(500, {"error": "inference_failed", "message": "Ron inference failed; inspect server logs."})
             return
-        self._json(200, {"reply": reply, "health": self.runtime.health()})
+        self._json(200, {"reply": reply, "generation_status": generation_status, "health": self.runtime.health()})
 
     def end_headers(self) -> None:
         # Static assets may be cached by the browser; app.js is versioned on deploy.
