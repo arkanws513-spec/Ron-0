@@ -1,0 +1,27 @@
+name: Ron UI JavaScript syntax check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.js"
+      - ".github/workflows/ron-ui-syntax.yml"
+  pull_request:
+    paths:
+      - "app.js"
+      - ".github/workflows/ron-ui-syntax.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Validate Ron UI JavaScript syntax
+        run: node --check app.js

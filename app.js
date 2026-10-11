@@ -100,7 +100,8 @@ const render=()=>{chat.replaceChildren();messages.forEach(m=>bubble(m.role,m.tex
 const cleanValue=s=>s.replace(/^[\s.،,؛;:]+|[\s.!؟?،,؛;:]+$/g,"").trim();
 const isSafeProfileName=value=>{
  const raw=String(value??"").trim(),n=norm(cleanValue(raw)),parts=n.split(" ").filter(Boolean);
- return !!n&&parts.length<=4&&!/^(?:لا|ليس|مش|مو|ما|بسالك|اسالك|عن|اسمك|اسمي|لكن|ولكن|وليس|بل)(?:\s|$)/.test(n)&&!/(?:^|\s)(?:وليس|لكن|ولكن|مش|مو|بل|لا|ليس|بسالك|اسالك|عن|اسمي|اسمك)$/.test(n)&&!/(?:^|\s)(?:بسالك|اسالك)\s+عن(?:\s|$)/.test(n)&&!/(?:^|\s)(?:اسمك|اسمي)(?:\s|$)/.test(n)&&!/[؟?]/.test(raw);
+ const rejectedPhrase=/^(?:تعبت منك|زهقت منك|مللت منك|مش فاهم|لا اعرف|لا املك|لم تخبرني|اسمك تعبت منك)$/.test(n)||/^(?:انا|انت|هو|هي|هذا|هذه|ذلك|ماذا|كيف|لماذا|تعبت|زهقت|مللت|عايز|اريد|ممكن|هل)\b/.test(n);
+ return !rejectedPhrase&&!!n&&parts.length<=4&&!/^(?:لا|ليس|مش|مو|ما|بسالك|اسالك|عن|اسمك|اسمي|لكن|ولكن|وليس|بل)(?:\s|$)/.test(n)&&!/(?:^|\s)(?:وليس|لكن|ولكن|مش|مو|بل|لا|ليس|بسالك|اسالك|عن|اسمي|اسمك)$/.test(n)&&!/(?:^|\s)(?:بسالك|اسالك)\s+عن(?:\s|$)/.test(n)&&!/(?:^|\s)(?:اسمك|اسمي)(?:\s|$)/.test(n)&&!/[؟?]/.test(raw);
 };
 const PROFILE_CLEAN_V5="ron-profile-clean-v5";
 if(localStorage.getItem(PROFILE_CLEAN_V5)!=="1"){
@@ -109,6 +110,13 @@ if(localStorage.getItem(PROFILE_CLEAN_V5)!=="1"){
  try{const raw=JSON.parse(localStorage.getItem("ron-learning-core-v1")||"null");if(raw&&Array.isArray(raw.knowledge)){raw.knowledge=raw.knowledge.filter(x=>{if(x?.kind!=="fact")return true;const t=norm(x.text||"");let m=t.match(/^اسمك\s+هو\s+(.+)$/);if(m)return isSafeProfileName(m[1]);m=t.match(/^اسمي\s+هو\s+(.+)$/);if(m)return norm(m[1])==="رون";return true;});localStorage.setItem("ron-learning-core-v1",JSON.stringify(raw));}}catch{}
  localStorage.setItem(PROFILE_CLEAN_V5,"1");
  try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
+}
+const PROFILE_CLEAN_V6="ron-profile-clean-v6";
+if(localStorage.getItem(PROFILE_CLEAN_V6)!=="1"){
+ const corruptedName=x=>x?.key==="user.name"&&/^(?:تعبت منك|زهقت منك|مللت منك|مش فاهم|لا اعرف|لا املك|لم تخبرني|اسمك تعبت منك)$/i.test(norm(x.text));
+ lessons=lessons.filter(x=>!corruptedName(x));
+ try{const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");if(raw&&Array.isArray(raw.facts)){raw.facts=raw.facts.filter(x=>!(x?.s==="$user"&&norm(x.p)==="اسم"&&/^(?:تعبت منك|زهقت منك|مللت منك|مش فاهم|لا اعرف|لا املك|لم تخبرني|اسمك تعبت منك)$/i.test(norm(x.o||"")));localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));}}catch{}
+ localStorage.setItem(PROFILE_CLEAN_V6,"1");try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
 }
 const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push({key,text,at:new Date().toISOString()});save()};
 const extractFacts=t=>{
@@ -193,7 +201,7 @@ const extractRonFacts=t=>{
  return facts;
 };
 const isRonNameStatement=n=>/^(?:انت\s+)?(?:اسمك\s+هو|اسمك|انت\s+اسمك)\s+رون$/.test(n)||/^اسمك\s+رون$/.test(n)||/^انت\s+رون$/.test(n)||/^اسمك\s+انت\s+رون$/.test(n)||/^وانت\s+رون$/.test(n)||/^انت\s+اسمك\s+رون$/.test(n);
-const isNameQuestion=n=>n.includes("ما اسمي")||n.includes("ايه اسمي")||n.includes("اي اسمي")||n.includes("هل تتذكر اسمي");
+const isNameQuestion=n=>/(?:^|\s)(?:و\s*)?(?:ما|ايه|اي)\s+(?:(?:هو|هي)\s+)?اسمي(?:\s|$)/.test(n)||n.includes("هل تتذكر اسمي")||n.includes("ما هو اسمي");
 const isRonNameQuestion=n=>n.includes("ما اسمك")||n.includes("ايه اسمك")||n.includes("اي اسمك")||n.includes("ما هو اسمك")||n.includes("اسمك اي")||n.includes("اسمك ايه")||n==="وانت"||n==="وانت؟";
 const isBothNamesQuestion=n=>/^(?=.*(?:ما|ايه|اي)\s*اسمي)(?=.*(?:ما|ايه|اي)\s*اسمك).*$/.test(n)||n.includes("اسمي واسمك");
 const isRonAgeQuestion=n=>n.includes("كم عمرك")||n.includes("ما عمرك")||n.includes("ما هو عمرك")||n.includes("هل تتذكر عمرك");
@@ -201,6 +209,10 @@ const isReadinessQuestion=n=>/^(?:هل\s+)?انت\s+جاهز[؟?!.]*$/.test(n);
 const isIncompleteMathQuestion=n=>/^(?:و\s*)?كم\s+(?:تساوي|يساوي)[؟?!.]*$/.test(n)||/^(?:و\s*)?ما\s+الناتج[؟?!.]*$/.test(n);
 const isEgyptCapitalQuestion=n=>/^(?:(?:ما|ايه|اي)\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+مصر[؟?!.]*$/.test(n)||/^(?:ما|ايه|اي)\s+(?:هي\s+)?عاصم(?:ة|ه)\s+مصر[؟?!.]*$/.test(n);
 const isEgyptCapitalPreference=n=>/^(?:حين|عندما|لما)\s+اسالك\s+(?:ما\s+(?:هي\s+)?)?عاصم(?:ة|ه)\s+مصر[،,]?\s+(?:قول|قل)\s+القاهرة\s+فقط[.!؟?]*$/.test(n);
+const capitalQuestionCountry=raw=>{let q=norm(raw).replace(/[؟?!.،,]+$/,"").trim();q=q.replace(/^(?:(?:اذا|طيب|طب)\s+)?/,"");q=q.replace(/^(?:(?:هل\s+)?(?:انت\s+)?(?:اتعرف|تعرف)\s+)/,"");const m=q.match(/^(?:ما|ايه|اي)\s+(?:هي\s+)?عاصم(?:ة|ه)\s+(.+)$/);return m?cleanValue(m[1]):null;};
+const extractCapitalStatement=raw=>{let q=norm(raw).replace(/[.!؟?،,؛;]+$/,"").trim();q=q.replace(/\s+(?:تذكر(?:\s+ذلك)?|احفظ(?:\s+ذلك)?|سجل(?:\s+ذلك)?)$/,"").trim();let m=q.match(/^عاصم(?:ة|ه)\s+(.+?)\s+(?:هي|تكون)\s+(.+)$/);if(m)return{country:cleanValue(m[1]),city:cleanValue(m[2])};m=q.match(/^(.+?)\s+(?:هي\s+)?عاصم(?:ة|ه)\s+(.+)$/);if(m)return{country:cleanValue(m[2]),city:cleanValue(m[1])};return null;};
+const saveCapitalFact=(country,city,sourceText)=>{lessons=lessons.filter(item=>!(item.kind==="relation"&&item.relation==="capital_of"&&norm(item.object)===norm(country)));lessons.push({key:"fact:capital:"+Date.now(),text:sourceText||("عاصمة "+country+" هي "+city),kind:"relation",relation:"capital_of",subject:city,object:country,at:new Date().toISOString()});save();};
+const answerCapitalQuestion=raw=>{const country=capitalQuestionCountry(raw);if(!country)return null;const learned=lessons.slice().reverse().find(item=>item.kind==="relation"&&item.relation==="capital_of"&&norm(item.object)===norm(country));if(learned)return learned.subject+" هي عاصمة "+learned.object+".";const known=[["مصر","القاهرة"],["فرنسا","باريس"],["المملكة المتحدة","لندن"],["بريطانيا","لندن"]].find(item=>norm(item[0])===norm(country));if(known)return known[1]+" هي عاصمة "+country+".";return "لا أملك معلومة موثوقة عن عاصمة "+country+" بعد، ولن أخمّن.";};
 const isAgeQuestion=n=>n.includes("كم عمري")||n.includes("ما عمري")||n.includes("ما هو عمري")||n.includes("عندي كام سنة")||n.includes("هل تتذكر عمري");
 const isProfileQuestion=n=>(isNameQuestion(n)||isAgeQuestion(n))&&(isNameQuestion(n)&&isAgeQuestion(n));
 const teach=t=>{let x=String(t||"").trim().replace(/^\s*عل[ّ]?م\s+رون\s*(?::|،|,|-)?\s*/i,"").trim().replace(/^ان\s+/i,"").trim();if(!x)return"اكتب المعلومة بعد «علّم رون:».";
@@ -243,6 +255,9 @@ const explainPreviousReply=()=>{
 };
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ const capitalStatement=extractCapitalStatement(t);
+ if(capitalStatement){saveCapitalFact(capitalStatement.country,capitalStatement.city,t);return "تم حفظ المعلومة: عاصمة "+capitalStatement.country+" هي "+capitalStatement.city+".";}
+ const capitalAnswer=answerCapitalQuestion(t);if(capitalAnswer)return capitalAnswer;
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
  if(isReadinessQuestion(n))return "أيوه، جاهز.";
  if(isWithMeQuestion(n))return "أيوه، أنا معاك. قولّي نكمل منين.";
@@ -255,6 +270,7 @@ const answer=t=>{
  if(/^(مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا)([!！،,. ]*)$/.test(n))return "مرحبًا. أنا رون، وجاهز لمساعدتك.";
  if(/^(ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)([؟? !،,.]*)$/.test(n))return "أنا بخير وجاهز للعمل. ماذا تريد أن نفعل؟";
  if(/^(ماذا تستطيع|ايه اللي تقدر تعمله|ماذا يمكنك ان تفعل|ماذا يمكنك|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(n))return "أستطيع فهم المحادثة، حفظ ما تعلّمني إياه، استخدام معرفتي المحلية، إجراء استدلال بسيط، والبحث في الإنترنت عندما أحتاج معلومة غير موجودة لدي. وويمكنني الاعتماد على نواتي المحلية والبحث في الإنترنت عند الحاجة.";
+  if(/^(?:كيف|ازاي)\s+(?:تستطيع|يمكنك)\s+(?:ان\s+)?(?:تساعدني|مساعدتي)$/.test(n))return "أستطيع الإجابة عن الأسئلة البسيطة، والمساعدة في الكتابة والحساب، وتذكّر المعلومات التي تعلّمني إياها على هذا الجهاز. ما زلت قيد التطوير وقد أخطئ، لذلك سأوضح عندما لا أعرف الإجابة.";
  if(/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً)$/.test(n))return "شكرًا! أنا جاهز نكمل.";
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
  if(ronFacts.length&&!isRonNameQuestion(n)&&!isRonAgeQuestion(n)&&!isNameQuestion(n)&&!isAgeQuestion(n)){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
@@ -309,7 +325,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
- const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
+ const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||!!capitalQuestionCountry(t)||!!extractCapitalStatement(t)||/^(?:كيف|ازاي)\s+(?:تستطيع|يمكنك)\s+(?:ان\s+)?(?:تساعدني|مساعدتي)$/.test(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim()){
   const core=globalThis.ronCore;
