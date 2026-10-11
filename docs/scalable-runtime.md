@@ -4,7 +4,7 @@ The GitHub Pages site is static and cannot execute PyTorch. The browser chat mus
 
 ## 1. Obtain the training artifact
 
-Open [the successful Ron-180M training run](https://github.com/arkanws513-spec/Ron-0/actions/runs/38109801662), download the artifact named `ron-180m-pythia-distillation-pilot`, and extract it so these files exist:
+Open [the successful Ron-180M training run](https://github.com/arkanws513-spec/Ron-0/actions/runs/38109801662), download the artifact named `ron-180m-pythia-distillation-pilot`, then extract its contents into the repository's `artifacts/` directory so these files exist:
 
 - `artifacts/ron-180m-pythia-distilled/checkpoint.pt`
 - `artifacts/ron-180m-pythia-distilled/config.json`
