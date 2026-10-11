@@ -4,11 +4,22 @@ from __future__ import annotations
 import re
 
 _TOKEN_RE = re.compile(r"[\w\u0600-\u06ff]+", re.UNICODE)
+_REPEAT_PATTERN_RE = re.compile(r"(.{3,10})\1{2,}", re.DOTALL)
 
 
 def is_degenerate_text(answer: str) -> bool:
-    """Detect obvious token loops; this does not assess factual correctness."""
-    tokens = [token.casefold() for token in _TOKEN_RE.findall(str(answer))]
+    """Detect obvious word loops and repeated character fragments, not factual errors."""
+    text = str(answer or "").strip()
+    if not text:
+        return True
+
+    # Character-level models can loop without spaces (for example, repeating a
+    # short Arabic fragment); word-only repetition checks miss these outputs.
+    compact = re.sub(r"\s+", "", text.casefold())
+    if len(compact) >= 18 and _REPEAT_PATTERN_RE.search(compact):
+        return True
+
+    tokens = [token.casefold() for token in _TOKEN_RE.findall(text)]
     if len(tokens) < 6:
         return False
     counts: dict[str, int] = {}
@@ -20,7 +31,7 @@ def is_degenerate_text(answer: str) -> bool:
 
 
 def guard_generated_text(answer: str, fallback: str) -> tuple[str, bool]:
-    """Return generated text unless empty or obviously repetitive; also report rejection."""
+    """Return generated text unless empty or obviously repetitive; report rejection."""
     candidate = str(answer or "").strip()
     if not candidate or is_degenerate_text(candidate):
         return fallback, True
