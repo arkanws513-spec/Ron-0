@@ -192,9 +192,17 @@ class ScalableRuntime:
                 if key in saved_config and int(saved_config[key]) != int(getattr(self.config, key)):
                     raise RuntimeError(f"Checkpoint/config mismatch for {key}")
         precision = os.getenv("RON_PRECISION", "fp16").lower()
-        dtype = torch.float16 if precision == "fp16" else torch.float32
-        print("ron-runtime: constructing model", flush=True)
-        self.model = ScalableRonLM(self.config).to(device=self.device, dtype=dtype)
+        if precision not in {"fp16", "fp32"}:
+            raise RuntimeError("RON_PRECISION must be fp16 or fp32")
+        if precision == "fp32" and self.device.type == "cpu":
+            raise RuntimeError("FP32 inference exceeds the current CPU memory budget; use RON_PRECISION=fp16")
+        target_dtype = torch.float16 if precision == "fp16" else torch.float32
+        if any(tensor.dtype != target_dtype for tensor in state.values()):
+            # Keep the default FP16 path zero-copy. FP32 is only allowed on a GPU.
+            state = {key: tensor.to(dtype=target_dtype) for key, tensor in state.items()}
+        print("ron-runtime: constructing model on meta device to avoid a second full weight allocation", flush=True)
+        with torch.device("meta"):
+            self.model = ScalableRonLM(self.config)
         print("ron-runtime: assigning checkpoint weights", flush=True)
         self.model.load_state_dict(state, strict=True, assign=True)
         # assign=True reduces load-time memory but can split tied parameters into
@@ -203,8 +211,14 @@ class ScalableRuntime:
         del payload, state
         self.model.eval()
         self.parameter_count = count_parameters(self.model)
+        if any(parameter.is_meta for parameter in self.model.parameters()):
+            raise RuntimeError("Checkpoint assignment left model parameters on the meta device")
+        if any(parameter.dtype != target_dtype for parameter in self.model.parameters()):
+            raise RuntimeError("Loaded checkpoint precision does not match RON_PRECISION")
         if self.config.tie_embeddings and self.model.lm_head.weight is not self.model.embed_tokens.weight:
             raise RuntimeError("Configured tied embeddings were not preserved")
+        if self.config.tie_embeddings and self.parameter_count != 180_255_744:
+            raise RuntimeError(f"Unexpected tied-model parameter count: {self.parameter_count}")
 
         print("ron-runtime: verifying checkpoint checksum", flush=True)
         self.checkpoint_sha256 = self._sha256(CHECKPOINT)
