@@ -89,10 +89,21 @@ class NativeCheckpointProvider:
         result = torch.tensor([ids], dtype=torch.long)
         generated: list[int] = []
         newline_id = self.vocab.get("\n")
+        # Greedy decoding collapsed into short character loops on this checkpoint.
+        # Filtered sampling is deterministic per prompt so evaluation remains repeatable.
+        seed = int.from_bytes(hashlib.sha256(prompt.encode("utf-8")).digest()[:8], "big") % (2**63 - 1)
+        generator = torch.Generator(device="cpu").manual_seed(seed)
+        temperature = 0.8
+        top_k = min(8, self.config.vocab_size)
 
         for _ in range(min(160, self.config.max_sequence_length)):
             context = result[:, -self.config.max_sequence_length:]
-            next_id = int(self.model(context).logits[:, -1, :].argmax(dim=-1).item())
+            logits = self.model(context).logits[:, -1, :].float() / temperature
+            top_values = torch.topk(logits, k=top_k, dim=-1).values
+            cutoff = top_values[:, -1, None]
+            logits = logits.masked_fill(logits < cutoff, float("-inf"))
+            probabilities = torch.softmax(logits, dim=-1)
+            next_id = int(torch.multinomial(probabilities, num_samples=1, generator=generator).item())
             generated.append(next_id)
             result = torch.cat((result, torch.tensor([[next_id]], dtype=torch.long)), dim=1)
             if newline_id is not None and next_id == newline_id and len(generated) > 1:
