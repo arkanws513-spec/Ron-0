@@ -1,0 +1,74 @@
+name: Ron free compute smoke test
+
+on:
+  push:
+    branches: [feat/native-core-audit]
+    paths:
+      - 'notebooks/ron_colab_smoke_test.ipynb'
+      - '.github/workflows/ron-free-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ron-free-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout Ron training branch
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Inspect CPU and memory
+        run: |
+          python - <<'PY'
+          import os, platform, shutil
+          print("Python platform:", platform.platform())
+          print("CPU count:", os.cpu_count())
+          print("Free disk GiB:", round(shutil.disk_usage(".").free / 1024**3, 2))
+          try:
+              with open("/proc/meminfo") as f:
+                  print("\n".join(line.strip() for line in f if line.startswith(("MemTotal:", "MemAvailable:"))))
+          except OSError as e:
+              print("Memory info unavailable:", e)
+          PY
+      - name: Install model dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[model]" pytest
+      - name: Run native model and training recipe tests
+        run: python -m pytest tests/test_model.py tests/test_native_10m_recipe.py tests/test_sft_10m.py tests/test_native_evaluation_gate.py -q
+      - name: Execute three-step isolated optimizer smoke test
+        run: |
+          python - <<'PY'
+          import json, os, torch
+          from ron.model import RonCausalLM
+          from ron.model_config import RonModelConfig
+          torch.manual_seed(1701)
+          cfg = RonModelConfig(vocab_size=128, hidden_size=64, num_layers=2, num_heads=4, max_sequence_length=32)
+          model = RonCausalLM(cfg)
+          optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+          losses = []
+          for step in range(3):
+              x = torch.randint(0, cfg.vocab_size, (2, 32))
+              y = torch.randint(0, cfg.vocab_size, (2, 32))
+              optimizer.zero_grad(set_to_none=True)
+              loss = model(x, y).loss
+              assert loss is not None and torch.isfinite(loss), "loss is non-finite"
+              loss.backward()
+              torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+              optimizer.step()
+              losses.append(float(loss.detach()))
+          path = os.path.join(os.environ.get("RUNNER_TEMP", "."), "ron-smoke-test-only.pt")
+          torch.save({"state_dict": model.state_dict(), "losses": losses, "smoke_test_only": True}, path)
+          assert os.path.isfile(path) and os.path.getsize(path) > 0
+          print(json.dumps({"status":"PASS","parameters":sum(p.numel() for p in model.parameters()),"steps":3,"losses":losses,"isolated_checkpoint_bytes":os.path.getsize(path)}, indent=2))
+          PY
