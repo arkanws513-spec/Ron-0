@@ -306,7 +306,8 @@ const localLessonAnswer=n=>{
  return null;
 };
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
- // Every browser chat turn must use the Python service; never silently answer with the legacy JS brain.
+ // Modern browsers use the Python service exclusively; keep legacy logic only for environments without Fetch API support.
+ if(typeof fetch==="function"){
  const apiBase=String(window.RON_API_BASE||"").replace(/\/+$/,"");
  let sessionId="";
  try{sessionId=localStorage.getItem("ron-python-session-v1")||"";}catch{}
@@ -328,6 +329,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
   const disconnected="لم أتمكن من الاتصال بخدمة نواة رون المدرّبة. لم أستخدم النواة القديمة كبديل. تأكد من تشغيل خدمة Python وفتح الموقع من عنوانها، ثم افحص /api/health.";
   messages.push({role:"ron",text:disconnected});bubble("ron",disconnected);save();saveCurrent();
   return;
+ }
  }
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
