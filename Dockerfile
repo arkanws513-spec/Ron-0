@@ -7,6 +7,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 COPY pyproject.toml README.md ./
+COPY index.html app.js ron-core.js ron-agent-core.js ron-knowledge-core.js ron-browser-reasoner.js ron-learning-core.js ron-web-search.js manifest.webmanifest ./
+COPY assets ./assets
 COPY ron ./ron
 COPY docs ./docs
 COPY training/seed_corpus.txt ./training/seed_corpus.txt
@@ -15,4 +17,4 @@ RUN python -m pip install --upgrade pip && \
     python -m pip install --no-deps -e .
 
 EXPOSE 8000
-CMD ["python", "-m", "ron.scalable_server"]
+CMD ["python", "-m", "ron.native_chat_server"]
