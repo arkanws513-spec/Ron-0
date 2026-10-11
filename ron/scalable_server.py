@@ -109,6 +109,8 @@ def deterministic_social_reply(text: str) -> str | None:
     normalized = re.sub(r"[\u064b-\u065f\u0670\u0640]", "", normalized)
     normalized = re.sub(r"[أإآٱ]", "ا", normalized)
     normalized = re.sub(r"[!?؟.,،؛:]+$", "", normalized).strip()
+    if re.fullmatch(r"(?:انا\\s+)?(?:تمام|كويس|كويسة|بخير|الحمد لله|تمام الحمد لله|كويس الحمد لله|كويسة الحمد لله)", normalized):
+        return "الحمد لله، مبسوط إنك تمام. تحب نكمل في إيه؟"
     if re.fullmatch(r"(?:ما اسمك|ما هو اسمك|اسمك ايه|انت اسمك ايه|من انت|انت مين|مين انت)(?:\s+يا\s+رون)?", normalized):
         return "أنا رون، مساعد مستقل يعمل بنواته الخاصة."
     if re.fullmatch(r"(?:احسنت|برافو|عاش|ممتاز|رائع|شكرا|شكرا لك)(?:\s+يا\s+رون)?", normalized):
