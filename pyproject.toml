@@ -12,6 +12,7 @@ dependencies = []
 [project.optional-dependencies]
 model = ["torch>=2.6"]
 distill = ["torch>=2.6", "transformers>=4.45", "accelerate>=0.34", "safetensors>=0.4"]
+scalable = ["torch>=2.6", "tokenizers>=0.20"]
 
 [tool.setuptools.packages.find]
 include = ["ron*"]
