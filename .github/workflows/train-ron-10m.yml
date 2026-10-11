@@ -16,6 +16,8 @@ on:
       - 'training/eval_cases.json'
       - '.github/workflows/train-ron-10m.yml'
       - 'ron/model.py'
+      - 'ron/native_provider.py'
+      - 'ron/generation_quality.py'
       - 'ron/model_config.py'
   workflow_dispatch:
     inputs:
