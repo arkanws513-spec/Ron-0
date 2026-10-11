@@ -1,0 +1,91 @@
+name: Ron 180M Pythia distillation (free CPU)
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_prompts:
+        description: "Number of seed prompts for the small teacher dataset"
+        required: true
+        default: "16"
+        type: string
+      max_steps:
+        description: "Maximum student optimizer updates (bounded CPU pilot)"
+        required: true
+        default: "5"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  distill-180m:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out Ron
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install model and distillation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[distill]" tokenizers
+      - name: Build Ron's own tokenizer
+        run: |
+          python scripts/train_ron_tokenizer.py --corpus training/seed_corpus.txt --output artifacts/ron-tokenizer --vocab-size 8000 --min-frequency 1
+      - name: Download Pythia-160M and generate explicitly labeled teacher examples
+        run: |
+          python scripts/generate_pythia_distillation_data.py \
+            --model EleutherAI/pythia-160m \
+            --corpus training/seed_corpus.txt \
+            --output artifacts/pythia-distillation/teacher_data.jsonl \
+            --max-prompts "${{ inputs.max_prompts }}" \
+            --max-new-tokens 32
+      - name: Train Ron's native 180M student weights
+        run: |
+          python scripts/train_scalable_sft.py \
+            --data artifacts/pythia-distillation/teacher_data.jsonl \
+            --tokenizer artifacts/ron-tokenizer/tokenizer.json \
+            --output artifacts/ron-180m-pythia-distilled \
+            --scale-preset ron-180m \
+            --sequence-length 64 \
+            --batch-size 1 \
+            --epochs 1 \
+            --max-steps "${{ inputs.max_steps }}" \
+            --learning-rate 0.00001 \
+            --allow-teacher-generated
+      - name: Verify trained student checkpoint and parameter count
+        run: |
+          python - <<'PY'
+          import json, pathlib, torch
+          root = pathlib.Path("artifacts/ron-180m-pythia-distilled")
+          metrics = json.loads((root / "metrics.json").read_text())
+          checkpoint = torch.load(root / "checkpoint.pt", map_location="cpu", weights_only=True)
+          assert metrics["parameters"] == 180255744, metrics
+          assert metrics["optimizer_steps"] > 0, metrics
+          assert "model" in checkpoint and "config" in checkpoint
+          assert all(row["train_loss"] > 0 for row in metrics["history"]), metrics
+          print(json.dumps({
+              "status": metrics["status"],
+              "parameters": metrics["parameters"],
+              "optimizer_steps": metrics["optimizer_steps"],
+              "history": metrics["history"],
+              "elapsed_seconds": metrics["elapsed_seconds"],
+              "teacher_generated_records_allowed": metrics["teacher_generated_records_allowed"],
+          }, indent=2))
+          PY
+      - name: Upload Ron student checkpoint, tokenizer, teacher data, and metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: ron-180m-pythia-distillation-pilot
+          path: |
+            artifacts/ron-180m-pythia-distilled/checkpoint.pt
+            artifacts/ron-180m-pythia-distilled/config.json
+            artifacts/ron-180m-pythia-distilled/tokenizer.json
+            artifacts/ron-180m-pythia-distilled/metrics.json
+            artifacts/pythia-distillation/teacher_data.jsonl
+          if-no-files-found: error
+          retention-days: 30

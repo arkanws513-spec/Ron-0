@@ -5,6 +5,7 @@ from ron.scalable_model import ScalableRonConfig
 
 RON_100M_PARAMETERS = 99_959_808
 RON_100M_VOCAB_SIZE = 8_000
+RON_180M_PARAMETERS = 180_255_744
 
 
 def build_scale_config(
@@ -19,8 +20,8 @@ def build_scale_config(
 ) -> ScalableRonConfig:
     """Build a pilot config or a fixed, testable ~100M Ron architecture.
 
-    The 100M preset deliberately fixes the vocabulary size and model dimensions;
-    changing any of them changes the parameter count and invalidates this preset.
+    The 100M and 180M presets fix vocabulary and model dimensions; changing them
+    changes the parameter count and invalidates the corresponding preset.
     """
     if preset == "pilot":
         return ScalableRonConfig(
@@ -31,14 +32,14 @@ def build_scale_config(
             num_kv_heads=num_kv_heads,
             max_sequence_length=sequence_length,
         )
-    if preset == "ron-100m":
+    if preset in ("ron-100m", "ron-180m"):
         if vocab_size < 256 or vocab_size > RON_100M_VOCAB_SIZE:
-            raise ValueError("ron-100m expects a tokenizer vocabulary between 256 and 8,000 tokens")
+            raise ValueError(f"{preset} expects a tokenizer vocabulary between 256 and 8,000 tokens")
         # Pad model vocabulary to 8,000 even if the starter corpus cannot train that many BPE tokens.
         config = ScalableRonConfig(
             vocab_size=RON_100M_VOCAB_SIZE,
             hidden_size=1024,
-            num_layers=8,
+            num_layers=8 if preset == "ron-100m" else 15,
             num_heads=16,
             num_kv_heads=4,
             max_sequence_length=sequence_length,
