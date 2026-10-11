@@ -15,5 +15,5 @@ This milestone adds a native Ron configuration with **180,255,744 trainable para
 - `Pythia-160M` is a **base language model**, not an instruction-tuned assistant. Its continuations can be incoherent or factually wrong.
 - Teacher outputs are marked `review_status=teacher_generated`, `source=pythia-160m`, and `human_reviewed=false`. They are not mislabeled as human-approved facts. The training command must explicitly opt into these synthetic examples.
 - This is a small CPU pilot, not comprehensive distillation and not evidence that Ron has acquired all of Pythia's knowledge. The bounded defaults are 16 prompts and 5 optimizer updates.
-- The workflow is manual-only and uses GitHub-hosted CPU resources; no paid GPU is required. Runtime and memory depend on current GitHub runner limits and the model download.
+- The workflow runs automatically when these changes are merged to main, and can also be rerun manually with custom bounds. It uses GitHub-hosted CPU resources; no paid GPU is required. Runtime and memory depend on current GitHub runner limits and the model download.
 - The resulting checkpoint is an artifact, not automatically wired into Ron's live chat service. Deployment requires a separate compatibility and quality review.

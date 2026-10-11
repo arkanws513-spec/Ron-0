@@ -1,6 +1,14 @@
 name: Ron 180M Pythia distillation (free CPU)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "ron/scale_presets.py"
+      - "scripts/train_scalable_sft.py"
+      - "scripts/generate_pythia_distillation_data.py"
+      - "training/seed_corpus.txt"
+      - ".github/workflows/distill-ron-180m-pythia.yml"
   workflow_dispatch:
     inputs:
       max_prompts:
@@ -42,7 +50,7 @@ jobs:
             --model EleutherAI/pythia-160m \
             --corpus training/seed_corpus.txt \
             --output artifacts/pythia-distillation/teacher_data.jsonl \
-            --max-prompts "${{ inputs.max_prompts }}" \
+            --max-prompts "${{ inputs.max_prompts || '16' }}" \
             --max-new-tokens 32
       - name: Train Ron's native 180M student weights
         run: |
@@ -54,7 +62,7 @@ jobs:
             --sequence-length 64 \
             --batch-size 1 \
             --epochs 1 \
-            --max-steps "${{ inputs.max_steps }}" \
+            --max-steps "${{ inputs.max_steps || '5' }}" \
             --learning-rate 0.00001 \
             --allow-teacher-generated
       - name: Verify trained student checkpoint and parameter count
