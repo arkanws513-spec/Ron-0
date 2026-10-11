@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import torch
 
 from .contracts import ModelRequest, ModelResponse
@@ -89,12 +90,35 @@ class NativeCheckpointProvider:
         generated: list[int] = []
         newline_id = self.vocab.get("\n")
 
+        # Greedy decoding caused severe character-level loops in the previous
+        # training run. Seeded nucleus sampling is repeatable for evaluation
+        # while allowing the model to escape a single overconfident character.
+        seed_material = (self.checkpoint_path.name + ':' + prompt).encode('utf-8')
+        seed = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], 'big') % (2**63 - 1)
+        generator = torch.Generator(device='cpu')
+        generator.manual_seed(seed)
+
         for _ in range(min(160, self.config.max_sequence_length)):
             context = result[:, -self.config.max_sequence_length:]
-            next_id = int(self.model(context).logits[:, -1, :].argmax(dim=-1).item())
+            logits = self.model(context).logits[:, -1, :].float().squeeze(0)
+            logits = logits / 0.8
+            probabilities = torch.softmax(logits, dim=-1)
+            sorted_probabilities, sorted_indices = torch.sort(probabilities, descending=True)
+            cumulative = torch.cumsum(sorted_probabilities, dim=0)
+            # Keep the smallest high-probability nucleus reaching 0.90.
+            remove = cumulative - sorted_probabilities >= 0.90
+            sorted_probabilities[remove] = 0
+            filtered = torch.zeros_like(probabilities)
+            filtered.scatter_(0, sorted_indices, sorted_probabilities)
+            total = filtered.sum()
+            if not torch.isfinite(total) or total.item() <= 0:
+                next_id = int(torch.argmax(logits).item())
+            else:
+                filtered = filtered / total
+                next_id = int(torch.multinomial(filtered, 1, generator=generator).item())
             generated.append(next_id)
             result = torch.cat((result, torch.tensor([[next_id]], dtype=torch.long)), dim=1)
-            if newline_id is not None and next_id == newline_id and len(generated) > 1:
+            if newline_id is not None and next_id == newline_id and len(generated) > 2:
                 break
 
         raw_answer = "".join(self.id_to_char.get(index, "") for index in generated)
