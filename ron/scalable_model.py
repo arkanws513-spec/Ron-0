@@ -146,18 +146,41 @@ class ScalableRonLM(nn.Module):
 
     @torch.inference_mode()
     def generate(self, input_ids: Tensor, max_new_tokens: int = 128, *,
-                 eos_token_id: int | None = None, temperature: float = 0.0) -> Tensor:
+                 eos_token_id: int | None = None, temperature: float = 0.0,
+                 valid_vocab_size: int | None = None,
+                 suppress_token_ids: list[int] | tuple[int, ...] | None = None,
+                 min_new_tokens: int = 0) -> Tensor:
         if input_ids.ndim != 2 or input_ids.shape[1] < 1:
             raise ValueError("input_ids must be a non-empty [batch, sequence] tensor")
         if max_new_tokens < 0 or temperature < 0:
             raise ValueError("max_new_tokens and temperature must be non-negative")
+        if min_new_tokens < 0 or min_new_tokens > max_new_tokens:
+            raise ValueError("min_new_tokens must be between zero and max_new_tokens")
+        if valid_vocab_size is not None and not 1 <= valid_vocab_size <= self.config.vocab_size:
+            raise ValueError("valid_vocab_size must be within the model vocabulary")
         if eos_token_id is not None and not 0 <= eos_token_id < self.config.vocab_size:
             raise ValueError("eos_token_id is outside the vocabulary")
+        suppressed = tuple(suppress_token_ids or ())
+        if any(token_id < 0 or token_id >= self.config.vocab_size for token_id in suppressed):
+            raise ValueError("a suppressed token ID is outside the vocabulary")
+        if eos_token_id is not None and eos_token_id in suppressed:
+            raise ValueError("EOS must not be included in suppress_token_ids")
         result = input_ids
         finished = torch.zeros(result.shape[0], dtype=torch.bool, device=result.device)
-        for _ in range(max_new_tokens):
+        for step in range(max_new_tokens):
             context = result[:, -self.config.max_sequence_length:]
             logits = self(context)["logits"][:, -1, :].float()
+            # Ron's fixed-size embedding table may be larger than its learned tokenizer.
+            # Never sample untrained padding rows: they decode to empty text and can
+            # dominate logits despite never appearing as targets during training.
+            if valid_vocab_size is not None and valid_vocab_size < self.config.vocab_size:
+                logits[:, valid_vocab_size:] = -torch.inf
+            for token_id in suppressed:
+                logits[:, token_id] = -torch.inf
+            # A weak/early checkpoint may predict EOS immediately. Require a chance
+            # to emit content before accepting the end-of-turn token.
+            if eos_token_id is not None and step < min_new_tokens:
+                logits[:, eos_token_id] = -torch.inf
             if temperature == 0:
                 next_token = logits.argmax(dim=-1, keepdim=True)
             else:
