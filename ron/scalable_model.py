@@ -179,8 +179,10 @@ class ScalableRonLM(nn.Module):
             # dominate logits despite never appearing as targets during training.
             if valid_vocab_size is not None and valid_vocab_size < self.config.vocab_size:
                 logits[:, valid_vocab_size:] = -torch.inf
-            for token_id in suppressed:
-                logits[:, token_id] = -torch.inf
+            if suppressed:
+                # Apply the suppression mask in one indexed operation; a Python
+                # loop over hundreds of tokenizer pieces is costly on a 1-CPU host.
+                logits[:, list(suppressed)] = -torch.inf
             # A weak/early checkpoint may predict EOS immediately. Require a chance
             # to emit content before accepting the end-of-turn token.
             if eos_token_id is not None and step < min_new_tokens:
