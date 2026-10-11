@@ -60,6 +60,7 @@ jobs:
               assert response.status == 200, data
               reply = data.get("reply")
               assert isinstance(reply, str) and reply.strip(), data
+              assert any(character.isalnum() for character in reply), data
               assert data.get("generation_status") == "native_model", data
               assert reply != "لم ينتج النموذج إجابة نصية. نحتاج إلى مراجعة التدريب والتقييم.", data
               health = data.get("health", {})
