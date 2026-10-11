@@ -58,6 +58,21 @@ def test_scalable_generation_stays_within_vocabulary() -> None:
     assert int(generated.min()) >= 0 and int(generated.max()) < config.vocab_size
 
 
+def test_tied_embeddings_are_restored_after_assign_checkpoint_loading() -> None:
+    config = ScalableRonConfig(vocab_size=32, hidden_size=32, num_layers=1, num_heads=4,
+        num_kv_heads=2, max_sequence_length=8, tie_embeddings=True)
+    original = ScalableRonLM(config)
+    expected_parameters = count_parameters(original)
+    checkpoint_state = original.state_dict()
+
+    restored = ScalableRonLM(config)
+    restored.load_state_dict(checkpoint_state, strict=True, assign=True)
+    restored.tie_weights()
+
+    assert restored.lm_head.weight is restored.embed_tokens.weight
+    assert count_parameters(restored) == expected_parameters
+
+
 def test_generation_masks_untrained_vocab_rows_and_structural_tokens() -> None:
     config = ScalableRonConfig(vocab_size=8, hidden_size=16, num_layers=1, num_heads=2,
         num_kv_heads=1, max_sequence_length=8)
