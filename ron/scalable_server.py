@@ -27,7 +27,6 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import torch
-from tokenizers import Tokenizer
 
 from .scalable_model import ScalableRonConfig, ScalableRonLM, count_parameters
 
@@ -94,6 +93,7 @@ class ScalableRuntime:
                     f"Required Ron scalable artifact is missing: {path}. "
                     "Download and extract the ron-180m-pythia-distillation-pilot workflow artifact first."
                 )
+        from tokenizers import Tokenizer
         self.config = ScalableRonConfig.load(CONFIG)
         self.tokenizer = Tokenizer.from_file(str(TOKENIZER))
         actual_vocab = self.tokenizer.get_vocab_size()
