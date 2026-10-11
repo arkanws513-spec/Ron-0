@@ -1,0 +1,98 @@
+name: Ron-10M harder training + blind 200-case exam
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/train-ron-10m-200-eval.yml"
+      - "scripts/ron_eval_200.py"
+      - "scripts/train_native_10m.py"
+      - "scripts/train_sft_10m.py"
+      - "scripts/prepare_corpus.py"
+      - "scripts/download_english_corpus.py"
+      - "scripts/download_oasst1_english.py"
+      - "training/arabic_sft_seed.txt"
+      - "ron/model.py"
+      - "ron/model_config.py"
+  workflow_dispatch:
+    inputs:
+      training_steps:
+        description: Pretraining optimizer steps (larger run)
+        required: true
+        default: "2000"
+        type: string
+      batch_size:
+        description: Training batch size
+        required: true
+        default: "2"
+        type: string
+      sft_steps:
+        description: Assistant-only fine-tuning steps
+        required: true
+        default: "1000"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ron-10m-hard-200-eval-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  train-and-exam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out Ron-0
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install model and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[model]" pytest
+      - name: Download English public-domain starter texts
+        run: python scripts/download_english_corpus.py
+      - name: Download reviewed English dialogue dataset
+        run: python scripts/download_oasst1_english.py
+      - name: Normalize and deduplicate pretraining corpus
+        run: python scripts/prepare_corpus.py
+      - name: Run native model and SFT regression tests
+        run: python -m pytest tests/test_model.py tests/test_native_10m_recipe.py tests/test_sft_10m.py tests/test_native_provider_prompt.py
+      - name: Pretrain Ron-10M with increased steps
+        env:
+          RON_STEPS: ${{ inputs.training_steps || '2000' }}
+          RON_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
+          RON_SEQUENCE_LENGTH: "256"
+        run: python scripts/train_native_10m.py
+      - name: Fine-tune on reviewed English and curated Arabic conversations
+        env:
+          RON_SFT_STEPS: ${{ inputs.sft_steps || '1000' }}
+          RON_SFT_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
+          RON_SFT_SEQUENCE_LENGTH: "256"
+        run: python scripts/train_sft_10m.py
+      - name: Run blind 200-case exam (70% minimum)
+        run: >-
+          python scripts/ron_eval_200.py
+          --checkpoint artifacts/native-10m/ron_native_10m_sft.pt
+          --output artifacts/native-10m/eval_200.json
+      - name: Archive candidate checkpoints and reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ron-10m-hard-training-exam-${{ github.run_id }}
+          path: |
+            artifacts/native-10m/ron_native_10m.pt
+            artifacts/native-10m/metrics.json
+            artifacts/native-10m/ron_native_10m_sft.pt
+            artifacts/native-10m/sft_metrics.json
+            artifacts/native-10m/eval_200.json
+            training/corpus_manifest.json
+            training/gutenberg_sources.json
+            training/oasst1_manifest.json
+          if-no-files-found: warn
+          retention-days: 30
