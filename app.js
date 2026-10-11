@@ -115,7 +115,7 @@ const PROFILE_CLEAN_V6="ron-profile-clean-v6";
 if(localStorage.getItem(PROFILE_CLEAN_V6)!=="1"){
  const corruptedName=x=>x?.key==="user.name"&&/^(?:تعبت منك|زهقت منك|مللت منك|مش فاهم|لا اعرف|لا املك|لم تخبرني|اسمك تعبت منك)$/i.test(norm(x.text));
  lessons=lessons.filter(x=>!corruptedName(x));
- try{const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");if(raw&&Array.isArray(raw.facts)){raw.facts=raw.facts.filter(x=>!(x?.s==="$user"&&norm(x.p)==="اسم"&&/^(?:تعبت منك|زهقت منك|مللت منك|مش فاهم|لا اعرف|لا املك|لم تخبرني|اسمك تعبت منك)$/i.test(norm(x.o||"")));localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));}}catch{}
+ try{const raw=JSON.parse(localStorage.getItem("ron-core-data-v2")||"null");if(raw&&Array.isArray(raw.facts)){raw.facts=raw.facts.filter(x=>!(x?.s==="$user"&&norm(x.p)==="اسم"&&/^(?:تعبت منك|زهقت منك|مللت منك|مش فاهم|لا اعرف|لا املك|لم تخبرني|اسمك تعبت منك)$/i.test(norm(x.o||""))));localStorage.setItem("ron-core-data-v2",JSON.stringify(raw));}}catch{}
  localStorage.setItem(PROFILE_CLEAN_V6,"1");try{localStorage.setItem(S.lessons,JSON.stringify(lessons.slice(-500)))}catch{}
 }
 const saveFact=(key,text)=>{lessons=lessons.filter(x=>x.key!==key);lessons.push({key,text,at:new Date().toISOString()});save()};
