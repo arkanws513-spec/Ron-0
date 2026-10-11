@@ -1,6 +1,7 @@
 import json
 import threading
 import urllib.request
+import uuid
 from http.server import ThreadingHTTPServer
 
 from ron import scalable_server
@@ -82,7 +83,7 @@ def test_chat_retry_request_id_returns_cached_response_without_duplicate_turn():
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     worker = threading.Thread(target=server.serve_forever, daemon=True)
     worker.start()
-    request_id = "test_retry_idempotency_20261011"
+    request_id = "test_retry_" + uuid.uuid4().hex
     body = json.dumps({
         "message": "hello",
         "session_id": "test_session",
