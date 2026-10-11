@@ -11,7 +11,7 @@ from ron.scalable_model import ScalableRonConfig, ScalableRonLM, count_parameter
 from ron.scale_presets import build_scale_config
 
 class PromptResponseDataset(Dataset):
-    def __init__(self, path: Path, tokenizer_path: Path, max_length: int, limit: int | None = None) -> None:
+    def __init__(self, path: Path, tokenizer_path: Path, max_length: int, limit: int | None = None, allow_teacher_generated: bool = False) -> None:
         try:
             from tokenizers import Tokenizer
         except ImportError as exc:
@@ -35,7 +35,9 @@ class PromptResponseDataset(Dataset):
                     raise ValueError(f"invalid JSON on line {line_no}") from exc
                 if not isinstance(row, dict) or not isinstance(row.get("prompt"), str) or not isinstance(row.get("response"), str):
                     raise ValueError(f"line {line_no} must contain string prompt and response fields")
-                if row.get("review_status") != "approved":
+                approved = row.get("review_status") == "approved"
+                teacher_generated = allow_teacher_generated and row.get("review_status") == "teacher_generated" and row.get("source") == "pythia-160m"
+                if not (approved or teacher_generated):
                     continue
                 if row["prompt"].strip() and row["response"].strip():
                     self.rows.append(row)
@@ -74,7 +76,7 @@ def main() -> None:
     p.add_argument("--output", type=Path, default=Path("artifacts/ron-scalable"))
     p.add_argument("--init-checkpoint", type=Path, help="Optional compatible scalable Ron pretraining checkpoint")
     p.add_argument("--vocab-size", type=int, help="Expected tokenizer vocabulary size; defaults to the tokenizer file's actual size")
-    p.add_argument("--scale-preset", choices=("pilot", "ron-100m"), default="pilot", help="ron-100m uses the validated ~100M-parameter architecture and requires an 8,000-token tokenizer")
+    p.add_argument("--scale-preset", choices=("pilot", "ron-100m", "ron-180m"), default="pilot", help="ron-100m and ron-180m use fixed native architectures with an 8,000-token model vocabulary")
     p.add_argument("--hidden-size", type=int, default=256)
     p.add_argument("--layers", type=int, default=4)
     p.add_argument("--heads", type=int, default=4)
@@ -83,11 +85,15 @@ def main() -> None:
     p.add_argument("--epochs", type=int, default=1)
     p.add_argument("--batch-size", type=int, default=2)
     p.add_argument("--learning-rate", type=float, default=3e-4)
-    p.add_argument("--limit", type=int, help="Limit reviewed records for a small pilot")
+    p.add_argument("--limit", type=int, help="Limit records for a small pilot")
+    p.add_argument("--max-steps", type=int, help="Stop after this many optimizer updates")
+    p.add_argument("--allow-teacher-generated", action="store_true", help="Explicitly allow records marked teacher_generated from source pythia-160m; this is not human review")
     p.add_argument("--seed", type=int, default=1701)
     args = p.parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.learning_rate <= 0:
         p.error("epochs, batch-size and learning-rate must be positive")
+    if args.max_steps is not None and args.max_steps < 1:
+        p.error("max-steps must be positive")
     if not args.data.is_file() or not args.tokenizer.is_file():
         p.error("both --data and --tokenizer must point to existing files")
     if args.validation_data is not None and not args.validation_data.is_file():
@@ -97,8 +103,8 @@ def main() -> None:
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    ds = PromptResponseDataset(args.data, args.tokenizer, args.sequence_length, args.limit)
-    val_ds = PromptResponseDataset(args.validation_data, args.tokenizer, args.sequence_length) if args.validation_data else None
+    ds = PromptResponseDataset(args.data, args.tokenizer, args.sequence_length, args.limit, args.allow_teacher_generated)
+    val_ds = PromptResponseDataset(args.validation_data, args.tokenizer, args.sequence_length, allow_teacher_generated=args.allow_teacher_generated) if args.validation_data else None
     # Validate tokenizer/model vocabulary agreement before allocating training batches.
     from tokenizers import Tokenizer
     actual_vocab = Tokenizer.from_file(str(args.tokenizer)).get_vocab_size()
@@ -126,10 +132,13 @@ def main() -> None:
     (args.output / "tokenizer.json").write_bytes(args.tokenizer.read_bytes())
     started = time.time()
     history = []
+    global_steps = 0
     for epoch in range(args.epochs):
         model.train()
         total, count = 0.0, 0
         for batch in loader:
+            if args.max_steps is not None and global_steps >= args.max_steps:
+                break
             ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device)
             optimizer.zero_grad(set_to_none=True)
@@ -142,6 +151,7 @@ def main() -> None:
             optimizer.step()
             total += float(loss.detach())
             count += 1
+            global_steps += 1
         epoch_loss = total / max(count, 1)
         row = {"epoch": epoch + 1, "train_loss": epoch_loss}
         if val_loader is not None:
@@ -160,11 +170,14 @@ def main() -> None:
         torch.save({"model": model.state_dict(), "config": config.__dict__, "epoch": epoch + 1,
                     "optimizer": optimizer.state_dict(), "seed": args.seed}, args.output / "checkpoint.pt")
         print(json.dumps(history[-1]))
+        if args.max_steps is not None and global_steps >= args.max_steps:
+            break
     metrics = {"status": "training_completed_with_held_out_loss" if val_ds is not None else "training_completed_no_independent_evaluation",
         "parameters": count_parameters(model), "device": str(device), "dataset_records": len(ds),
         "validation_records": len(val_ds) if val_ds is not None else 0, "epochs": args.epochs,
-        "history": history, "elapsed_seconds": round(time.time() - started, 2),
+        "history": history, "optimizer_steps": global_steps, "elapsed_seconds": round(time.time() - started, 2),
         "initialized_from_pretraining_checkpoint": args.init_checkpoint is not None,
+        "teacher_generated_records_allowed": args.allow_teacher_generated,
         "limitations": ["This is a pilot SFT run, not pretraining from scratch.", "Only assistant response tokens contribute to loss.", "All training and validation records must be reviewed and marked review_status=approved.", "Held-out loss does not replace task-based quality, factuality, Arabic/English coverage, safety, or regression evaluations.", "Do not treat the checkpoint as production-ready without independent evaluation."]}
     (args.output / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(metrics, indent=2))

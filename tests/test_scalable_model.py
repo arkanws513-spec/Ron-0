@@ -93,3 +93,32 @@ def test_ron_100m_preset_pads_small_tokenizer_vocabulary() -> None:
     from ron.scale_presets import build_scale_config
     config = build_scale_config("ron-100m", vocab_size=700, sequence_length=32)
     assert config.vocab_size == 8000
+
+
+
+def test_ron_180m_preset_has_expected_real_parameter_count() -> None:
+    from ron.scale_presets import build_scale_config
+    config = build_scale_config("ron-180m", vocab_size=8000, sequence_length=64)
+    assert (config.hidden_size, config.num_layers, config.num_heads, config.num_kv_heads, config.intermediate_size) == (1024, 15, 16, 4, 2880)
+    with torch.device("meta"):
+        model = ScalableRonLM(config)
+    assert count_parameters(model) == 180_255_744
+
+
+def test_sft_dataset_only_accepts_teacher_data_when_explicitly_enabled(tmp_path: Path) -> None:
+    pytest.importorskip("tokenizers")
+    from tokenizers import Tokenizer, models, pre_tokenizers, trainers
+    from scripts.train_scalable_sft import PromptResponseDataset
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text("hello world\nanswer", encoding="utf-8")
+    tok = Tokenizer(models.BPE(unk_token="<unk>"))
+    tok.pre_tokenizer = pre_tokenizers.ByteLevel()
+    tok.train([str(corpus)], trainers.BpeTrainer(vocab_size=300, special_tokens=["<pad>", "<unk>", "<bos>", "<eos>", "<user>", "<assistant>"], initial_alphabet=pre_tokenizers.ByteLevel.alphabet()))
+    tok_path = tmp_path / "tokenizer.json"
+    tok.save(str(tok_path))
+    data = tmp_path / "data.jsonl"
+    data.write_text(json.dumps({"prompt": "hello", "response": "world", "review_status": "teacher_generated", "source": "pythia-160m", "human_reviewed": False}) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="reviewed records"):
+        PromptResponseDataset(data, tok_path, 16)
+    accepted = PromptResponseDataset(data, tok_path, 16, allow_teacher_generated=True)
+    assert len(accepted) == 1
