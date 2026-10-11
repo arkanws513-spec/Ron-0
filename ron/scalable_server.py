@@ -119,6 +119,34 @@ def deterministic_social_reply(text: str) -> str | None:
     return None
 
 
+def normalize_lookup_text(text: str) -> str:
+    """Normalize a question for exact lookup in Ron's reviewed seed corpus."""
+    normalized = unicodedata.normalize("NFKC", str(text)).casefold()
+    normalized = re.sub(r"[\u064b-\u065f\u0670\u0640]", "", normalized)
+    normalized = re.sub(r"[أإآٱ]", "ا", normalized)
+    normalized = re.sub(r"[^\w\s]", " ", normalized, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def load_seed_responses(path: Path) -> dict[str, str]:
+    """Load reviewed user/Ron pairs; this is retrieval, not an external model."""
+    if not path.is_file():
+        return {}
+    responses: dict[str, str] = {}
+    pending_prompt: str | None = None
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line.startswith(("المستخدم:", "User:", "Question:")):
+            pending_prompt = line.split(":", 1)[1].strip()
+        elif pending_prompt is not None and line.startswith(("رون:", "Ron:", "Answer:")):
+            answer = line.split(":", 1)[1].strip()
+            key = normalize_lookup_text(pending_prompt)
+            if key and answer:
+                responses.setdefault(key, answer)
+            pending_prompt = None
+    return responses
+
+
 def deterministic_math(text: str) -> str | None:
     """Handle only an explicitly arithmetic expression, without eval/exec."""
     expression = text.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789"))
@@ -145,6 +173,8 @@ class ScalableRuntime:
                     f"Required Ron scalable artifact is missing: {path}. "
                     "Download and extract the ron-180m-pythia-distillation-pilot workflow artifact first."
                 )
+        self.seed_responses = load_seed_responses(ROOT / "training/seed_corpus.txt")
+        print(f"ron-runtime: loaded {len(self.seed_responses)} reviewed seed responses", flush=True)
         print("ron-runtime: initializing tokenizer", flush=True)
         from tokenizers import Tokenizer
         self.config = ScalableRonConfig.load(CONFIG)
@@ -299,6 +329,13 @@ class ScalableRuntime:
                 self.sessions[session_id].append({"role": "user", "text": text})
                 self.sessions[session_id].append({"role": "assistant", "text": social_reply})
             return social_reply, "deterministic_social"
+
+        seed_reply = self.seed_responses.get(normalize_lookup_text(text))
+        if seed_reply is not None:
+            with self.lock:
+                self.sessions[session_id].append({"role": "user", "text": text})
+                self.sessions[session_id].append({"role": "assistant", "text": seed_reply})
+            return seed_reply, "deterministic_seed_corpus"
 
         with self.lock:
             history = list(self.sessions[session_id])
