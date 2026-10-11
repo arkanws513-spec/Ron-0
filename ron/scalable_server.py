@@ -442,7 +442,7 @@ class RonHandler(SimpleHTTPRequestHandler):
         if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", session_id):
             self._json(400, {"error": "invalid_session_id"})
             return
-        if request_id and (not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", request_id)):
+        if request_id != "" and (not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", request_id)):
             self._json(400, {"error": "invalid_request_id"})
             return
         cache_key = (session_id, request_id) if request_id else None
