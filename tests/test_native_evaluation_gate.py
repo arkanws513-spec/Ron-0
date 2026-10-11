@@ -120,8 +120,9 @@ def test_repository_blind_evaluation_set_has_unique_ids_and_required_coverage():
     cases_path = Path(__file__).resolve().parents[1] / "training" / "eval_cases.json"
     cases = validate_cases(json.loads(cases_path.read_text(encoding="utf-8")))
     ids = {case["id"] for case in cases}
-    assert {"egypt_capital_short", "egypt_capital_variant", "france_capital", "context_followup"} <= ids
-    assert sum(bool(case.get("critical")) for case in cases) >= 8
+    assert {"hard300_001_v1", "hard300_001_v2", "hard300_100_v3"} <= ids
+    assert len(cases) == 300
+    assert sum(bool(case.get("critical")) for case in cases) >= 40
 
 
 def test_promotion_rejects_a_pass_report_with_insufficient_evaluation_coverage(tmp_path):
