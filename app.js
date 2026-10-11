@@ -308,7 +308,7 @@ const localLessonAnswer=n=>{
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  // Modern browsers use the Python service exclusively; keep legacy logic only for environments without Fetch API support.
  if(typeof fetch==="function"){
- const apiBase=String(window.RON_API_BASE||"").replace(/\/+$/,"");
+ const apiBase=String(window.RON_API_BASE||"https://accurate-courage-production.up.railway.app").replace(/\/+$/,"");
  let sessionId="";
  try{sessionId=localStorage.getItem("ron-python-session-v1")||"";}catch{}
  if(!/^[A-Za-z0-9_-]{1,80}$/.test(sessionId)){
