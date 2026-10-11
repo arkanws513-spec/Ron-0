@@ -27,11 +27,11 @@ Optional environment variables:
 - `RON_SCALABLE_CHECKPOINT`: path to `checkpoint.pt`
 - `RON_SCALABLE_CONFIG`: path to `config.json`
 - `RON_SCALABLE_TOKENIZER`: path to `tokenizer.json`
-- `RON_MAX_NEW_TOKENS`: generation cap (default 96, maximum 128)
+- `RON_MAX_NEW_TOKENS`: generation cap (default 48, maximum 96; values below 8 are raised to 8)
 - `RON_ALLOWED_ORIGIN`: browser origin allowed by CORS (default `*`; set this to the exact Pages origin for public deployment)
 
 ## Important limitations
 
 The current workflow trained a bounded pilot using only 16 teacher prompts and 5 optimizer updates. It is not a full transfer of Pythia's knowledge and should not be described as a capable general assistant yet. This server deliberately fails to start when the artifact is missing or incompatible; it does not silently fall back to the old JavaScript assistant.
 
-The inference bundle stores weights in FP16 (roughly 360 MB for parameters), plus runtime memory and the tokenizer. A Python-capable host with sufficient RAM is still required. The server reports actual precision and checkpoint SHA-256 at /api/health.
+The browser retries one transient connection or 502–504 failure using the same request ID; the server caches recent responses to avoid generating duplicate turns for a retry. Browser requests time out after 60 seconds. The inference bundle stores weights in FP16 (roughly 360 MB for parameters), plus runtime memory and the tokenizer. A Python-capable host with sufficient RAM is still required. The server reports actual precision and checkpoint SHA-256 at /api/health.

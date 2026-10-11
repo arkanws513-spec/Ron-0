@@ -22,7 +22,7 @@ import tempfile
 import threading
 import time
 import unicodedata
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from operator import add, sub, mul, truediv, mod, pow
 from pathlib import Path
@@ -42,8 +42,11 @@ CONFIG = Path(os.getenv("RON_SCALABLE_CONFIG", ROOT / "artifacts/ron-180m-pythia
 TOKENIZER = Path(os.getenv("RON_SCALABLE_TOKENIZER", ROOT / "artifacts/ron-180m-pythia-distilled/tokenizer.json"))
 MAX_BODY_BYTES = 16 * 1024
 MAX_MESSAGE_CHARS = 4000
-MAX_NEW_TOKENS = min(24, max(1, int(os.getenv("RON_MAX_NEW_TOKENS", "12"))))
+MAX_NEW_TOKENS = min(96, max(8, int(os.getenv("RON_MAX_NEW_TOKENS", "48"))))
 ALLOWED_ORIGIN = os.getenv("RON_ALLOWED_ORIGIN", "*")
+RESPONSE_CACHE_LIMIT = 1024
+RESPONSE_CACHE: OrderedDict[tuple[str, str], tuple[str, str]] = OrderedDict()
+RESPONSE_CACHE_LOCK = threading.Lock()
 RUNTIME_BUNDLE_URL = os.getenv("RON_RUNTIME_BUNDLE_URL", "https://github.com/arkanws513-spec/Ron-0/releases/download/ron-180m-runtime-2026-10-11/ron-180m-inference-bundle.zip")
 
 
@@ -432,17 +435,36 @@ class RonHandler(SimpleHTTPRequestHandler):
             return
         message = payload.get("message") if isinstance(payload, dict) else None
         session_id = payload.get("session_id", "default") if isinstance(payload, dict) else "default"
+        request_id = payload.get("request_id", "") if isinstance(payload, dict) else ""
         if not isinstance(message, str) or not message.strip() or len(message) > MAX_MESSAGE_CHARS:
             self._json(400, {"error": "invalid_message", "message": "Message must be 1–4000 characters."})
             return
         if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", session_id):
             self._json(400, {"error": "invalid_session_id"})
             return
+        if request_id != "" and (not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", request_id)):
+            self._json(400, {"error": "invalid_request_id"})
+            return
+        cache_key = (session_id, request_id) if request_id else None
+        if cache_key:
+            with RESPONSE_CACHE_LOCK:
+                cached = RESPONSE_CACHE.get(cache_key)
+                if cached is not None:
+                    RESPONSE_CACHE.move_to_end(cache_key)
+            if cached is not None:
+                self._json(200, {"reply": cached[0], "generation_status": cached[1], "health": self.runtime.health(), "cached_retry": True})
+                return
         try:
             reply, generation_status = self.runtime.answer_with_status(message.strip(), session_id)
         except Exception:
             self._json(500, {"error": "inference_failed", "message": "Ron inference failed; inspect server logs."})
             return
+        if cache_key:
+            with RESPONSE_CACHE_LOCK:
+                RESPONSE_CACHE[cache_key] = (reply, generation_status)
+                RESPONSE_CACHE.move_to_end(cache_key)
+                while len(RESPONSE_CACHE) > RESPONSE_CACHE_LIMIT:
+                    RESPONSE_CACHE.popitem(last=False)
         self._json(200, {"reply": reply, "generation_status": generation_status, "health": self.runtime.health()})
 
     def end_headers(self) -> None:
