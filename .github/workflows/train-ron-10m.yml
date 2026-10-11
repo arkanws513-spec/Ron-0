@@ -42,7 +42,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   train:
@@ -66,6 +66,17 @@ jobs:
           key: ron-live-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ron-live-checkpoint-
+      # Release assets are durable; Actions caches are only a performance optimization.
+      # Fall back to the latest promoted checkpoint when the cache was evicted.
+      - name: Restore durable promoted checkpoint if cache is empty
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f ron/checkpoints/ron_native_10m.pt ]; then
+            mkdir -p ron/checkpoints
+            gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
+              --pattern ron_native_10m.pt --dir ron/checkpoints || true
+          fi
       - name: Report checkpoint starting point
         run: |
           if [ -f ron/checkpoints/ron_native_10m.pt ]; then
@@ -120,7 +131,19 @@ jobs:
           --metrics artifacts/native-10m/sft_metrics.json
       # Save only after evaluation AND promotion both succeed. Failed candidates never
       # replace the durable checkpoint used by the next training run.
-      - name: Persist newly promoted Ron checkpoint
+      - name: Persist newly promoted Ron checkpoint in durable release
+        if: steps.conversation_eval.outcome == 'success' && steps.promote_checkpoint.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view ron-live-checkpoint --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
+              --title "Ron live native checkpoint" \
+              --notes "Automatically updated only when training and evaluation gates pass. Asset: ron_native_10m.pt"
+          fi
+          gh release upload ron-live-checkpoint ron/checkpoints/ron_native_10m.pt \
+            --repo "$GITHUB_REPOSITORY" --clobber
+      - name: Cache newly promoted checkpoint for faster next run
         if: steps.conversation_eval.outcome == 'success' && steps.promote_checkpoint.outcome == 'success'
         uses: actions/cache/save@v4
         with:
