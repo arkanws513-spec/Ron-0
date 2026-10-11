@@ -124,7 +124,11 @@ class ScalableRonLM(nn.Module):
         self.layers = nn.ModuleList(ScalableBlock(config) for _ in range(config.num_layers))
         self.norm = RMSNorm(config.hidden_size, config.rms_norm_eps)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-        if config.tie_embeddings:
+        self.tie_weights()
+
+    def tie_weights(self) -> None:
+        """Restore shared input/output embeddings after checkpoint assignment loading."""
+        if self.config.tie_embeddings:
             self.lm_head.weight = self.embed_tokens.weight
 
     def forward(self, input_ids: Tensor, labels: Tensor | None = None) -> dict[str, Tensor | None]:
