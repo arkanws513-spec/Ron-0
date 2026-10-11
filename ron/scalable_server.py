@@ -128,8 +128,19 @@ class ScalableRuntime:
         self.config = ScalableRonConfig.load(CONFIG)
         self.tokenizer = Tokenizer.from_file(str(TOKENIZER))
         actual_vocab = self.tokenizer.get_vocab_size()
+        if actual_vocab > self.config.vocab_size:
+            raise RuntimeError(f"Tokenizer vocab size {actual_vocab} exceeds model config {self.config.vocab_size}")
+        if actual_vocab < self.config.vocab_size:
+            # The fixed 180M architecture pads its embedding table to 8,000 IDs.
+            # The seed-corpus BPE tokenizer may contain fewer learned tokens; add
+            # reserved special IDs so every embedding row has a valid token ID.
+            self.tokenizer.add_special_tokens([
+                f"<ron_unused_{token_id}>"
+                for token_id in range(actual_vocab, self.config.vocab_size)
+            ])
+        actual_vocab = self.tokenizer.get_vocab_size()
         if actual_vocab != self.config.vocab_size:
-            raise RuntimeError(f"Tokenizer vocab size {actual_vocab} does not match model config {self.config.vocab_size}")
+            raise RuntimeError(f"Tokenizer padding failed: {actual_vocab} != {self.config.vocab_size}")
         self.vocab = self.tokenizer.get_vocab()
         self.special = {name: self.vocab.get(name) for name in ("<bos>", "<user>", "<assistant>", "<eos>")}
         if any(value is None for value in self.special.values()):
