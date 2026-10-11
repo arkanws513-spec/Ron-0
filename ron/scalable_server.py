@@ -40,7 +40,7 @@ CONFIG = Path(os.getenv("RON_SCALABLE_CONFIG", ROOT / "artifacts/ron-180m-pythia
 TOKENIZER = Path(os.getenv("RON_SCALABLE_TOKENIZER", ROOT / "artifacts/ron-180m-pythia-distilled/tokenizer.json"))
 MAX_BODY_BYTES = 16 * 1024
 MAX_MESSAGE_CHARS = 4000
-MAX_NEW_TOKENS = min(128, max(1, int(os.getenv("RON_MAX_NEW_TOKENS", "96"))))
+MAX_NEW_TOKENS = min(24, max(1, int(os.getenv("RON_MAX_NEW_TOKENS", "12"))))
 ALLOWED_ORIGIN = os.getenv("RON_ALLOWED_ORIGIN", "*")
 RUNTIME_BUNDLE_URL = os.getenv("RON_RUNTIME_BUNDLE_URL", "https://github.com/arkanws513-spec/Ron-0/releases/download/ron-180m-runtime-2026-10-11/ron-180m-inference-bundle.zip")
 
