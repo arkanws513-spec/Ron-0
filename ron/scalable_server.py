@@ -197,9 +197,15 @@ class ScalableRuntime:
         self.model = ScalableRonLM(self.config).to(device=self.device, dtype=dtype)
         print("ron-runtime: assigning checkpoint weights", flush=True)
         self.model.load_state_dict(state, strict=True, assign=True)
+        # assign=True reduces load-time memory but can split tied parameters into
+        # separate Parameter objects. Re-establish Ron's configured weight tying.
+        self.model.tie_weights()
         del payload, state
         self.model.eval()
         self.parameter_count = count_parameters(self.model)
+        if self.config.tie_embeddings and self.model.lm_head.weight is not self.model.embed_tokens.weight:
+            raise RuntimeError("Configured tied embeddings were not preserved")
+
         print("ron-runtime: verifying checkpoint checksum", flush=True)
         self.checkpoint_sha256 = self._sha256(CHECKPOINT)
         metrics_path = CHECKPOINT.parent / "metrics.json"
