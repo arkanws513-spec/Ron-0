@@ -56,6 +56,24 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      # Persist the last promoted native weights between disposable GitHub runners.
+      # A unique key lets each successful promotion publish a new immutable cache.
+      - name: Restore last promoted Ron checkpoint
+        id: ron_checkpoint_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ron/checkpoints/ron_native_10m.pt
+          key: ron-live-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ron-live-checkpoint-
+      - name: Report checkpoint starting point
+        run: |
+          if [ -f ron/checkpoints/ron_native_10m.pt ]; then
+            echo "Found prior promoted Ron checkpoint; this run will continue from it."
+            ls -lh ron/checkpoints/ron_native_10m.pt
+          else
+            echo "No prior promoted checkpoint was restored; training will initialize a new checkpoint."
+          fi
       - name: Install model and test dependencies
         run: |
           python -m pip install --upgrade pip
@@ -100,6 +118,14 @@ jobs:
           --candidate artifacts/native-10m/ron_native_10m_sft.pt
           --report artifacts/native-10m/conversational_eval.json
           --metrics artifacts/native-10m/sft_metrics.json
+      # Save only after evaluation AND promotion both succeed. Failed candidates never
+      # replace the durable checkpoint used by the next training run.
+      - name: Persist newly promoted Ron checkpoint
+        if: steps.conversation_eval.outcome == 'success' && steps.promote_checkpoint.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: ron/checkpoints/ron_native_10m.pt
+          key: ron-live-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Archive model, metrics, and dataset manifests
         if: always()
         uses: actions/upload-artifact@v6
