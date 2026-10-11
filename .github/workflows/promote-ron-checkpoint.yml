@@ -1,0 +1,105 @@
+name: Promote passing Ron checkpoint to main
+
+on:
+  workflow_run:
+    workflows: ["Train Ron-10M (manual)"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful training run ID to promote (main branch only)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: ron-checkpoint-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: >-
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve and verify training run
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          INPUT_RUN_ID: ${{ inputs.run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN_ID="${EVENT_RUN_ID}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            RUN_ID="$INPUT_RUN_ID"
+          fi
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid run ID"; exit 1; }
+          RUN_JSON="$(gh run view "$RUN_ID" --repo "$REPOSITORY" --json conclusion,headBranch,name,headRepository)"
+          echo "$RUN_JSON" | python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("conclusion") == "success", "training run did not succeed"; assert r.get("headBranch") == "main", "training must come from main"; assert (r.get("headRepository") or {}).get("name") == "Ron-0", "unexpected source repository"; print("Verified successful training run:", r.get("name"))'
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download training report and checkpoint
+        uses: actions/download-artifact@v6
+        with:
+          name: ron-10m-training-${{ steps.run.outputs.run_id }}
+          run-id: ${{ steps.run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: incoming
+
+      - name: Verify the full 200-case exam and checkpoint integrity
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          report_path = Path("incoming/artifacts/native-10m/conversational_eval.json")
+          checkpoint = Path("incoming/ron/checkpoints/ron_native_10m.pt")
+          if not report_path.is_file() or not checkpoint.is_file():
+              raise SystemExit("Promotion blocked: report or promoted checkpoint is missing from the artifact.")
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          digest = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+          if report.get("passed") is not True:
+              raise SystemExit("Promotion blocked: the evaluation report did not pass.")
+          if int(report.get("case_count", 0)) < 200:
+              raise SystemExit(f"Promotion blocked: expected at least 200 cases, got {report.get('case_count')}.")
+          if float(report.get("pass_rate", 0)) < 0.70:
+              raise SystemExit("Promotion blocked: pass rate is below 70%.")
+          if report.get("critical_failures"):
+              raise SystemExit("Promotion blocked: one or more critical cases failed.")
+          if digest != report.get("checkpoint_sha256"):
+              raise SystemExit("Promotion blocked: checkpoint hash does not match the evaluated checkpoint.")
+          print(f"Verified {report['passed_count']}/{report['case_count']} cases ({report['pass_rate']:.1%}); checkpoint SHA-256 matches.")
+          PY
+
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Commit passing checkpoint to main
+        env:
+          RUN_ID: ${{ steps.run.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p ron/checkpoints
+          cp incoming/ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_native_10m.pt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f ron/checkpoints/ron_native_10m.pt
+          if git diff --cached --quiet; then
+            echo "The passing checkpoint is already present on main; no commit needed."
+            exit 0
+          fi
+          git commit -m "Promote passing Ron-10M checkpoint from run $RUN_ID"
+          git push origin HEAD:main
