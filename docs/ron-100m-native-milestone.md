@@ -36,3 +36,8 @@ Do not proceed to 1B, 100B, or 500B merely because the configuration instantiate
 - verified checkpoints and data provenance.
 
 A 100B or 500B model requires distributed training, very large datasets, and compute well beyond free Colab's guaranteed capacity. Those stages should be separate go/no-go decisions, not automatically launched. Qwen2.5-7B uses a different tokenizer and architecture; its tensors cannot be copied directly into this Ron architecture. Use Qwen as an optional teacher to generate reviewed examples, then train Ron's own weights, unless a separately engineered and validated architecture-compatible conversion is implemented.
+
+
+## Free CI proof run
+
+The repository workflow `.github/workflows/train-ron-100m.yml` runs a resource-limited real CPU training proof on GitHub's hosted runner. It trains the 99,959,808-parameter model for three optimizer updates on the repository's small starter corpus, saves a model-only checkpoint and JSON metrics, and uploads them as a workflow artifact. This demonstrates real gradient updates and checkpoint creation; it is not meaningful broad pretraining and does not establish assistant quality. Use a larger reviewed/licensed corpus and suitable GPU for serious training.

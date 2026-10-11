@@ -81,6 +81,7 @@ def main() -> None:
     p.add_argument("--batch-size", type=int, default=2)
     p.add_argument("--learning-rate", type=float, default=3e-4)
     p.add_argument("--max-documents", type=int, help="Limit documents for a small smoke test")
+    p.add_argument("--max-steps", type=int, help="Stop after this many optimizer updates")
     p.add_argument("--seed", type=int, default=1701)
     args = p.parse_args()
     if not args.corpus.is_file() or not args.tokenizer.is_file():
@@ -91,6 +92,8 @@ def main() -> None:
         p.error("sequence-length must be >= 8; epochs, batch-size and learning-rate must be positive")
     if args.max_documents is not None and args.max_documents < 1:
         p.error("--max-documents must be positive")
+    if args.max_steps is not None and args.max_steps < 1:
+        p.error("--max-steps must be positive")
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     from tokenizers import Tokenizer
@@ -117,6 +120,8 @@ def main() -> None:
         model.train()
         total, steps = 0.0, 0
         for batch in loader:
+            if args.max_steps is not None and sum(item.get("steps", 0) for item in history) + steps >= args.max_steps:
+                break
             optimizer.zero_grad(set_to_none=True)
             result = model(batch["input_ids"].to(device), batch["labels"].to(device))
             loss = result["loss"]
@@ -127,15 +132,17 @@ def main() -> None:
             optimizer.step()
             total += float(loss.detach())
             steps += 1
-        row = {"epoch": epoch + 1, "train_loss": total / max(steps, 1)}
+        row = {"epoch": epoch + 1, "steps": steps, "train_loss": total / max(steps, 1)}
         if val_loader is not None:
             row["validation_loss"] = evaluate(model, val_loader, device)
         history.append(row)
         torch.save({"model": model.state_dict(), "config": config.__dict__, "epoch": epoch + 1,
-                    "optimizer": optimizer.state_dict(), "seed": args.seed}, args.output / "checkpoint.pt")
+                    "seed": args.seed}, args.output / "checkpoint.pt")
+        if args.max_steps is not None and sum(item.get("steps", 0) for item in history) >= args.max_steps:
+            break
         print(json.dumps(row))
     metrics = {"status": "pretraining_completed_with_held_out_loss" if val_ds else "pretraining_completed_no_independent_evaluation",
-        "parameters": count_parameters(model), "vocabulary_size": vocab_size, "train_blocks": len(ds),
+        "parameters": count_parameters(model), "vocabulary_size": vocab_size, "model_vocabulary_size": config.vocab_size, "train_blocks": len(ds),
         "validation_blocks": len(val_ds) if val_ds else 0, "device": str(device), "epochs": args.epochs,
         "history": history, "elapsed_seconds": round(time.time() - started, 2),
         "limitations": ["This is causal language-model pretraining on the supplied corpus, not evidence of broad competence.",

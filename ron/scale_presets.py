@@ -32,11 +32,9 @@ def build_scale_config(
             max_sequence_length=sequence_length,
         )
     if preset == "ron-100m":
-        if vocab_size != RON_100M_VOCAB_SIZE:
-            raise ValueError(
-                "ron-100m requires an 8,000-token tokenizer; train the tokenizer "
-                "on a sufficiently large, reviewed corpus with --vocab-size 8000"
-            )
+        if vocab_size < 256 or vocab_size > RON_100M_VOCAB_SIZE:
+            raise ValueError("ron-100m expects a tokenizer vocabulary between 256 and 8,000 tokens")
+        # Pad model vocabulary to 8,000 even if the starter corpus cannot train that many BPE tokens.
         config = ScalableRonConfig(
             vocab_size=RON_100M_VOCAB_SIZE,
             hidden_size=1024,

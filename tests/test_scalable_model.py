@@ -89,7 +89,7 @@ def test_ron_100m_preset_has_expected_real_parameter_count() -> None:
     assert count_parameters(model) == estimate_result["estimated_parameters"]
 
 
-def test_ron_100m_preset_rejects_mismatched_tokenizer_vocab() -> None:
+def test_ron_100m_preset_pads_small_tokenizer_vocabulary() -> None:
     from ron.scale_presets import build_scale_config
-    with pytest.raises(ValueError, match="8,000-token"):
-        build_scale_config("ron-100m", vocab_size=7999, sequence_length=256)
+    config = build_scale_config("ron-100m", vocab_size=700, sequence_length=32)
+    assert config.vocab_size == 8000
