@@ -1,0 +1,65 @@
+name: Ron live API smoke test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ron-live-smoke-test.yml"
+      - "ron/scalable_server.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-api-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wait for health endpoint
+        env:
+          RON_BASE_URL: https://accurate-courage-production-8a31.up.railway.app
+        run: |
+          python - <<'PY'
+          import json, os, time, urllib.request
+          base = os.environ["RON_BASE_URL"].rstrip("/")
+          deadline = time.time() + 240
+          last_error = "health endpoint did not become ready"
+          while time.time() < deadline:
+              try:
+                  req = urllib.request.Request(base + "/api/health", headers={"User-Agent": "Ron-live-smoke-test"})
+                  with urllib.request.urlopen(req, timeout=15) as response:
+                      data = json.loads(response.read().decode("utf-8"))
+                      health = data.get("health", data)
+                      if response.status == 200 and health.get("status") == "ok":
+                          assert health.get("native_weights_loaded") is True, health
+                          assert health.get("external_model_used") is False, health
+                          assert int(health.get("parameter_count", 0)) > 180_000_000, health
+                          print(json.dumps({"health": "ok", "parameter_count": health["parameter_count"], "native_weights_loaded": health["native_weights_loaded"], "external_model_used": health["external_model_used"]}))
+                          break
+                      last_error = f"unexpected health payload: {data}"
+              except Exception as exc:
+                  last_error = repr(exc)
+              time.sleep(10)
+          else:
+              raise SystemExit("Ron health check failed: " + last_error)
+          PY
+      - name: Send a real chat request through Ron's native model
+        env:
+          RON_BASE_URL: https://accurate-courage-production-8a31.up.railway.app
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          base = os.environ["RON_BASE_URL"].rstrip("/")
+          payload = json.dumps({"message": "Say hello in one short sentence.", "session_id": "github-smoke-test"}).encode()
+          req = urllib.request.Request(base + "/api/chat", data=payload, headers={"Content-Type": "application/json", "User-Agent": "Ron-live-smoke-test"}, method="POST")
+          with urllib.request.urlopen(req, timeout=240) as response:
+              data = json.loads(response.read().decode("utf-8"))
+              assert response.status == 200, data
+              reply = data.get("reply")
+              assert isinstance(reply, str) and reply.strip(), data
+              health = data.get("health", {})
+              assert health.get("native_weights_loaded") is True, health
+              assert health.get("external_model_used") is False, health
+              print(json.dumps({"chat_http_status": response.status, "reply": reply, "native_weights_loaded": health.get("native_weights_loaded"), "parameter_count": health.get("parameter_count")}, ensure_ascii=False))
+          PY
