@@ -129,6 +129,9 @@ class ScalableRuntime:
         self.config = ScalableRonConfig.load(CONFIG)
         self.tokenizer = Tokenizer.from_file(str(TOKENIZER))
         actual_vocab = self.tokenizer.get_vocab_size()
+        # Keep the learned tokenizer boundary before any reserved rows are added.
+        # The model's fixed embedding table may be larger than the actual tokenizer.
+        self.valid_vocab_size = actual_vocab
         if actual_vocab > self.config.vocab_size:
             raise RuntimeError(f"Tokenizer vocab size {actual_vocab} exceeds model config {self.config.vocab_size}")
         if actual_vocab < self.config.vocab_size:
@@ -147,6 +150,16 @@ class ScalableRuntime:
         self.special = {name: self.vocab.get(name) for name in ("<bos>", "<user>", "<assistant>", "<eos>")}
         if any(value is None for value in self.special.values()):
             raise RuntimeError("Tokenizer must define <bos>, <user>, <assistant>, and <eos> tokens")
+        # These structural tokens are useful in prompts, but must not be emitted as
+        # user-facing content. EOS remains separately controlled by min_new_tokens.
+        self.suppressed_token_ids = [
+            int(token_id) for token, token_id in self.vocab.items()
+            if token in {"<pad>", "<unk>", "<bos>", "<user>", "<assistant>"}
+        ]
+        if not 1 <= self.valid_vocab_size <= self.config.vocab_size:
+            raise RuntimeError(f"Invalid learned tokenizer vocabulary size: {self.valid_vocab_size}")
+        if int(self.special["<eos>"]) >= self.valid_vocab_size:
+            raise RuntimeError("EOS token is outside the learned tokenizer vocabulary")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"ron-runtime: loading checkpoint on {self.device}", flush=True)
         payload = torch.load(CHECKPOINT, map_location=self.device, mmap=(self.device.type == "cpu"), weights_only=True)
@@ -246,7 +259,14 @@ class ScalableRuntime:
                 ids[0] = int(self.special["<bos>"])
         input_ids = torch.tensor([ids], dtype=torch.long, device=self.device)
         with self.inference_lock, torch.inference_mode():
-            output = self.model.generate(input_ids, MAX_NEW_TOKENS, eos_token_id=int(self.special["<eos>"]))[0, len(ids):].tolist()
+            output = self.model.generate(
+                input_ids,
+                MAX_NEW_TOKENS,
+                eos_token_id=int(self.special["<eos>"]),
+                valid_vocab_size=self.valid_vocab_size,
+                suppress_token_ids=self.suppressed_token_ids,
+                min_new_tokens=1,
+            )[0, len(ids):].tolist()
         reply = self.tokenizer.decode(output, skip_special_tokens=True).strip()
         if not reply:
             reply = "لم ينتج النموذج إجابة نصية. نحتاج إلى مراجعة التدريب والتقييم."
