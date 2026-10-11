@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/ron-live-smoke-test.yml"
       - "ron/scalable_server.py"
+      - "ron/scalable_model.py"
   workflow_dispatch:
 
 permissions:
@@ -51,13 +52,15 @@ jobs:
           python - <<'PY'
           import json, os, urllib.request
           base = os.environ["RON_BASE_URL"].rstrip("/")
-          payload = json.dumps({"message": "Say hello in one short sentence.", "session_id": "github-smoke-test"}).encode()
+          payload = json.dumps({"message": "Explain in one short sentence why the sky looks blue.", "session_id": "github-smoke-test"}).encode()
           req = urllib.request.Request(base + "/api/chat", data=payload, headers={"Content-Type": "application/json", "User-Agent": "Ron-live-smoke-test"}, method="POST")
           with urllib.request.urlopen(req, timeout=240) as response:
               data = json.loads(response.read().decode("utf-8"))
               assert response.status == 200, data
               reply = data.get("reply")
               assert isinstance(reply, str) and reply.strip(), data
+              assert data.get("generation_status") == "native_model", data
+              assert reply != "لم ينتج النموذج إجابة نصية. نحتاج إلى مراجعة التدريب والتقييم.", data
               health = data.get("health", {})
               assert health.get("native_weights_loaded") is True, health
               assert health.get("external_model_used") is False, health
