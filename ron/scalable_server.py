@@ -129,7 +129,7 @@ def normalize_lookup_text(text: str) -> str:
 
 
 def load_seed_responses(path: Path) -> dict[str, str]:
-    """Load reviewed user/Ron pairs; this is retrieval, not an external model."""
+    """Load user/Ron pairs from the project seed corpus; this is not an external model."""
     if not path.is_file():
         return {}
     responses: dict[str, str] = {}
@@ -174,7 +174,7 @@ class ScalableRuntime:
                     "Download and extract the ron-180m-pythia-distillation-pilot workflow artifact first."
                 )
         self.seed_responses = load_seed_responses(ROOT / "training/seed_corpus.txt")
-        print(f"ron-runtime: loaded {len(self.seed_responses)} reviewed seed responses", flush=True)
+        print(f"ron-runtime: loaded {len(self.seed_responses)} seed responses", flush=True)
         print("ron-runtime: initializing tokenizer", flush=True)
         from tokenizers import Tokenizer
         self.config = ScalableRonConfig.load(CONFIG)
@@ -285,6 +285,7 @@ class ScalableRuntime:
             "provider": "ScalableRonLM",
             "native_weights_loaded": True,
             "external_model_used": False,
+            "seed_response_count": len(self.seed_responses),
             "parameter_count": self.parameter_count,
             "target_parameter_count": 180_255_744,
             "target_size_reached": self.parameter_count == 180_255_744,
