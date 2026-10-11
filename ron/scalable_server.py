@@ -146,7 +146,7 @@ class ScalableRuntime:
         if any(value is None for value in self.special.values()):
             raise RuntimeError("Tokenizer must define <bos>, <user>, <assistant>, and <eos> tokens")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        payload = torch.load(CHECKPOINT, map_location="cpu", weights_only=True)
+        payload = torch.load(CHECKPOINT, map_location=self.device, mmap=(self.device.type == "cpu"), weights_only=True)
         state = payload.get("model")
         if not isinstance(state, dict):
             raise RuntimeError("Checkpoint does not contain the expected 'model' state dictionary")
@@ -158,7 +158,7 @@ class ScalableRuntime:
         precision = os.getenv("RON_PRECISION", "fp16").lower()
         dtype = torch.float16 if precision == "fp16" else torch.float32
         self.model = ScalableRonLM(self.config).to(device=self.device, dtype=dtype)
-        self.model.load_state_dict(state, strict=True)
+        self.model.load_state_dict(state, strict=True, assign=True)
         del payload, state
         self.model.eval()
         self.parameter_count = count_parameters(self.model)
