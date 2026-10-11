@@ -307,7 +307,7 @@ const localLessonAnswer=n=>{
 };
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  // Every browser chat turn must use the Python service; never silently answer with the legacy JS brain.
- const apiBase=String(window.RON_API_BASE||"").replace(/\\/+$/,"");
+ const apiBase=String(window.RON_API_BASE||"").replace(/\/+$/,"");
  let sessionId="";
  try{sessionId=localStorage.getItem("ron-python-session-v1")||"";}catch{}
  if(!/^[A-Za-z0-9_-]{1,80}$/.test(sessionId)){
