@@ -1,4 +1,9 @@
-from ron.scalable_server import deterministic_math, deterministic_social_reply
+from ron.scalable_server import (
+    deterministic_math,
+    deterministic_social_reply,
+    load_seed_responses,
+    normalize_lookup_text,
+)
 
 
 def test_deterministic_math_handles_common_arithmetic():
@@ -30,3 +35,16 @@ def test_deterministic_social_replies_cover_common_greetings_without_inference()
     assert "Hello" in deterministic_social_reply("hello")
     assert "ready to help" in deterministic_social_reply("how are you")
     assert deterministic_social_reply("اشرح لي الجاذبية") is None
+
+
+def test_seed_corpus_lookup_normalizes_arabic_question_marks_and_diacritics(tmp_path):
+    corpus = tmp_path / "seed_corpus.txt"
+    corpus.write_text(
+        "المستخدم: لماذا السماء تبدو زرقاء؟\n"
+        "رون: يتشتت الضوء الأزرق في الغلاف الجوي.\n",
+        encoding="utf-8",
+    )
+    responses = load_seed_responses(corpus)
+    key = normalize_lookup_text("لماذا السماء تبدو زرقاء؟")
+    assert responses[key] == "يتشتت الضوء الأزرق في الغلاف الجوي."
+    assert responses.get(normalize_lookup_text("لماذا السماء تبدو زرقاء")) == responses[key]
