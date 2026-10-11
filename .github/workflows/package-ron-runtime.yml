@@ -2,7 +2,7 @@ name: Package Ron inference checkpoint
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/ron-180m-live-chat-api]
     paths:
       - ".github/workflows/package-ron-runtime.yml"
   workflow_dispatch:
