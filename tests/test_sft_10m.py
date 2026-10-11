@@ -1,6 +1,8 @@
+import random
+
 import torch
 
-from scripts.train_sft_10m import candidate_starts, encode_examples, make_batch, split_examples
+from scripts.train_sft_10m import candidate_starts, encode_examples, make_batch, make_mixed_batch, split_examples
 
 
 def test_sft_masks_user_text_and_trains_only_ron_response_characters():
@@ -50,3 +52,25 @@ def test_sft_split_is_reproducible_and_keeps_examples_disjoint():
     assert train_a == train_b
     assert val_a == val_b
     assert set(train_a).isdisjoint(set(val_a))
+
+def test_sft_mixed_batch_achieves_target_arabic_fraction_with_small_batches():
+    random.seed(41)
+    torch.manual_seed(41)
+    length = 8
+    english_tokens = torch.zeros(40, dtype=torch.long)
+    arabic_tokens = torch.ones(40, dtype=torch.long)
+    mask = torch.ones(40, dtype=torch.bool)
+    starts = candidate_starts(mask, length)
+    english = (english_tokens, mask, starts)
+    arabic = (arabic_tokens, mask, starts)
+
+    arabic_rows = 0
+    total_rows = 0
+    for _ in range(500):
+        x, _ = make_mixed_batch(english, arabic, size=2, length=length, arabic_fraction=0.65)
+        arabic_rows += int((x[:, 0] == 1).sum().item())
+        total_rows += x.shape[0]
+
+    observed_fraction = arabic_rows / total_rows
+    assert abs(observed_fraction - 0.65) < 0.05
+

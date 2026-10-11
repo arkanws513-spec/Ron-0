@@ -35,19 +35,6 @@ python -m scripts.surprise_eval
 
 Training and evaluation reports are written under `artifacts/native-baseline/`. The workflow keeps candidate weights separate from the live checkpoint until the blind anti-degeneration gate passes.
 
-## Live chat with the Ron-180M checkpoint
-
-The static GitHub Pages deployment cannot execute the trained PyTorch model. The browser must send each chat turn to the Python runtime:
-
-```bash
-python -m pip install -e ".[scalable]"
-python -m ron.scalable_server
-```
-
-Download the `ron-180m-pythia-distillation-pilot` artifact from [the successful training run](https://github.com/arkanws513-spec/Ron-0/actions/runs/38109801662) and extract its contents into `artifacts/` before starting the service. The server refuses to start if the checkpoint, config, or tokenizer is missing or incompatible. Verify the actual loaded checkpoint at `/api/health`.
-
-See [scalable runtime setup](docs/scalable-runtime.md) for paths, environment variables, memory requirements, and deployment limits. GitHub Pages alone is not a live model server; public chat requires hosting the Python service and artifact on a Python-capable host.
-
 ## Current limitations
 
 Ron-0's native Transformer is a small character-level prototype trained on a curated corpus. It is not yet a general-purpose language model. A lower training loss alone is not evidence that responses improved; held-out validation and blind generation checks must also be reviewed.

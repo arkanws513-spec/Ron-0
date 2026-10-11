@@ -306,63 +306,6 @@ const localLessonAnswer=n=>{
  return null;
 };
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
- // Modern browsers use the Python service exclusively; keep legacy logic only for environments without Fetch API support.
- if(typeof fetch==="function"){
- const apiBase=String(window.RON_API_BASE||"https://accurate-courage-production-8a31.up.railway.app").replace(/\/+$/,"");
- let sessionId="";
- try{sessionId=localStorage.getItem("ron-python-session-v1")||"";}catch{}
- if(!/^[A-Za-z0-9_-]{1,80}$/.test(sessionId)){
-  sessionId="ron_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);
-  try{localStorage.setItem("ron-python-session-v1",sessionId);}catch{}
- }
- try{
-  const requestId="req_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);
-  let response=null,payload={},lastError=null;
-  for(let attempt=0;attempt<2;attempt++){
-   let controller=null,timeoutId=null;
-   try{
-    if(typeof AbortController==="function"){
-     controller=new AbortController();
-     timeoutId=setTimeout(()=>controller.abort(),60000);
-    }
-    response=await fetch((apiBase||"")+"/api/chat",{
-     method:"POST",headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({message:t,session_id:sessionId,request_id:requestId}),
-     ...(controller?{signal:controller.signal}:{})
-    });
-   }catch(error){
-    lastError=error;
-    const retryable=error?.name==="AbortError"||error instanceof TypeError;
-    if(attempt===0&&retryable){await new Promise(resolve=>setTimeout(resolve,500));continue;}
-    throw error;
-   }finally{if(timeoutId!==null)clearTimeout(timeoutId);}
-   if(attempt===0&&[502,503,504].includes(response.status)){
-    await new Promise(resolve=>setTimeout(resolve,500));
-    continue;
-   }
-   break;
-  }
-  if(!response)throw lastError||new Error("network_error");
-  try{payload=await response.json();}catch{}
-  if(!response.ok)throw new Error(payload.error||("http_"+response.status));
-  const reply=String(payload.reply||"").trim();
-  if(!reply)throw new Error("empty_reply");
-  globalThis.ronRuntimeStatus=payload.health||null;
-  globalThis.ronLastGenerationStatus=payload.generation_status||"unknown";
-  messages.push({role:"ron",text:reply});bubble("ron",reply);save();saveCurrent();
-  return;
- }catch(error){
-  console.error("Ron Python service request failed",error);
-  let disconnected="تعذّر الحصول على رد من نواة رون.";
-  if(error?.name==="AbortError")disconnected="استغرقت نواة رون أكثر من 60 ثانية ولم يصل رد. قد تكون الخدمة تبدأ التشغيل أو أن الاستدلال بطيء؛ حاول مرة أخرى.";
-  else if(error instanceof TypeError)disconnected="تعذّر الاتصال بخدمة نواة رون. قد تكون الخدمة متوقفة أو أن الاتصال محجوب؛ افحص /api/health وسجلات الاستضافة.";
-  else if(String(error?.message||"").startsWith("http_5"))disconnected="وصل الطلب إلى خدمة رون، لكن الخادم واجه خطأ أثناء المعالجة. افحص سجلات خدمة Python.";
-  else if(String(error?.message||"")==="empty_reply")disconnected="وصل رد فارغ من خدمة رون. تم تسجيل حالة التوليد للفحص؛ أعد المحاولة لاحقًا.";
-  else disconnected="تعذّر إكمال طلب رون ("+String(error?.message||"خطأ غير معروف")+"). افحص حالة الخدمة وسجلاتها.";
-  messages.push({role:"ron",text:disconnected});bubble("ron",disconnected);save();saveCurrent();
-  return;
- }
- }
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
