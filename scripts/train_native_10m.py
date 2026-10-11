@@ -190,7 +190,9 @@ def main():
     random.seed(SEED)
     torch.manual_seed(SEED)
     torch.set_num_threads(min(4, torch.get_num_threads()))
-    corpus_path = ROOT / "training" / "corpus.txt"
+    corpus_path = Path(os.environ.get("RON_CORPUS_PATH", str(ROOT / "training" / "corpus.txt"))).expanduser()
+    if not corpus_path.is_absolute():
+        corpus_path = ROOT / corpus_path
     if not corpus_path.is_file():
         raise FileNotFoundError(
             "Ron-10M requires training/corpus.txt. Add appropriately licensed text files under "
