@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import torch
 
 from .contracts import ModelRequest, ModelResponse
@@ -14,9 +15,18 @@ class NativeCheckpointProvider:
     """Load Ron's own trained checkpoint and generate from its character vocabulary."""
 
     def __init__(self, checkpoint_path: str | Path | None = None) -> None:
-        self.checkpoint_path = Path(checkpoint_path) if checkpoint_path else (
-            Path(__file__).resolve().parent / "checkpoints" / "ron_native_baseline.pt"
-        )
+        # Explicit argument wins, then deployment environment, then the trained 10M
+        # checkpoint when packaged; retain baseline fallback for existing deployments.
+        configured_path = checkpoint_path or os.environ.get("RON_NATIVE_CHECKPOINT_PATH")
+        checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
+        if configured_path:
+            self.checkpoint_path = Path(configured_path).expanduser()
+        else:
+            trained_checkpoint = checkpoint_dir / "ron_native_10m.pt"
+            baseline_checkpoint = checkpoint_dir / "ron_native_baseline.pt"
+            self.checkpoint_path = (
+                trained_checkpoint if trained_checkpoint.is_file() else baseline_checkpoint
+            )
         if not self.checkpoint_path.is_file():
             raise FileNotFoundError(f"Ron native checkpoint not found: {self.checkpoint_path}")
 
