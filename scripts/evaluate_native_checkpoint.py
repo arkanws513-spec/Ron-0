@@ -26,11 +26,13 @@ def normalize(text: str) -> str:
 
 MIN_EVAL_CASES = 20
 MIN_CRITICAL_CASES = 8
+HARD_EVAL_CASE_COUNT = 300
+HARD_CRITICAL_CASES = 40
 
 
-def validate_cases(cases: Any) -> list[dict[str, Any]]:
-    if not isinstance(cases, list) or len(cases) < MIN_EVAL_CASES:
-        raise ValueError(f"evaluation requires at least {MIN_EVAL_CASES} cases")
+def validate_cases(cases: Any, min_cases: int = MIN_EVAL_CASES, min_critical: int = MIN_CRITICAL_CASES) -> list[dict[str, Any]]:
+    if not isinstance(cases, list) or len(cases) < min_cases:
+        raise ValueError(f"evaluation requires at least {min_cases} cases")
     if any(not isinstance(case, dict) for case in cases):
         raise ValueError("every evaluation case must be an object")
     ids = [str(case.get("id", case.get("prompt", ""))).strip() for case in cases]
@@ -39,8 +41,8 @@ def validate_cases(cases: Any) -> list[dict[str, Any]]:
     if len(ids) != len(set(ids)):
         raise ValueError("evaluation case IDs must be unique")
     critical_count = sum(bool(case.get("critical", False)) for case in cases)
-    if critical_count < MIN_CRITICAL_CASES:
-        raise ValueError(f"evaluation requires at least {MIN_CRITICAL_CASES} critical cases")
+    if critical_count < min_critical:
+        raise ValueError(f"evaluation requires at least {min_critical} critical cases")
     for case in cases:
         if not case.get("messages") and not str(case.get("prompt", "")).strip():
             raise ValueError(f"evaluation case {case.get('id', '<unknown>')} needs a prompt or messages")
@@ -72,8 +74,12 @@ def assess_case(answer: str, case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def evaluate_checkpoint(checkpoint_path: Path, cases_path: Path, report_path: Path, min_pass_rate: float) -> dict[str, Any]:
-    cases = validate_cases(json.loads(cases_path.read_text(encoding="utf-8")))
+def evaluate_checkpoint(checkpoint_path: Path, cases_path: Path, report_path: Path, min_pass_rate: float, expected_case_count: int = HARD_EVAL_CASE_COUNT) -> dict[str, Any]:
+    loaded_cases = json.loads(cases_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded_cases, list) or len(loaded_cases) != expected_case_count:
+        actual_count = len(loaded_cases) if isinstance(loaded_cases, list) else "non-list"
+        raise ValueError(f"hard evaluation requires exactly {expected_case_count} cases; found {actual_count}")
+    cases = validate_cases(loaded_cases, min_cases=expected_case_count, min_critical=HARD_CRITICAL_CASES)
     provider = NativeCheckpointProvider(checkpoint_path)
     parameter_count = sum(parameter.numel() for parameter in provider.model.parameters())
     results = []
@@ -100,7 +106,7 @@ def evaluate_checkpoint(checkpoint_path: Path, cases_path: Path, report_path: Pa
         checkpoint_hash = hashlib.file_digest(checkpoint_file, "sha256").hexdigest()
     report = {
         "status": "completed",
-        "passed": pass_rate >= min_pass_rate and not critical_failures,
+        "passed": pass_rate >= min_pass_rate and not critical_failures and len(results) == expected_case_count and sum(bool(case.get("critical", False)) for case in cases) >= HARD_CRITICAL_CASES,
         "checkpoint": checkpoint_path.name,
         "checkpoint_sha256": checkpoint_hash,
         "parameter_count": parameter_count,
@@ -123,11 +129,12 @@ def main() -> int:
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    parser.add_argument("--min-pass-rate", type=float, default=0.70)
+    parser.add_argument("--min-pass-rate", type=float, default=0.80)
+    parser.add_argument("--expected-case-count", type=int, default=HARD_EVAL_CASE_COUNT)
     args = parser.parse_args()
     if not 0 < args.min_pass_rate <= 1:
         raise ValueError("--min-pass-rate must be in (0, 1]")
-    report = evaluate_checkpoint(args.checkpoint, args.cases, args.report, args.min_pass_rate)
+    report = evaluate_checkpoint(args.checkpoint, args.cases, args.report, args.min_pass_rate, args.expected_case_count)
     return 0 if report["passed"] else 1
 
 
