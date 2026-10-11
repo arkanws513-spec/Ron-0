@@ -43,8 +43,8 @@ jobs:
             RUN_ID="$INPUT_RUN_ID"
           fi
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid run ID"; exit 1; }
-          RUN_JSON="$(gh run view "$RUN_ID" --repo "$REPOSITORY" --json conclusion,headBranch,name,headRepository)"
-          echo "$RUN_JSON" | python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("conclusion") == "success", "training run did not succeed"; assert r.get("headBranch") == "main", "training must come from main"; assert (r.get("headRepository") or {}).get("name") == "Ron-0", "unexpected source repository"; print("Verified successful training run:", r.get("name"))'
+          RUN_JSON="$(gh api "repos/$REPOSITORY/actions/runs/$RUN_ID")"
+          echo "$RUN_JSON" | python -c 'import json,sys; r=json.load(sys.stdin); assert r.get("conclusion") == "success", "training run did not succeed"; assert r.get("head_branch") == "main", "training must come from main"; assert (r.get("head_repository") or {}).get("full_name") == r.get("repository", {}).get("full_name"), "unexpected source repository"; print("Verified successful training run:", r.get("name"))'
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Download training report and checkpoint
