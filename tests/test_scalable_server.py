@@ -13,6 +13,16 @@ def test_deterministic_math_rejects_non_math_and_unsafe_expressions():
     assert deterministic_math("1 / 0") is None
 
 
+def test_generation_quality_guard_rejects_symbol_only_output():
+    from ron.generation_quality import guard_generated_text, is_degenerate_text
+
+    fallback = "Ron could not form a clear answer."
+    assert is_degenerate_text("********")
+    assert guard_generated_text("********", fallback) == (fallback, True)
+    assert guard_generated_text("aaaaaaaa", fallback) == (fallback, True)
+    assert guard_generated_text("The sky looks blue.", fallback) == ("The sky looks blue.", False)
+
+
 def test_deterministic_social_replies_cover_common_greetings_without_inference():
     assert "أهلًا" in deterministic_social_reply("اهلا")
     assert "وعليكم السلام" in deterministic_social_reply("السلام عليكم")
