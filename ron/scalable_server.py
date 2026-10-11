@@ -180,6 +180,8 @@ class ScalableRuntime:
         # Do not let punctuation-only/whitespace-only BPE pieces dominate decoding.
         # Decode each learned ID once at startup; Arabic and Latin word pieces remain allowed.
         for token_id in range(self.valid_vocab_size):
+            if token_id == int(self.special["<eos>"]):
+                continue
             piece = self.tokenizer.decode([token_id], skip_special_tokens=True)
             if not any(character.isalnum() for character in piece):
                 self.suppressed_token_ids.append(token_id)
