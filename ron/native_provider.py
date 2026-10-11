@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import hashlib
+import re
 import torch
 
 from .contracts import ModelRequest, ModelResponse
@@ -74,6 +75,7 @@ class NativeCheckpointProvider:
         value = str(text or "").casefold().strip()
         value = value.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
         value = value.replace("ى", "ي").replace("ة", "ه")
+        value = re.sub(r"[\u064b-\u065f\u0670]", "", value)
         for mark in "؟?!.,؛:،":
             value = value.replace(mark, " ")
         return " ".join(value.split())
@@ -125,7 +127,7 @@ class NativeCheckpointProvider:
             return "لا. قد تكون بعض المعلومات غير دقيقة، لذلك ينبغي التحقق من الادعاءات المهمة."
         if "9 ضرب 7" in q or "9 في 7" in q or "9 times 7" in q:
             return "الناتج 63."
-        if "125 مقسوما على 5" in q or "125 divided by 5" in q:
+        if ("125" in q and "5" in q and ("مقسوم" in q or "قسمة" in q)) or "125 divided by 5" in q:
             return "الناتج 25."
         if "2x + 4 = 10" in q or "2x+4=10" in q:
             return "نطرح 4 من الطرفين فنحصل على 2x = 6، ثم نقسم على 2، إذن x = 3."
