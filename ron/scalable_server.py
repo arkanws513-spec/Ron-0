@@ -124,6 +124,7 @@ class ScalableRuntime:
                     f"Required Ron scalable artifact is missing: {path}. "
                     "Download and extract the ron-180m-pythia-distillation-pilot workflow artifact first."
                 )
+        print("ron-runtime: initializing tokenizer", flush=True)
         from tokenizers import Tokenizer
         self.config = ScalableRonConfig.load(CONFIG)
         self.tokenizer = Tokenizer.from_file(str(TOKENIZER))
@@ -141,11 +142,13 @@ class ScalableRuntime:
         actual_vocab = self.tokenizer.get_vocab_size()
         if actual_vocab != self.config.vocab_size:
             raise RuntimeError(f"Tokenizer padding failed: {actual_vocab} != {self.config.vocab_size}")
+        print(f"ron-runtime: tokenizer ready ({actual_vocab} tokens)", flush=True)
         self.vocab = self.tokenizer.get_vocab()
         self.special = {name: self.vocab.get(name) for name in ("<bos>", "<user>", "<assistant>", "<eos>")}
         if any(value is None for value in self.special.values()):
             raise RuntimeError("Tokenizer must define <bos>, <user>, <assistant>, and <eos> tokens")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"ron-runtime: loading checkpoint on {self.device}", flush=True)
         payload = torch.load(CHECKPOINT, map_location=self.device, mmap=(self.device.type == "cpu"), weights_only=True)
         state = payload.get("model")
         if not isinstance(state, dict):
@@ -157,11 +160,14 @@ class ScalableRuntime:
                     raise RuntimeError(f"Checkpoint/config mismatch for {key}")
         precision = os.getenv("RON_PRECISION", "fp16").lower()
         dtype = torch.float16 if precision == "fp16" else torch.float32
+        print("ron-runtime: constructing model", flush=True)
         self.model = ScalableRonLM(self.config).to(device=self.device, dtype=dtype)
+        print("ron-runtime: assigning checkpoint weights", flush=True)
         self.model.load_state_dict(state, strict=True, assign=True)
         del payload, state
         self.model.eval()
         self.parameter_count = count_parameters(self.model)
+        print("ron-runtime: verifying checkpoint checksum", flush=True)
         self.checkpoint_sha256 = self._sha256(CHECKPOINT)
         metrics_path = CHECKPOINT.parent / "metrics.json"
         self.metrics = json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.is_file() else {}
@@ -325,6 +331,7 @@ class RonHandler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     ensure_runtime_bundle()
+    print("ron-runtime: starting native model initialization", flush=True)
     runtime = ScalableRuntime()
     RonHandler.runtime = runtime
     host = os.getenv("RON_HOST", "0.0.0.0")
