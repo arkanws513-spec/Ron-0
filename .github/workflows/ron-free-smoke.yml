@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[model]" pytest
       - name: Run native model and training recipe tests
-        run: python -m pytest tests/test_model.py tests/test_native_10m_recipe.py tests/test_sft_10m.py tests/test_native_evaluation_gate.py -q
+        run: python -m pytest tests/test_model.py tests/test_native_10m_recipe.py tests/test_sft_10m.py tests/test_native_evaluation_gate.py tests/test_generation_quality.py -q
       - name: Execute three-step isolated optimizer smoke test
         run: |
           python - <<'PY'
