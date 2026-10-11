@@ -1,0 +1,71 @@
+name: Package Ron inference checkpoint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/package-ron-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Download the verified training artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ron-180m-pythia-distillation-pilot
+          repository: arkanws513-spec/Ron-0
+          run-id: 38109801662
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded
+      - name: Convert to a compact inference-only FP16 checkpoint
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "torch>=2.6"
+          python - <<'PY'
+          import json, pathlib, torch, zipfile
+          base = pathlib.Path("downloaded")
+          matches = list(base.rglob("checkpoint.pt"))
+          if len(matches) != 1:
+              raise SystemExit(f"Expected one checkpoint.pt, found {matches}")
+          source = matches[0].parent
+          for name in ("config.json", "tokenizer.json", "metrics.json"):
+              if not (source / name).is_file():
+                  raise SystemExit(f"Missing required artifact file: {source / name}")
+          payload = torch.load(source / "checkpoint.pt", map_location="cpu", weights_only=True)
+          if "model" not in payload or "config" not in payload:
+              raise SystemExit("Checkpoint is missing model/config")
+          config = json.loads((source / "config.json").read_text())
+          if int(config["vocab_size"]) != 8000:
+              raise SystemExit(f"Unexpected vocabulary size: {config['vocab_size']}")
+          state = {key: tensor.detach().to(dtype=torch.float16, device="cpu").contiguous()
+                   for key, tensor in payload["model"].items()}
+          out = pathlib.Path("bundle/ron-180m-pythia-distilled")
+          out.mkdir(parents=True)
+          torch.save({"model": state, "config": payload["config"]}, out / "checkpoint.pt")
+          del payload, state
+          for name in ("config.json", "tokenizer.json", "metrics.json"):
+              (out / name).write_bytes((source / name).read_bytes())
+          with zipfile.ZipFile("ron-180m-inference-bundle.zip", "w", compression=zipfile.ZIP_STORED) as archive:
+              for file in out.iterdir():
+                  archive.write(file, file.relative_to("bundle"))
+          print("Inference bundle bytes:", pathlib.Path("ron-180m-inference-bundle.zip").stat().st_size)
+          PY
+      - name: Publish public runtime bundle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ron-180m-runtime-2026-10-11
+          name: Ron-180M inference runtime
+          target_commitish: ${{ github.sha }}
+          overwrite_files: true
+          files: ron-180m-inference-bundle.zip
