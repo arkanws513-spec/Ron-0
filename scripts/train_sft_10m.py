@@ -116,12 +116,27 @@ def make_batch(tokens, response_mask, valid_starts, size: int, length: int):
 
 
 def make_mixed_batch(english, arabic, size: int, length: int, arabic_fraction: float):
-    """Sample both languages every batch instead of letting English corpus size dominate."""
-    if size == 1:
-        source = arabic if random.random() < arabic_fraction else english
-        return make_batch(*source, 1, length)
-    arabic_size = max(1, min(size - 1, round(size * arabic_fraction)))
+    """Sample languages with the requested long-run fraction, including small batches."""
+    if size < 1:
+        raise ValueError("batch size must be positive")
+    if not 0 < arabic_fraction < 1:
+        raise ValueError("Arabic fraction must be between 0 and 1")
+
+    # Stochastic rounding preserves the target fraction when batch size is small.
+    # For size=2 and fraction=0.65, this selects two Arabic rows 30% of the
+    # time and one Arabic row 70% of the time: E[Arabic rows] = 1.3.
+    expected_arabic = size * arabic_fraction
+    arabic_size = int(math.floor(expected_arabic))
+    if random.random() < expected_arabic - arabic_size:
+        arabic_size += 1
+    arabic_size = max(0, min(size, arabic_size))
     english_size = size - arabic_size
+
+    if arabic_size == 0:
+        return make_batch(*english, size, length)
+    if english_size == 0:
+        return make_batch(*arabic, size, length)
+
     x_en, y_en = make_batch(*english, english_size, length)
     x_ar, y_ar = make_batch(*arabic, arabic_size, length)
     return torch.cat((x_en, x_ar), dim=0), torch.cat((y_en, y_ar), dim=0)
