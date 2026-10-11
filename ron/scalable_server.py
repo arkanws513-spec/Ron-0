@@ -17,6 +17,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import tempfile
 import threading
 import time
 from collections import defaultdict, deque
@@ -25,6 +27,8 @@ from operator import add, sub, mul, truediv, mod, pow
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
+from urllib.request import Request, urlopen
+import zipfile
 
 import torch
 
@@ -38,7 +42,34 @@ MAX_BODY_BYTES = 16 * 1024
 MAX_MESSAGE_CHARS = 4000
 MAX_NEW_TOKENS = min(128, max(1, int(os.getenv("RON_MAX_NEW_TOKENS", "96"))))
 ALLOWED_ORIGIN = os.getenv("RON_ALLOWED_ORIGIN", "*")
+RUNTIME_BUNDLE_URL = os.getenv("RON_RUNTIME_BUNDLE_URL", "https://github.com/arkanws513-spec/Ron-0/releases/download/ron-180m-runtime-2026-10-11/ron-180m-inference-bundle.zip")
 
+
+def ensure_runtime_bundle() -> None:
+    """Fetch the inference-only release bundle if trained files are absent."""
+    if CHECKPOINT.is_file() and CONFIG.is_file() and TOKENIZER.is_file():
+        return
+    if os.getenv("RON_DISABLE_AUTO_DOWNLOAD", "").lower() in {"1", "true", "yes"}:
+        raise FileNotFoundError("Ron checkpoint files are missing and auto-download is disabled")
+    destination = ROOT / "artifacts"
+    destination.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="ron-bundle-") as temporary:
+        archive_path = Path(temporary) / "bundle.zip"
+        request = Request(RUNTIME_BUNDLE_URL, headers={"User-Agent": "Ron-180M-runtime"})
+        print("ron-runtime: downloading inference bundle", flush=True)
+        with urlopen(request, timeout=1200) as response, archive_path.open("wb") as output:
+            shutil.copyfileobj(response, output, length=1024 * 1024)
+        expected_root = destination.resolve()
+        with zipfile.ZipFile(archive_path) as archive:
+            for member in archive.infolist():
+                target = (destination / member.filename).resolve()
+                if target != expected_root and expected_root not in target.parents:
+                    raise RuntimeError("Runtime bundle contains an unsafe path")
+            archive.extractall(destination)
+    for path in (CHECKPOINT, CONFIG, TOKENIZER):
+        if not path.is_file():
+            raise FileNotFoundError(f"Downloaded runtime bundle is missing {path}")
+    print("ron-runtime: inference bundle ready", flush=True)
 
 def _safe_math_node(node: ast.AST) -> float:
     if isinstance(node, ast.Expression):
@@ -113,8 +144,11 @@ class ScalableRuntime:
             for key in ("vocab_size", "hidden_size", "num_layers", "num_heads", "num_kv_heads", "max_sequence_length"):
                 if key in saved_config and int(saved_config[key]) != int(getattr(self.config, key)):
                     raise RuntimeError(f"Checkpoint/config mismatch for {key}")
-        self.model = ScalableRonLM(self.config).to(self.device)
+        precision = os.getenv("RON_PRECISION", "fp16").lower()
+        dtype = torch.float16 if precision == "fp16" else torch.float32
+        self.model = ScalableRonLM(self.config).to(device=self.device, dtype=dtype)
         self.model.load_state_dict(state, strict=True)
+        del payload, state
         self.model.eval()
         self.parameter_count = count_parameters(self.model)
         self.checkpoint_sha256 = self._sha256(CHECKPOINT)
@@ -158,6 +192,7 @@ class ScalableRuntime:
             "optimizer_steps": self.metrics.get("optimizer_steps"),
             "training_metrics": self.metrics.get("history", [])[-3:],
             "device": str(self.device),
+            "precision": str(next(self.model.parameters()).dtype),
         }
 
     def allow_request(self, client_ip: str) -> bool:
@@ -278,6 +313,7 @@ class RonHandler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
+    ensure_runtime_bundle()
     runtime = ScalableRuntime()
     RonHandler.runtime = runtime
     host = os.getenv("RON_HOST", "0.0.0.0")
