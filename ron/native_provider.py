@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import torch
 
 from .contracts import ModelRequest, ModelResponse
@@ -118,6 +119,9 @@ class NativeCheckpointProvider:
                 "optimizer_state_persisted": self.optimizer_state_persisted,
                 "checkpoint_source": self.checkpoint_source,
                 "external_model_used": False,
+                "generation_strategy": "deterministic_top_k_sampling",
+                "generation_temperature": temperature,
+                "generation_top_k": top_k,
                 "native_generated_answer_rejected": generation_rejected,
                 "generation_quality_fallback": generation_rejected,
             },
