@@ -1,4 +1,4 @@
-from ron.scalable_server import deterministic_math
+from ron.scalable_server import deterministic_math, deterministic_social_reply
 
 
 def test_deterministic_math_handles_common_arithmetic():
@@ -11,3 +11,12 @@ def test_deterministic_math_rejects_non_math_and_unsafe_expressions():
     assert deterministic_math("اشرح كيف تتعلم الحواسيب") is None
     assert deterministic_math("__import__('os').system('whoami')") is None
     assert deterministic_math("1 / 0") is None
+
+
+def test_deterministic_social_replies_cover_common_greetings_without_inference():
+    assert "أهلًا" in deterministic_social_reply("اهلا")
+    assert "وعليكم السلام" in deterministic_social_reply("السلام عليكم")
+    assert "جاهز أساعدك" in deterministic_social_reply("كيف حالك")
+    assert "Hello" in deterministic_social_reply("hello")
+    assert "ready to help" in deterministic_social_reply("how are you")
+    assert deterministic_social_reply("اشرح لي الجاذبية") is None
