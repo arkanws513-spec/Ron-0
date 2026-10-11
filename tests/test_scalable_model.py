@@ -75,3 +75,21 @@ def test_optional_training_and_chat_scripts_import_without_tokenizers() -> None:
     assert padded["input_ids"].shape == (2, 4)
     assert padded["labels"][0, 2:].tolist() == [-100, -100]
     assert chat_scalable_ron.__doc__ is not None
+
+
+def test_ron_100m_preset_has_expected_real_parameter_count() -> None:
+    from ron.scale_presets import build_scale_config
+    from scripts.estimate_model_scale import estimate
+    config = build_scale_config("ron-100m", vocab_size=8000, sequence_length=256)
+    assert (config.hidden_size, config.num_layers, config.num_heads, config.num_kv_heads, config.intermediate_size) == (1024, 8, 16, 4, 2880)
+    estimate_result = estimate(8000, 1024, 8, 16, 256, architecture="scalable", num_kv_heads=4, intermediate_size=2880)
+    assert estimate_result["estimated_parameters"] == 99_959_808
+    with torch.device("meta"):
+        model = ScalableRonLM(config)
+    assert count_parameters(model) == estimate_result["estimated_parameters"]
+
+
+def test_ron_100m_preset_rejects_mismatched_tokenizer_vocab() -> None:
+    from ron.scale_presets import build_scale_config
+    with pytest.raises(ValueError, match="8,000-token"):
+        build_scale_config("ron-100m", vocab_size=7999, sequence_length=256)

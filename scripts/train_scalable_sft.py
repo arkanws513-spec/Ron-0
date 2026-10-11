@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, Dataset
 from ron.scalable_model import ScalableRonConfig, ScalableRonLM, count_parameters
+from ron.scale_presets import build_scale_config
 
 class PromptResponseDataset(Dataset):
     def __init__(self, path: Path, tokenizer_path: Path, max_length: int, limit: int | None = None) -> None:
@@ -73,6 +74,7 @@ def main() -> None:
     p.add_argument("--output", type=Path, default=Path("artifacts/ron-scalable"))
     p.add_argument("--init-checkpoint", type=Path, help="Optional compatible scalable Ron pretraining checkpoint")
     p.add_argument("--vocab-size", type=int, help="Expected tokenizer vocabulary size; defaults to the tokenizer file's actual size")
+    p.add_argument("--scale-preset", choices=("pilot", "ron-100m"), default="pilot", help="ron-100m uses the validated ~100M-parameter architecture and requires an 8,000-token tokenizer")
     p.add_argument("--hidden-size", type=int, default=256)
     p.add_argument("--layers", type=int, default=4)
     p.add_argument("--heads", type=int, default=4)
@@ -103,9 +105,9 @@ def main() -> None:
     config_vocab_size = args.vocab_size if args.vocab_size is not None else actual_vocab
     if actual_vocab != config_vocab_size:
         p.error(f"tokenizer vocabulary ({actual_vocab}) must match --vocab-size ({config_vocab_size})")
-    config = ScalableRonConfig(vocab_size=config_vocab_size, hidden_size=args.hidden_size,
-        num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads,
-        max_sequence_length=args.sequence_length)
+    config = build_scale_config(args.scale_preset, vocab_size=config_vocab_size,
+        sequence_length=args.sequence_length, hidden_size=args.hidden_size,
+        num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False) if val_ds is not None else None
     model = ScalableRonLM(config).to(device)

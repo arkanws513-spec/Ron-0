@@ -5,7 +5,8 @@ import json
 
 def estimate(vocab_size: int, hidden_size: int, num_layers: int, num_heads: int,
              sequence_length: int, architecture: str = "legacy",
-             num_kv_heads: int | None = None, tied_embeddings: bool = True) -> dict:
+             num_kv_heads: int | None = None, tied_embeddings: bool = True,
+             intermediate_size: int | None = None) -> dict:
     if min(vocab_size, hidden_size, num_layers, num_heads, sequence_length) < 1:
         raise ValueError("all dimensions must be positive")
     if hidden_size % num_heads:
@@ -27,7 +28,9 @@ def estimate(vocab_size: int, hidden_size: int, num_layers: int, num_heads: int,
         if head_dim % 2:
             raise ValueError("scalable RoPE head dimension must be even")
         kv_width = kv_heads * head_dim
-        ff_size = ((int(8 * hidden_size / 3 + 63) // 64) * 64)
+        if intermediate_size is not None and intermediate_size < 1:
+            raise ValueError("intermediate_size must be positive when supplied")
+        ff_size = intermediate_size or ((int(8 * hidden_size / 3 + 63) // 64) * 64)
         embedding = vocab_size * hidden_size * (1 if tied_embeddings else 2)
         position_embedding = 0
         per_layer = 2 * hidden_size * hidden_size + 2 * hidden_size * kv_width + 3 * hidden_size * ff_size + 2 * hidden_size
@@ -38,6 +41,7 @@ def estimate(vocab_size: int, hidden_size: int, num_layers: int, num_heads: int,
         "num_layers": num_layers, "num_heads": num_heads,
         "num_kv_heads": (num_kv_heads if num_kv_heads is not None else num_heads) if architecture == "scalable" else num_heads,
         "sequence_length": sequence_length, "tied_embeddings": True if architecture == "legacy" else tied_embeddings,
+        "intermediate_size": (None if architecture == "legacy" else (intermediate_size or ((int(8 * hidden_size / 3 + 63) // 64) * 64))),
         "estimated_parameters": parameters,
         "estimated_parameters_millions": round(parameters / 1_000_000, 3),
         "fp32_inference_weights_gib": round(parameters * 4 / (1024 ** 3), 3),
@@ -56,11 +60,12 @@ def main() -> None:
     parser.add_argument("--heads", type=int, default=6)
     parser.add_argument("--kv-heads", type=int, help="Scalable architecture only; defaults to --heads")
     parser.add_argument("--sequence-length", type=int, default=256)
+    parser.add_argument("--intermediate-size", type=int, help="Scalable architecture only; defaults to the SwiGLU size formula")
     parser.add_argument("--untied-embeddings", action="store_true")
     args = parser.parse_args()
     print(json.dumps(estimate(args.vocab_size, args.hidden_size, args.layers, args.heads,
         args.sequence_length, architecture=args.architecture, num_kv_heads=args.kv_heads,
-        tied_embeddings=not args.untied_embeddings), indent=2))
+        tied_embeddings=not args.untied_embeddings, intermediate_size=args.intermediate_size), indent=2))
 
 if __name__ == "__main__":
     main()

@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, Dataset
 from ron.scalable_model import ScalableRonConfig, ScalableRonLM, count_parameters
+from ron.scale_presets import build_scale_config
 
 class PackedTextDataset(Dataset):
     def __init__(self, corpus: Path, tokenizer_path: Path, sequence_length: int,
@@ -70,6 +71,7 @@ def main() -> None:
     p.add_argument("--validation-corpus", type=Path, help="Separate held-out text corpus")
     p.add_argument("--tokenizer", type=Path, default=Path("artifacts/ron-tokenizer/tokenizer.json"))
     p.add_argument("--output", type=Path, default=Path("artifacts/ron-pretrained"))
+    p.add_argument("--scale-preset", choices=("pilot", "ron-100m"), default="pilot", help="ron-100m uses the validated ~100M-parameter architecture and requires an 8,000-token tokenizer")
     p.add_argument("--hidden-size", type=int, default=256)
     p.add_argument("--layers", type=int, default=4)
     p.add_argument("--heads", type=int, default=4)
@@ -98,9 +100,9 @@ def main() -> None:
     pad_id = 0 if pad_id is None else pad_id
     ds = PackedTextDataset(args.corpus, args.tokenizer, args.sequence_length, args.max_documents)
     val_ds = PackedTextDataset(args.validation_corpus, args.tokenizer, args.sequence_length) if args.validation_corpus else None
-    config = ScalableRonConfig(vocab_size=vocab_size, hidden_size=args.hidden_size,
-        num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads,
-        max_sequence_length=args.sequence_length)
+    config = build_scale_config(args.scale_preset, vocab_size=vocab_size,
+        sequence_length=args.sequence_length, hidden_size=args.hidden_size,
+        num_layers=args.layers, num_heads=args.heads, num_kv_heads=args.kv_heads)
     collate = lambda batch: collate_blocks(batch, args.sequence_length, pad_id)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True, collate_fn=collate)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate) if val_ds else None
