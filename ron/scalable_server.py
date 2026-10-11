@@ -33,6 +33,7 @@ import zipfile
 
 import torch
 
+from .generation_quality import guard_generated_text
 from .scalable_model import ScalableRonConfig, ScalableRonLM, count_parameters
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -176,6 +177,13 @@ class ScalableRuntime:
             int(token_id) for token, token_id in self.vocab.items()
             if token in {"<pad>", "<unk>", "<bos>", "<user>", "<assistant>"}
         ]
+        # Do not let punctuation-only/whitespace-only BPE pieces dominate decoding.
+        # Decode each learned ID once at startup; Arabic and Latin word pieces remain allowed.
+        for token_id in range(self.valid_vocab_size):
+            piece = self.tokenizer.decode([token_id], skip_special_tokens=True)
+            if not any(character.isalnum() for character in piece):
+                self.suppressed_token_ids.append(token_id)
+        self.suppressed_token_ids = sorted(set(self.suppressed_token_ids))
         if not 1 <= self.valid_vocab_size <= self.config.vocab_size:
             raise RuntimeError(f"Invalid learned tokenizer vocabulary size: {self.valid_vocab_size}")
         if int(self.special["<eos>"]) >= self.valid_vocab_size:
@@ -315,12 +323,10 @@ class ScalableRuntime:
                 suppress_token_ids=self.suppressed_token_ids,
                 min_new_tokens=min(3, MAX_NEW_TOKENS),
             )[0, len(ids):].tolist()
-        reply = self.tokenizer.decode(output, skip_special_tokens=True).strip()
-        status = "native_model"
-        if not reply:
-            # Do not pass an empty string to the UI or misrepresent it as a model answer.
-            reply = "أنا معك، لكن النموذج لم يصغ ردًا واضحًا هذه المرة. جرّب سؤالًا أبسط."
-            status = "empty_generation_fallback"
+        decoded = self.tokenizer.decode(output, skip_special_tokens=True).strip()
+        fallback = "أنا معك، لكن النموذج لم يصغ ردًا واضحًا هذه المرة. جرّب سؤالًا أبسط."
+        reply, rejected = guard_generated_text(decoded, fallback)
+        status = "empty_generation_fallback" if rejected else "native_model"
         with self.lock:
             self.sessions[session_id].append({"role": "user", "text": text})
             self.sessions[session_id].append({"role": "assistant", "text": reply})
