@@ -35,7 +35,8 @@ jobs:
                       if response.status == 200 and health.get("status") == "ok":
                           assert health.get("native_weights_loaded") is True, health
                           assert health.get("external_model_used") is False, health
-                          assert int(health.get("parameter_count", 0)) > 180_000_000, health
+                          assert int(health.get("parameter_count", 0)) == int(health.get("target_parameter_count", -1)), health
+                          assert int(health.get("parameter_count", 0)) == 180_255_744, health
                           print(json.dumps({"health": "ok", "parameter_count": health["parameter_count"], "native_weights_loaded": health["native_weights_loaded"], "external_model_used": health["external_model_used"]}))
                           break
                       last_error = f"unexpected health payload: {data}"
