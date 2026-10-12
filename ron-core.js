@@ -89,7 +89,7 @@ function createRuleNLU(cfg=DEFAULTS){
    const stop=next.exec(rest);
    const raw=(stop?rest.slice(0,stop.index):rest).trim();
    const max=cfg.valueTokens[hit[1]] ?? cfg.valueTokens.default;
-   const parts=raw.split(/\\s+/).slice(0,max);
+   const parts=raw.split(/\s+/).slice(0,max);
    const o=key(parts.join(' '));
    if(o&&!['انت','انا','هو','هي'].includes(o))frames.push({type:'assert',s:hit[2]==='ي'?'$user':'$self',p:hit[1],o,sd:'',pd:hit[1],od:parts.join(' ')});
    if(stop)re.lastIndex=valueStart+stop.index;
