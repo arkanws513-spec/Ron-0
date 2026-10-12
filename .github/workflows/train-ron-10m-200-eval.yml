@@ -61,8 +61,8 @@ jobs:
         run: python scripts/download_oasst1_english.py
       - name: Normalize and deduplicate pretraining corpus
         run: python scripts/prepare_corpus.py
-      - name: Run native model and SFT regression tests
-        run: python -m pytest tests/test_model.py tests/test_native_10m_recipe.py tests/test_sft_10m.py tests/test_native_provider_prompt.py
+      - name: Run all Ron regression tests before training
+        run: python scripts/run_all_tests.py
       - name: Pretrain Ron-10M with increased steps
         env:
           RON_STEPS: ${{ inputs.training_steps || '2000' }}
