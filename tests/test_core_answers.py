@@ -71,3 +71,18 @@ def test_short_confirmation_resolves_prior_topic(provider: NativeCheckpointProvi
     answer = provider._known_core_answer(request, "نعم، افعل ذلك.")
     assert answer is not None
     assert "الاستدلال" in answer
+
+
+
+def test_curated_retrieval_returns_exact_reviewed_pair() -> None:
+    provider = object.__new__(NativeCheckpointProvider)
+    result = provider._retrieve_curated_answer("كيف تتعلم؟")
+    assert result is not None
+    answer, score = result
+    assert "أمثلة موثوقة" in answer
+    assert score >= 0.48
+
+
+def test_curated_retrieval_abstains_on_unrelated_question() -> None:
+    provider = object.__new__(NativeCheckpointProvider)
+    assert provider._retrieve_curated_answer("ما أفضل طريقة لقياس المسافة إلى مجرة بعيدة؟") is None
