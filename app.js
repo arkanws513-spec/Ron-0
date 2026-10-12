@@ -345,7 +345,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  const shouldWebSearch=!globalThis.ronCore&&webSearchEnabled()&&(explicitWebSearch||(!local&&(analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up")));
  if(!local&&shouldWebSearch){try{const searchQuery=resolveFollowUp(t)||t;webResult=await globalThis.RonWebSearch.answer(searchQuery);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
  // Prefer real web results when a search was requested; otherwise use Ron's promoted native weights.
- if(!String(r||"").trim()&&!explicitWebSearch&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(normalizedInput)){
+ if(!String(r||"").trim()&&typeof fetch==="function"&&!explicitWebSearch&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(normalizedInput)){
   r=await queryNativeCheckpoint(t);
  }
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
