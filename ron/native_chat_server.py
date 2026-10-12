@@ -1,7 +1,7 @@
-"""HTTP chat service for Ron's native 110k-parameter checkpoint.
+"""HTTP chat service for Ron's native model with automatic promoted-checkpoint updates.
 
-This runtime is intentionally separate from the experimental scalable-model pilot.
-It serves the checkpoint committed at ron/checkpoints/ron_native_baseline.pt.
+The service starts with the last locally available checkpoint, then polls the durable
+GitHub release and atomically activates each validated 10M checkpoint after promotion.
 """
 from __future__ import annotations
 
