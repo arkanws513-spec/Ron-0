@@ -19,6 +19,10 @@ on:
       - 'ron/native_provider.py'
       - 'ron/generation_quality.py'
       - 'ron/model_config.py'
+  # One bounded automatic training run per week. The run number increases the
+  # curriculum depth gradually without creating an unbounded self-trigger loop.
+  schedule:
+    - cron: "0 3 * * 0"
   workflow_dispatch:
     inputs:
       training_steps:
@@ -77,13 +81,31 @@ jobs:
             gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
               --pattern ron_native_10m.pt --dir ron/checkpoints || true
           fi
-      - name: Report checkpoint starting point
+      # If no quality-approved live checkpoint exists yet, continue experimental learning
+      # from the last failed candidate. This file is training-only and never served live.
+      - name: Restore latest experimental continuation for the next training run
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          mkdir -p ron/checkpoints
+          if gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
+            --pattern ron_training_continuation.pt --dir ron/checkpoints; then
+            mv -f ron/checkpoints/ron_training_continuation.pt ron/checkpoints/ron_native_10m.pt
+            echo "Continuing from the latest experimental candidate. The live release remains unchanged."
+          else
+            echo "No experimental continuation exists; use the last promoted checkpoint if available."
+          fi
+      - name: Report checkpoint starting point and progressive difficulty
+        env:
+          RON_STEPS: ${{ inputs.training_steps || (github.run_number < 3 && '6000' || github.run_number < 5 && '7000' || github.run_number < 7 && '8000' || '9000') }}
+          RON_SFT_STEPS: ${{ inputs.sft_steps || (github.run_number < 3 && '6000' || github.run_number < 5 && '7000' || github.run_number < 7 && '8000' || '9000') }}
+        run: |
+          echo "Training progression: run_number=$GITHUB_RUN_NUMBER base_steps=$RON_STEPS sft_steps=$RON_SFT_STEPS"
           if [ -f ron/checkpoints/ron_native_10m.pt ]; then
-            echo "Found prior promoted Ron checkpoint; this run will continue from it."
+            echo "Continuing from a checkpoint; this file is training-only until all quality gates pass."
             ls -lh ron/checkpoints/ron_native_10m.pt
           else
-            echo "No prior promoted checkpoint was restored; training will initialize a new checkpoint."
+            echo "No previous checkpoint found; initializing a new experimental run."
           fi
       - name: Install model and test dependencies
         run: |
@@ -99,13 +121,15 @@ jobs:
         run: python -m pytest
       - name: Train Ron-10M
         env:
-          RON_STEPS: ${{ inputs.training_steps || '6000' }}
+          # Progressive schedule: 6k, 7k, 8k, then 9k steps; cap to protect runner limits.
+          RON_STEPS: ${{ inputs.training_steps || (github.run_number < 3 && '6000' || github.run_number < 5 && '7000' || github.run_number < 7 && '8000' || '9000') }}
           RON_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
           RON_SEQUENCE_LENGTH: "256"
         run: python scripts/train_native_10m.py
       - name: Fine-tune Ron on reviewed conversations (English + Arabic)
         env:
-          RON_SFT_STEPS: ${{ inputs.sft_steps || '6000' }}
+          # Increase supervised dialogue practice alongside the base training schedule.
+          RON_SFT_STEPS: ${{ inputs.sft_steps || (github.run_number < 3 && '6000' || github.run_number < 5 && '7000' || github.run_number < 7 && '8000' || '9000') }}
           RON_SFT_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
           RON_SFT_SEQUENCE_LENGTH: "256"
           RON_ARABIC_BATCH_FRACTION: "0.65"
@@ -149,6 +173,25 @@ jobs:
         with:
           path: ron/checkpoints/ron_native_10m.pt
           key: ron-live-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
+      # Preserve the latest experiment for the next run without promoting it to live.
+      # The approved ron-live-checkpoint release is only updated after all gates pass.
+      - name: Persist experimental continuation for the next training run
+        if: always() && steps.conversation_eval.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f artifacts/native-10m/ron_native_10m_sft.pt ]; then
+            cp artifacts/native-10m/ron_native_10m_sft.pt ron_training_continuation.pt
+            if ! gh release view ron-training-continuation --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release create ron-training-continuation --repo "$GITHUB_REPOSITORY" \
+                --title "Ron experimental training continuation" \
+                --notes "Training-only checkpoint for subsequent experiments. Never used as live weights unless it passes the separate quality gate."
+            fi
+            gh release upload ron-training-continuation ron_training_continuation.pt \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            echo "No SFT candidate exists; preserving all previous checkpoints."
+          fi
       - name: Archive model, metrics, and dataset manifests
         if: always()
         uses: actions/upload-artifact@v6
