@@ -128,7 +128,7 @@ def evaluate(checkpoint: Path | None = None) -> dict:
         "interpretation": (
             "This tougher gate combines anti-degeneration checks with keyword-based answer signals and mandatory critical cases. "
             "Signal checks are approximate and can miss valid paraphrases or accept shallow keyword matches; manual review is still required. "
-            "Passing does not establish general intelligence or broad factual accuracy."
+            "Passing is not evidence of factual correctness or general intelligence; keyword checks can miss valid paraphrases or accept shallow matches, so manual review is still required."
         ),
     }
 
