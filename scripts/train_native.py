@@ -17,9 +17,9 @@ from ron.model_config import RonModelConfig
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "native-baseline"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_baseline.pt"
-SEED, STEPS, BATCH, LENGTH = 1701, 1800, 8, 96
+SEED, STEPS, BATCH, LENGTH = 1701, 2400, 8, 96
 HIDDEN, LAYERS, HEADS = 64, 2, 4
-PATIENCE_EVALS = 10
+PATIENCE_EVALS = 16
 
 
 def split_corpus(corpus: str, train_fraction: float = 0.9, seed: int = SEED):
@@ -315,7 +315,7 @@ def main():
         "history": history,
         "limitations": [
             "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
-            "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
+            "Validation uses held-out conversation pairs from the same corpus; it is not an independent benchmark.",
             "The checkpoint stores both final weights for training continuation and best-validation weights for inference; the two snapshots serve different purposes.",
             "No external inference model or paid API is used.",
         ],
