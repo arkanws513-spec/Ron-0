@@ -34,6 +34,8 @@ def test_generation_quality_guard_rejects_symbol_only_output():
     assert guard_generated_text("********", fallback) == (fallback, True)
     assert guard_generated_text("aaaaaaaa", fallback) == (fallback, True)
     assert guard_generated_text("The sky looks blue.", fallback) == ("The sky looks blue.", False)
+    assert not is_degenerate_text("Hello!!!")
+    assert not is_degenerate_text("السماء زرقاء؟")
 
 
 def test_deterministic_social_replies_cover_common_greetings_without_inference():
@@ -56,7 +58,6 @@ def test_seed_corpus_lookup_normalizes_arabic_question_marks_and_diacritics(tmp_
     key = normalize_lookup_text("لماذا السماء تبدو زرقاء؟")
     assert responses[key] == "يتشتت الضوء الأزرق في الغلاف الجوي."
     assert responses.get(normalize_lookup_text("لماذا السماء تبدو زرقاء")) == responses[key]
-
 
 
 def test_generation_token_budget_is_bounded():
