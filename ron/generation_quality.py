@@ -20,7 +20,9 @@ def is_degenerate_text(answer: str) -> bool:
         if meaningful / len(compact) < 0.25:
             return True
 
-    # Character-level models can loop without spaces.
+    # Catch short single-character loops as well as longer repeated fragments.
+    if len(compact) >= 6 and len(set(compact)) <= 2:
+        return True
     if len(compact) >= 18 and _REPEAT_PATTERN_RE.search(compact):
         return True
 
