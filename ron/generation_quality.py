@@ -8,14 +8,19 @@ _REPEAT_PATTERN_RE = re.compile(r"(.{3,10})\1{2,}", re.DOTALL)
 
 
 def is_degenerate_text(answer: str) -> bool:
-    """Detect obvious word loops and repeated character fragments, not factual errors."""
+    """Detect symbol-only output, obvious word loops, and repeated character fragments."""
     text = str(answer or "").strip()
     if not text:
         return True
 
-    # Character-level models can loop without spaces (for example, repeating a
-    # short Arabic fragment); word-only repetition checks miss these outputs.
     compact = re.sub(r"\s+", "", text.casefold())
+    # Reject punctuation/symbol-only generations while allowing normal punctuation.
+    if len(compact) >= 4:
+        meaningful = sum(char.isalnum() for char in compact)
+        if meaningful / len(compact) < 0.25:
+            return True
+
+    # Character-level models can loop without spaces.
     if len(compact) >= 18 and _REPEAT_PATTERN_RE.search(compact):
         return True
 
