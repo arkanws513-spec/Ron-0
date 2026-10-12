@@ -241,6 +241,22 @@ const explainPreviousReply=()=>{
   return "الرد السابق كان مقالًا طويلًا عن رون هاورد، لكنه لم يكن مرتبطًا بسؤالك «هل أنت معي؟». كان ذلك استدعاءً غير مناسب للنص، وكان يجب أن أجيب مباشرة: نعم، أنا معك.";
  return "أنت تسأل عن ردي السابق. كان مضمونه: «"+text.slice(0,220)+(text.length>220?"…":"")+"». إذا لم يجب عن سؤالك، فهذه مشكلة في اختيار السياق وكان ينبغي أن أرد بما يرتبط بطلبك.";
 };
+const nativeApiSessionId="web-"+Math.random().toString(36).slice(2,18);
+const queryNativeCheckpoint=async text=>{
+ try{
+  const configured=typeof window.RON_API_BASE_URL==="string"&&window.RON_API_BASE_URL.trim()?window.RON_API_BASE_URL.trim():"https://accurate-courage-production-8a31.up.railway.app";
+  const base=configured.replace(/\/+$/,"");
+  const response=await fetch(base+"/api/chat",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   cache:"no-store",
+   body:JSON.stringify({message:text,session_id:nativeApiSessionId,request_id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,8)})
+  });
+  if(!response.ok)return null;
+  const payload=await response.json();
+  return typeof payload.reply==="string"&&payload.reply.trim()?payload.reply.trim():null;
+ }catch(error){console.debug("Ron native checkpoint API unavailable; continuing with local runtime.",error);return null;}
+};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
@@ -322,13 +338,17 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
    }catch(error){console.warn("Ron Core response failed",error);}
   }
  } if(!String(r||"").trim())r=answer(t);
- if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;
  const local=String(r||"").trim();
  const n=norm(t);
  const explicitWebSearch=/^(?:ابحث|دورلي|دور لي|ابحث لي|ابحث عن|ابحث في|دور عن)/.test(n);
  const shouldWebSearch=!globalThis.ronCore&&webSearchEnabled()&&(explicitWebSearch||(!local&&(analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up")));
  if(!local&&shouldWebSearch){try{const searchQuery=resolveFollowUp(t)||t;webResult=await globalThis.RonWebSearch.answer(searchQuery);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
+ // Prefer real web results when a search was requested; otherwise use Ron's promoted native weights.
+ if(!String(r||"").trim()&&typeof fetch==="function"&&!explicitWebSearch&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(normalizedInput)){
+  r=await queryNativeCheckpoint(t);
+ }
+ if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);
 
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up")){
