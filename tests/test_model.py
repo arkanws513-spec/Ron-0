@@ -76,3 +76,16 @@ def test_dropout_regularization_is_active_only_during_training():
     eval_a = model(ids).logits
     eval_b = model(ids).logits
     assert torch.equal(eval_a, eval_b)
+
+
+def test_causal_attention_does_not_leak_future_tokens():
+    """Changing future input tokens must not change logits at earlier positions."""
+    torch.manual_seed(23)
+    model = RonCausalLM(config()).eval()
+    first = torch.tensor([[1, 2, 3, 4, 5, 6]])
+    changed_future = first.clone()
+    changed_future[:, 4:] = torch.tensor([17, 18])
+    with torch.no_grad():
+        logits_a = model(first).logits
+        logits_b = model(changed_future).logits
+    assert torch.allclose(logits_a[:, :4], logits_b[:, :4], atol=1e-6, rtol=1e-6)
