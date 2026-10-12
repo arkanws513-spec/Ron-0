@@ -19,6 +19,7 @@ on:
       - 'ron/native_provider.py'
       - 'ron/generation_quality.py'
       - 'ron/model_config.py'
+  # Manual kick after progressive-training rollout; keep each run bounded.
   # One bounded automatic training run per week. The run number increases the
   # curriculum depth gradually without creating an unbounded self-trigger loop.
   schedule:
