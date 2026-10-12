@@ -33,7 +33,9 @@ import zipfile
 
 import torch
 
+from .contracts import Message, ModelRequest
 from .generation_quality import guard_generated_text
+from .native_chat_server import NativeChatRuntime
 from .scalable_model import ScalableRonConfig, ScalableRonLM, count_parameters
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -278,6 +280,16 @@ class ScalableRuntime:
         self.inference_lock = threading.Lock()
         self.rate_lock = threading.Lock()
         self.requests: dict[str, deque[float]] = defaultdict(deque)
+        # Keep the current scalable engine as a safe fallback. Once a 10M checkpoint
+        # passes training gates and is published, the shared native runtime downloads
+        # and hot-swaps it without requiring a separate deployment.
+        self.live_native_runtime = NativeChatRuntime()
+        print(
+            "ron-runtime: promoted 10M checkpoint active"
+            if self.live_native_runtime.parameter_count >= 1_000_000
+            else "ron-runtime: awaiting promoted 10M checkpoint; scalable model remains active",
+            flush=True,
+        )
 
     @staticmethod
     def _sha256(path: Path) -> str:
@@ -288,10 +300,17 @@ class ScalableRuntime:
         return digest.hexdigest()
 
     def health(self) -> dict[str, Any]:
+        native_health = self.live_native_runtime.health()
+        promoted_native_active = native_health["parameter_count"] >= 1_000_000
         return {
             "status": "ok",
             "runtime": "ron-0-scalable-python",
             "provider": "ScalableRonLM",
+            "active_inference_provider": "NativeCheckpointProvider" if promoted_native_active else "ScalableRonLM",
+            "promoted_native_checkpoint_loaded": promoted_native_active,
+            "active_checkpoint": native_health["checkpoint"] if promoted_native_active else str(CHECKPOINT),
+            "active_checkpoint_sha256": native_health["checkpoint_sha256"] if promoted_native_active else self.checkpoint_sha256,
+            "active_parameter_count": native_health["parameter_count"] if promoted_native_active else self.parameter_count,
             "native_weights_loaded": True,
             "external_model_used": False,
             "seed_response_count": len(self.seed_responses),
@@ -350,6 +369,30 @@ class ScalableRuntime:
         with self.lock:
             history = list(self.sessions[session_id])
             history.append({"role": "user", "text": text})
+
+        # Prefer the promoted Ron-10M weights after the release loader validates them.
+        # Before that point, retain the existing scalable engine unchanged.
+        native_runtime = self.live_native_runtime
+        with native_runtime.lock:
+            native_provider = native_runtime.provider
+            native_parameter_count = native_runtime.parameter_count
+        if native_parameter_count >= 1_000_000:
+            native_request = ModelRequest(
+                messages=tuple(
+                    Message(role=message["role"], content=message["text"])
+                    for message in history
+                ),
+                metadata={"session_id": session_id, "runtime": "ron-native-promoted"},
+            )
+            native_response = native_provider.generate(native_request)
+            native_reply = native_response.content.strip()
+            if native_reply:
+                native_fallback = bool(native_response.metadata.get("generation_quality_fallback", False))
+                with self.lock:
+                    self.sessions[session_id].append({"role": "user", "text": text})
+                    self.sessions[session_id].append({"role": "assistant", "text": native_reply})
+                return native_reply, "native_quality_fallback" if native_fallback else "native_promoted_checkpoint"
+
         ids = [int(self.special["<bos>"])]
         for message in history:
             ids.append(int(self.special["<user>" if message["role"] == "user" else "<assistant>"]))
@@ -482,6 +525,7 @@ def main() -> None:
     ensure_runtime_bundle()
     print("ron-runtime: starting native model initialization", flush=True)
     runtime = ScalableRuntime()
+    runtime.live_native_runtime.start_checkpoint_refresh()
     RonHandler.runtime = runtime
     host = os.getenv("RON_HOST", "0.0.0.0")
     port = int(os.getenv("PORT", os.getenv("RON_PORT", "8000")))
