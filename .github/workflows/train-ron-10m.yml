@@ -118,8 +118,8 @@ jobs:
         run: python scripts/download_oasst1_english.py
       - name: Normalize and deduplicate pretraining corpus
         run: python scripts/prepare_corpus.py
-      - name: Run the complete repository test suite before training
-        run: python -m pytest
+      - name: Run all Ron tests before training
+        run: python scripts/run_all_tests.py
       - name: Train Ron-10M
         env:
           # Progressive schedule: 6k, 7k, 8k, then 9k steps; cap to protect runner limits.
