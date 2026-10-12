@@ -14,7 +14,6 @@ on:
       - 'scripts/evaluate_native_checkpoint.py'
       - 'scripts/promote_native_checkpoint.py'
       - 'training/eval_cases.json'
-      - '.github/workflows/train-ron-10m.yml'
       - 'ron/model.py'
       - 'ron/native_provider.py'
       - 'ron/generation_quality.py'
