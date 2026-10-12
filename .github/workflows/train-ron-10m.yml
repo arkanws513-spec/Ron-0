@@ -177,7 +177,7 @@ jobs:
       # Preserve the latest experiment for the next run without promoting it to live.
       # The approved ron-live-checkpoint release is only updated after all gates pass.
       - name: Persist experimental continuation for the next training run
-        if: always() && steps.conversation_eval.outcome != 'success'
+        if: always() && (steps.conversation_eval.outcome != 'success' || steps.promote_checkpoint.outcome != 'success')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
