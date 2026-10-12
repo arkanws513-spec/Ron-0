@@ -40,7 +40,7 @@ jobs:
       - name: Install model and distillation dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[distill]" tokenizers
+          python -m pip install -e ".[distill]" tokenizers pytest
       - name: Run all Ron regression tests before distillation
         run: python scripts/run_all_tests.py
       - name: Build Ron's own tokenizer
