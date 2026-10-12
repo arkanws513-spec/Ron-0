@@ -83,18 +83,17 @@ jobs:
           fi
       # If no quality-approved live checkpoint exists yet, continue experimental learning
       # from the last failed candidate. This file is training-only and never served live.
-      - name: Restore prior experimental continuation if no promoted checkpoint exists
+      - name: Restore latest experimental continuation for the next training run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -f ron/checkpoints/ron_native_10m.pt ]; then
-            mkdir -p ron/checkpoints
-            gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
-              --pattern ron_training_continuation.pt --dir ron/checkpoints || true
-            if [ -f ron/checkpoints/ron_training_continuation.pt ]; then
-              mv ron/checkpoints/ron_training_continuation.pt ron/checkpoints/ron_native_10m.pt
-              echo "Restored last experimental checkpoint for training only; live weights remain unchanged."
-            fi
+          mkdir -p ron/checkpoints
+          if gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
+            --pattern ron_training_continuation.pt --dir ron/checkpoints; then
+            mv -f ron/checkpoints/ron_training_continuation.pt ron/checkpoints/ron_native_10m.pt
+            echo "Continuing from the latest experimental candidate. The live release remains unchanged."
+          else
+            echo "No experimental continuation exists; use the last promoted checkpoint if available."
           fi
       - name: Report checkpoint starting point and progressive difficulty
         env:
