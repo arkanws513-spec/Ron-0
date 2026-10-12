@@ -91,10 +91,15 @@ jobs:
           mkdir -p ron/checkpoints
           if gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
             --pattern ron_training_continuation.pt --dir ron/checkpoints; then
-            mv -f ron/checkpoints/ron_training_continuation.pt ron/checkpoints/ron_native_10m.pt
-            echo "Continuing from the latest experimental candidate. The live release remains unchanged."
+            echo "Restored the latest experimental continuation separately from live runtime weights."
           else
-            echo "No experimental continuation exists; use the last promoted checkpoint if available."
+            echo "No experimental continuation exists; a promoted checkpoint will be copied into the isolated training path if available."
+          fi
+      - name: Prepare isolated training continuation
+        run: |
+          mkdir -p ron/checkpoints
+          if [ ! -f ron/checkpoints/ron_training_continuation.pt ] && [ -f ron/checkpoints/ron_native_10m.pt ]; then
+            cp ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_training_continuation.pt
           fi
       - name: Report checkpoint starting point and progressive difficulty
         env:
@@ -102,8 +107,11 @@ jobs:
           RON_SFT_STEPS: ${{ inputs.sft_steps || (github.run_number < 3 && '6000' || github.run_number < 5 && '7000' || github.run_number < 7 && '8000' || '9000') }}
         run: |
           echo "Training progression: run_number=$GITHUB_RUN_NUMBER base_steps=$RON_STEPS sft_steps=$RON_SFT_STEPS"
-          if [ -f ron/checkpoints/ron_native_10m.pt ]; then
-            echo "Continuing from a checkpoint; this file is training-only until all quality gates pass."
+          if [ -f ron/checkpoints/ron_training_continuation.pt ]; then
+            echo "Continuing from an isolated training checkpoint; live runtime weights remain untouched."
+            ls -lh ron/checkpoints/ron_training_continuation.pt
+          elif [ -f ron/checkpoints/ron_native_10m.pt ]; then
+            echo "Continuing from the promoted Ron-10M checkpoint."
             ls -lh ron/checkpoints/ron_native_10m.pt
           else
             echo "No previous checkpoint found; initializing a new experimental run."
@@ -126,6 +134,7 @@ jobs:
           RON_STEPS: ${{ inputs.training_steps || (github.run_number < 3 && '6000' || github.run_number < 5 && '7000' || github.run_number < 7 && '8000' || '9000') }}
           RON_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
           RON_SEQUENCE_LENGTH: "256"
+          RON_TRAINING_CHECKPOINT_PATH: ron/checkpoints/ron_training_continuation.pt
         run: python scripts/train_native_10m.py
       - name: Fine-tune Ron on reviewed conversations (English + Arabic)
         env:

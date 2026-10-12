@@ -18,7 +18,7 @@ from ron.model_config import RonModelConfig
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "native-10m"
-LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_10m.pt"
+LIVE_CHECKPOINT = Path(os.environ.get("RON_TRAINING_CHECKPOINT_PATH") or (ROOT / "ron" / "checkpoints" / "ron_native_10m.pt"))
 SEED = 1701
 STEPS = int(os.environ.get("RON_STEPS") or "5000")
 BATCH = int(os.environ.get("RON_BATCH_SIZE") or "2")
