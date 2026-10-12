@@ -89,6 +89,60 @@ class NativeCheckpointProvider:
             value = value.replace(mark, " ")
         return " ".join(value.split())
 
+    @staticmethod
+    def _retrieval_tokens(text: str) -> set[str]:
+        normalized = NativeCheckpointProvider._normalize_question(text)
+        tokens = set(re.findall(r"[a-z0-9]+|[\\u0600-\\u06ff]+", normalized))
+        stop = {"ما", "ماذا", "كيف", "هل", "هو", "هي", "من", "في", "على", "عن", "the", "what", "how", "is", "are", "do", "if", "a", "an", "to", "of"}
+        return {token for token in tokens if len(token) > 1 and token not in stop}
+
+    @staticmethod
+    def _char_ngrams(text: str, n: int = 3) -> set[str]:
+        normalized = NativeCheckpointProvider._normalize_question(text)
+        compact = re.sub(r"\\s+", " ", normalized)
+        return {compact[i:i + n] for i in range(max(0, len(compact) - n + 1))}
+
+    def _retrieve_curated_answer(self, user_text: str) -> tuple[str, float] | None:
+        """Retrieve a vetted answer only when the user's question closely matches a corpus question.
+
+        This is retrieval from reviewed examples, not a claim that the neural weights learned the answer.
+        A conservative threshold avoids presenting weakly related examples as answers.
+        """
+        question_tokens = self._retrieval_tokens(user_text)
+        if len(question_tokens) < 2:
+            return None
+        corpus_path = Path(__file__).resolve().parents[1] / "training" / "seed_corpus.txt"
+        if not corpus_path.is_file():
+            return None
+        question_ngrams = self._char_ngrams(user_text)
+        best: tuple[str, float] | None = None
+        second_score = 0.0
+        lines = [line.strip() for line in corpus_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        for index in range(0, len(lines) - 1, 2):
+            user_line, assistant_line = lines[index:index + 2]
+            if not user_line.startswith("المستخدم: ") or not assistant_line.startswith("رون: "):
+                continue
+            candidate_question = user_line[len("المستخدم: "):]
+            candidate_tokens = self._retrieval_tokens(candidate_question)
+            if len(candidate_tokens) < 2:
+                continue
+            union = question_tokens | candidate_tokens
+            word_score = len(question_tokens & candidate_tokens) / len(union) if union else 0.0
+            candidate_ngrams = self._char_ngrams(candidate_question)
+            char_union = question_ngrams | candidate_ngrams
+            char_score = len(question_ngrams & candidate_ngrams) / len(char_union) if char_union else 0.0
+            # Word overlap carries more weight; character overlap helps with Arabic morphology/typos.
+            score = 0.7 * word_score + 0.3 * char_score
+            if best is None or score > best[1]:
+                if best is not None:
+                    second_score = max(second_score, best[1])
+                best = (assistant_line[len("رون: "):], score)
+            else:
+                second_score = max(second_score, score)
+        if best is None or best[1] < 0.48 or (best[1] - second_score < 0.025 and best[1] < 0.62):
+            return None
+        return best
+
     def _known_core_answer(self, request: ModelRequest, user_text: str) -> str | None:
         """Answer a narrow set of stable, high-confidence basics before neural decoding.
 
@@ -171,6 +225,22 @@ class NativeCheckpointProvider:
                     "provider": "native-checkpoint",
                     "native_weights_loaded": True,
                     "deterministic_core_response": True,
+                    "external_model_used": False,
+                },
+            )
+
+        retrieved = self._retrieve_curated_answer(user_text)
+        if retrieved is not None:
+            answer, score = retrieved
+            return ModelResponse(
+                content=answer,
+                model="ron-native-checkpoint",
+                metadata={
+                    "runtime": "ron-0",
+                    "provider": "native-checkpoint",
+                    "native_weights_loaded": True,
+                    "curated_retrieval_used": True,
+                    "retrieval_similarity": round(score, 4),
                     "external_model_used": False,
                 },
             )
