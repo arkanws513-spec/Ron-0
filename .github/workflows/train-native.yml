@@ -76,16 +76,17 @@ jobs:
             git add ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json ron/checkpoints/latest_training_attempt.json
             commit_message="Promote validated Ron-0 native checkpoint"
           else
-            # Preserve the failed attempt's metrics and blind evaluation without promoting candidate weights.
+            # Keep the previously approved checkpoint and metrics; record only this failed attempt.
+            git restore --source=HEAD -- ron/checkpoints/ron_native_baseline.pt ron/checkpoints/metrics.json
             git add ron/checkpoints/latest_training_attempt.json
             commit_message="Record Ron-0 native training attempt (checkpoint not promoted)"
-            echo "::warning::Anti-degeneration gate failed; candidate weights were not promoted."
+            echo "::warning::Strict answer-quality gate failed; candidate weights were not promoted."
           fi
           if ! git diff --cached --quiet; then
             git commit -m "$commit_message"
             # Other reviewed changes may reach main while this CPU training job runs.
             git fetch origin main
-            git rebase origin/main
+            git rebase --autostash origin/main
             git push origin HEAD:main
           fi
       - name: Archive training run and surprise evaluation
