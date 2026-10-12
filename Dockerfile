@@ -17,4 +17,4 @@ RUN python -m pip install --upgrade pip && \
     python -m pip install --no-deps -e .
 
 EXPOSE 8000
-CMD ["python", "-m", "ron.native_chat_server"]
+CMD ["python", "-m", "ron.scalable_server"]
