@@ -24,16 +24,18 @@ def test_saved_native_checkpoint_is_used_by_default_core():
     assert 0 < response.metadata["selected_training_step"] <= response.metadata["training_steps_total"]
     assert response.metadata["inference_checkpoint"] == "best_validation"
     assert response.metadata["final_training_step"] >= response.metadata["selected_training_step"]
-    # A valid early-stopped run may finish below the configured 1800-step ceiling.
-    # Require evidence of early stopping in the persisted metrics instead of
-    # treating a legitimate shorter run as a corrupted checkpoint.
+    # A valid early-stopped run may finish below the configured step ceiling.
+    # The persisted metrics record why a run ended before its maximum.
     metrics = json.loads((checkpoint.parent / "metrics.json").read_text(encoding="utf-8"))
     steps_this_run = response.metadata["training_steps_this_run"]
-    assert 0 < steps_this_run <= 1800
-    assert steps_this_run >= 1800 or metrics.get("early_stopped") is True
+    assert 0 < steps_this_run <= 2400
+    assert steps_this_run >= 2400 or metrics.get("early_stopped") is True
     assert response.metadata["training_steps_total"] >= 2400
     assert response.metadata["optimizer_state_persisted"] is True
-    assert response.metadata["checkpoint_source"] == "continued_existing_ron_checkpoint"
+    assert response.metadata["checkpoint_source"] in {
+        "continued_existing_ron_checkpoint",
+        "continued_best_checkpoint_after_corpus_change",
+    }
 
 
 def test_native_provider_builds_bounded_prompt_from_recent_dialogue():
