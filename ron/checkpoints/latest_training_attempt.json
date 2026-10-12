@@ -1,0 +1,403 @@
+{
+  "attempt_status": "completed",
+  "checkpoint_promoted": true,
+  "promotion_reason": "anti_degeneration_gate_passed",
+  "metrics": {
+    "experiment": "ron0-native-character-lm",
+    "status": "completed",
+    "checkpoint_source": "continued_best_checkpoint_after_corpus_change",
+    "prior_selected_step": 7800,
+    "vocabulary_expanded": true,
+    "seed": 1701,
+    "training_steps_this_run": 1050,
+    "selected_checkpoint_step_this_run": 1050,
+    "corpus_sha256": "54c7ceb3648a1b0ba66953dca7f6237d36ddfa43096a81efdef59c53d35b50d5",
+    "early_stopped": true,
+    "early_stopping_patience_evaluations": 10,
+    "stale_evaluations_at_stop": 10,
+    "best_validation_step_this_run": 550,
+    "training_steps_total": 8850,
+    "final_train_loss": 1.2262980230152607,
+    "final_validation_loss": 1.4717880636453629,
+    "weights_persisted_from_final_training_step": true,
+    "best_validation_weights_persisted": true,
+    "best_selected_step_total": 8350,
+    "best_checkpoint_source": "this_run",
+    "optimizer_state_persisted": true,
+    "changed_parameter_tensors": 29,
+    "parameter_delta_l2": 25.007373673515723,
+    "parameters": 112960,
+    "vocab_size": 105,
+    "corpus_characters": 37159,
+    "training_pairs": 282,
+    "validation_pairs": 31,
+    "split_strategy": "deterministic_conversation_pair_holdout",
+    "train_characters": 33549,
+    "validation_characters": 3610,
+    "initial_train_loss": 2.5727825686335564,
+    "initial_validation_loss": 3.0781834684312344,
+    "best_validation_loss": 1.4664010778069496,
+    "last_train_loss": 1.2262980230152607,
+    "last_validation_loss": 1.4717880636453629,
+    "train_loss_reduction_percent": 52.33573027251323,
+    "validation_loss_reduction_percent": 52.36147900715332,
+    "best_checkpoint_validation_loss_delta_vs_continuation_start_percent": 52.36147900715332,
+    "elapsed_seconds": 14.43,
+    "history": [
+      {
+        "step": 50,
+        "train_loss": 1.5235226415097713,
+        "validation_loss": 1.5993021614849567
+      },
+      {
+        "step": 100,
+        "train_loss": 1.4251419380307198,
+        "validation_loss": 1.5326707400381565
+      },
+      {
+        "step": 150,
+        "train_loss": 1.3961898647248745,
+        "validation_loss": 1.5161922685801983
+      },
+      {
+        "step": 200,
+        "train_loss": 1.3705967292189598,
+        "validation_loss": 1.5116985403001308
+      },
+      {
+        "step": 250,
+        "train_loss": 1.3533410802483559,
+        "validation_loss": 1.5111254043877125
+      },
+      {
+        "step": 300,
+        "train_loss": 1.3309277296066284,
+        "validation_loss": 1.510044451802969
+      },
+      {
+        "step": 350,
+        "train_loss": 1.3171890676021576,
+        "validation_loss": 1.505230475217104
+      },
+      {
+        "step": 400,
+        "train_loss": 1.30443799123168,
+        "validation_loss": 1.485424306243658
+      },
+      {
+        "step": 450,
+        "train_loss": 1.3049183562397957,
+        "validation_loss": 1.485384576022625
+      },
+      {
+        "step": 500,
+        "train_loss": 1.2798260226845741,
+        "validation_loss": 1.4793280810117722
+      },
+      {
+        "step": 550,
+        "train_loss": 1.2720008827745914,
+        "validation_loss": 1.4664010778069496
+      },
+      {
+        "step": 600,
+        "train_loss": 1.2688071839511395,
+        "validation_loss": 1.4739004001021385
+      },
+      {
+        "step": 650,
+        "train_loss": 1.2678210362792015,
+        "validation_loss": 1.4700567908585072
+      },
+      {
+        "step": 700,
+        "train_loss": 1.2587997764348984,
+        "validation_loss": 1.4781042709946632
+      },
+      {
+        "step": 750,
+        "train_loss": 1.264611180871725,
+        "validation_loss": 1.4664632678031921
+      },
+      {
+        "step": 800,
+        "train_loss": 1.267711665481329,
+        "validation_loss": 1.467887669801712
+      },
+      {
+        "step": 850,
+        "train_loss": 1.2613846957683563,
+        "validation_loss": 1.4703778699040413
+      },
+      {
+        "step": 900,
+        "train_loss": 1.2672644071280956,
+        "validation_loss": 1.4737826585769653
+      },
+      {
+        "step": 950,
+        "train_loss": 1.2408698126673698,
+        "validation_loss": 1.4931938275694847
+      },
+      {
+        "step": 1000,
+        "train_loss": 1.2522806003689766,
+        "validation_loss": 1.4795234389603138
+      },
+      {
+        "step": 1050,
+        "train_loss": 1.2262980230152607,
+        "validation_loss": 1.4717880636453629
+      }
+    ],
+    "limitations": [
+      "This is a small character-level prototype trained on a hand-curated corpus, not a general-purpose large language model.",
+      "Validation is a held-out tail segment of the same corpus, not an independent benchmark.",
+      "The checkpoint stores both final weights for training continuation and best-validation weights for inference; the two snapshots serve different purposes.",
+      "No external inference model or paid API is used."
+    ]
+  },
+  "evaluation": {
+    "suite": "ron0-blind-surprise-v1",
+    "created_at_utc": "2026-10-12T05:30:56.738344+00:00",
+    "training_corpus_exact_prompt_leaks": 0,
+    "case_count": 15,
+    "non_empty_answers": 15,
+    "non_echo_answers": 15,
+    "unique_answer_count": 15,
+    "degenerate_answers": 0,
+    "stable_answers": 15,
+    "anti_degeneration_gate_threshold": 0.8,
+    "anti_degeneration_gate_passed": true,
+    "native_checkpoint_loaded": true,
+    "external_model_used": false,
+    "cases": [
+      {
+        "case": 1,
+        "prompt": "لماذا يتغير طول الظل خلال اليوم؟",
+        "answer": "ستطيع المحددة ومتنوعة معتادة والتدريب فقد.",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 42,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 2,
+        "prompt": "اشرح الفرق بين السبب والنتيجة بمثال جديد.",
+        "answer": "الخسارة المتغير من القرم كلمات مستقل والإجابة على متوقع، وأحدد النموذج المعلومات من أو مدى الاع",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 3,
+        "prompt": "إذا كانت كل الصناديق مغلقة ورأينا صندوقًا مفتوحًا، فهل تنطبق القاعدة عليه؟",
+        "answer": "المعلومات المتاحة لا أمثلة من الحقيقة من المصادرة، وأجيدة مثل مقصود من السابقة.",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 79,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 4,
+        "prompt": "ماذا ينبغي أن تقول عندما لا تعرف الإجابة بثقة؟",
+        "answer": "المعلومة الخارجة المقصودة لم أفكار، وأن الأخطاء الأخطأ التدريب يكون النموذج البيانات الوالتدريب",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 5,
+        "prompt": "حوّل هذه الفكرة إلى سؤال: النباتات تحتاج إلى الضوء.",
+        "answer": "يحدث والمتوقع المشكلة على مراجعة وليها وتقييم المتاحة ولية معرفة ومراجعتمدة والمشكلة ويسمة عشر",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 94,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 6,
+        "prompt": "هل كلمة «ربما» تعبّر عن اليقين أم الاحتمال؟",
+        "answer": "أن الوحدات من المعلومات والاحتمالاختبار والتعلمها النتيجة التعريف معتمد يحتاج إلى تتحقق من أستخ",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 7,
+        "prompt": "هل العبارة «اثنان زائد اثنين يساوي خمسة» صحيحة؟ وضّح باختصار.",
+        "answer": "لا. الطاقة يمكن اسمي بتدل الاستنتاجات والاستدلال المنموذج على منها تحتمال عندمات والاستقلاله بد",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 8,
+        "prompt": "اكتب ردًا قصيرًا يشرح معنى التعاون لطالب جديد.",
+        "answer": "لا، وأتتبدو الأفضل المشروعة ومراجعة والتدريب وتُحيح أثنات والحاجة التقاييته.",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 76,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 9,
+        "prompt": "ما الفرق بين ملاحظة حدث واستنتاج سببه؟",
+        "answer": "أراجع الفرق بين أو النسخة المشروع السبب البيانات والاستنتاج التدريب وتحديث التقارن المقتراضات أ",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 10,
+        "prompt": "أعد صياغة السؤال التالي دون تغيير معناه: كيف تتكوّن السحب؟",
+        "answer": "أتعلم من مصدر الأدلة ومراجعتها ومات ومقارن الأدلة، وأوضح عندما مدى القرار من أصحيحة التدريب وحل",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 11,
+        "prompt": "Describe how to verify a conclusion from evidence.",
+        "answer": "sheroutte todintion teerrecing aes attes fing omtpon atstionnt redrtierpon areetel coul esanrea",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 12,
+        "prompt": "What should Ron do if a request is ambiguous?",
+        "answer": "matiousingit sonecante ate demate altinedt.",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 43,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 13,
+        "prompt": "Explain why a model can overfit its training examples.",
+        "answer": "ed daing thecaes teont andout ating?",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 36,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 14,
+        "prompt": "Rewrite this statement as a question: water freezes at zero degrees Celsius.",
+        "answer": "mang moasngs moulthat tou than?",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 31,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      },
+      {
+        "case": 15,
+        "prompt": "Give a short example of a cause and its effect.",
+        "answer": "Calin aatang a anodt ret congselt eemr ae tedorn?",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 49,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 8350,
+        "generation_quality_fallback": false
+      }
+    ],
+    "interpretation": "These checks measure runtime robustness and prompt coverage, not factual accuracy or general intelligence. The anti-degeneration gate only catches obvious repetition; passing it is not evidence of factual correctness or general intelligence."
+  }
+}
