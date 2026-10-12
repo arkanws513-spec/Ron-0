@@ -33,6 +33,28 @@ BLIND_PROMPTS = (
     "Give a short example of a cause and its effect.",
 )
 
+# Lightweight answer checks: these are deliberately separate from training data.
+# They check whether each response contains evidence of the requested concept;
+# they do not claim full semantic understanding.
+ANSWER_SIGNALS = (
+    ("الشمس", "زاوية", "ضوء", "sun", "angle"),
+    ("سبب", "نتيجة", "cause", "effect"),
+    ("يخالف", "تناقض", "لا تنطبق", "استثناء", "contradict", "exception"),
+    ("لا أعرف", "لا اعرف", "مصدر", "uncertain", "don't know"),
+    ("هل", "ماذا", "لماذا", "كيف", "what", "how", "do plants"),
+    ("احتمال", "غير مؤكد", "ربما", "possibility", "uncertain"),
+    ("لا", "خطأ", "ليس", "false", "incorrect"),
+    ("تعاون", "مساعدة", "معًا", "teamwork", "help"),
+    ("ملاحظة", "استنتاج", "سبب", "evidence", "inference"),
+    ("كيف", "تتكون", "تتشكل", "form", "cloud"),
+    ("evidence", "source", "compare", "مصدر", "أدلة"),
+    ("توضيح", "استفسر", "سؤال", "clarify", "clarification"),
+    ("training", "new", "examples", "تدريب", "أمثلة", "تعميم"),
+    ("what", "how", "does", "is water", "هل", "كيف", "ماذا"),
+    ("because", "cause", "effect", "سبب", "نتيجة"),
+)
+CRITICAL_CASES = {3, 4, 7, 11, 12}
+
 
 def is_degenerate_answer(answer: str) -> bool:
     return is_degenerate_text(answer)
@@ -67,13 +89,21 @@ def evaluate(checkpoint: Path | None = None) -> dict:
             "checkpoint": response.metadata.get("inference_checkpoint"),
             "selected_training_step": response.metadata.get("selected_training_step"),
             "generation_quality_fallback": bool(response.metadata.get("generation_quality_fallback", False)),
+            "expected_signals": list(ANSWER_SIGNALS[index - 1]),
+            "answer_check_passed": any(signal.casefold() in answer.casefold() for signal in ANSWER_SIGNALS[index - 1]),
+            "critical": index in CRITICAL_CASES,
         })
 
     non_empty = sum(row["non_empty"] for row in rows)
     not_echo = sum(row["not_exact_echo"] for row in rows)
     unique_answers = len({row["answer"] for row in rows})
     stable_answers = sum(row["non_empty"] and row["not_exact_echo"] and not row["degenerate"] for row in rows)
+    answer_checks_passed = sum(row["answer_check_passed"] for row in rows)
+    critical_rows = [row for row in rows if row["critical"]]
+    critical_checks_passed = bool(critical_rows) and all(row["answer_check_passed"] for row in critical_rows)
+    answer_accuracy = answer_checks_passed / len(rows) if rows else 0.0
     anti_degeneration_gate_passed = bool(rows) and stable_answers / len(rows) >= 0.8
+    quality_gate_passed = anti_degeneration_gate_passed and answer_accuracy >= 0.8 and critical_checks_passed
     return {
         "suite": "ron0-blind-surprise-v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -86,13 +116,19 @@ def evaluate(checkpoint: Path | None = None) -> dict:
         "stable_answers": stable_answers,
         "anti_degeneration_gate_threshold": 0.8,
         "anti_degeneration_gate_passed": anti_degeneration_gate_passed,
+        "answer_checks_passed": answer_checks_passed,
+        "answer_check_accuracy": answer_accuracy,
+        "answer_check_threshold": 0.8,
+        "critical_checks_passed": critical_checks_passed,
+        "critical_cases": sorted(CRITICAL_CASES),
+        "quality_gate_passed": quality_gate_passed,
         "native_checkpoint_loaded": all(row["native_weights_loaded"] for row in rows),
         "external_model_used": any(row["external_model_used"] for row in rows),
         "cases": rows,
         "interpretation": (
-            "These checks measure runtime robustness and prompt coverage, not factual "
-            "accuracy or general intelligence. The anti-degeneration gate only catches obvious repetition; "
-            "passing it is not evidence of factual correctness or general intelligence."
+            "This tougher gate combines anti-degeneration checks with keyword-based answer signals and mandatory critical cases. "
+            "Signal checks are approximate and can miss valid paraphrases or accept shallow keyword matches; manual review is still required. "
+            "Passing does not establish general intelligence or broad factual accuracy."
         ),
     }
 
