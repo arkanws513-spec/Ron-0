@@ -338,18 +338,17 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
    }catch(error){console.warn("Ron Core response failed",error);}
   }
  } if(!String(r||"").trim())r=answer(t);
- // Use the trained native checkpoint when local rules and memory cannot answer.
- // If this is the static GitHub Pages build, a missing same-origin API safely falls through.
- if(!String(r||"").trim()&&!/^عل[ّ]?م رون\\s*(?::|،|,|-)/.test(normalizedInput)){
-  r=await queryNativeCheckpoint(t);
- }
- if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;
  const local=String(r||"").trim();
  const n=norm(t);
  const explicitWebSearch=/^(?:ابحث|دورلي|دور لي|ابحث لي|ابحث عن|ابحث في|دور عن)/.test(n);
  const shouldWebSearch=!globalThis.ronCore&&webSearchEnabled()&&(explicitWebSearch||(!local&&(analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up")));
  if(!local&&shouldWebSearch){try{const searchQuery=resolveFollowUp(t)||t;webResult=await globalThis.RonWebSearch.answer(searchQuery);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
+ // Prefer real web results when a search was requested; otherwise use Ron's promoted native weights.
+ if(!String(r||"").trim()&&!explicitWebSearch&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(normalizedInput)){
+  r=await queryNativeCheckpoint(t);
+ }
+ if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);
 
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up")){
