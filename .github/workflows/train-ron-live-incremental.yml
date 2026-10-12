@@ -40,25 +40,20 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Restore the latest available Ron weights
+      - name: Restore the exact currently published Ron inference weights
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p ron/checkpoints
-          # The live release may not exist yet on a new repository. Prefer live
-          # weights, then the saved training continuation, and only then initialize.
-          if gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
-            --pattern ron_native_10m.pt --dir ron/checkpoints; then
-            test -s ron/checkpoints/ron_native_10m.pt
-            cp ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_training_continuation.pt
-            echo "Starting from Ron's current live checkpoint."
-          elif gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
-            --pattern ron_training_continuation.pt --dir ron/checkpoints; then
-            test -s ron/checkpoints/ron_training_continuation.pt
-            echo "Starting from the latest saved training continuation; no live release was found."
-          else
-            echo "::warning::No persisted Ron checkpoint was found. The trainer will initialize the native model; this is not a continuation of live weights."
-          fi
+          # Ron's runtime polls only this release. Never substitute an unpromoted
+          # continuation checkpoint or silently initialize a new model.
+          gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
+            --pattern ron_native_10m.pt --dir ron/checkpoints
+          test -s ron/checkpoints/ron_native_10m.pt
+          cp ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_training_continuation.pt
+          echo "Restored the exact checkpoint published for Ron's live inference runtime."
+          sha256sum ron/checkpoints/ron_native_10m.pt
 
       - name: Install dependencies
         run: |
