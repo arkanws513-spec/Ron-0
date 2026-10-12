@@ -377,21 +377,26 @@ class ScalableRuntime:
             native_provider = native_runtime.provider
             native_parameter_count = native_runtime.parameter_count
         if native_parameter_count >= 1_000_000:
-            native_request = ModelRequest(
-                messages=tuple(
-                    Message(role=message["role"], content=message["text"])
-                    for message in history
-                ),
-                metadata={"session_id": session_id, "runtime": "ron-native-promoted"},
-            )
-            native_response = native_provider.generate(native_request)
-            native_reply = native_response.content.strip()
-            if native_reply:
+            try:
+                native_request = ModelRequest(
+                    messages=tuple(
+                        Message(role=message["role"], content=message["text"])
+                        for message in history
+                    ),
+                    metadata={"session_id": session_id, "runtime": "ron-native-promoted"},
+                )
+                native_response = native_provider.generate(native_request)
+                native_reply = native_response.content.strip()
                 native_fallback = bool(native_response.metadata.get("generation_quality_fallback", False))
-                with self.lock:
-                    self.sessions[session_id].append({"role": "user", "text": text})
-                    self.sessions[session_id].append({"role": "assistant", "text": native_reply})
-                return native_reply, "native_quality_fallback" if native_fallback else "native_promoted_checkpoint"
+                if native_reply and not native_fallback:
+                    with self.lock:
+                        self.sessions[session_id].append({"role": "user", "text": text})
+                        self.sessions[session_id].append({"role": "assistant", "text": native_reply})
+                    return native_reply, "native_promoted_checkpoint"
+                if native_fallback:
+                    print("ron-runtime: native checkpoint response rejected; using scalable fallback", flush=True)
+            except Exception as error:
+                print(f"ron-runtime: native checkpoint inference failed; using scalable fallback ({error})", flush=True)
 
         ids = [int(self.special["<bos>"])]
         for message in history:
