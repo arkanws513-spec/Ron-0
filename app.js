@@ -338,6 +338,11 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
    }catch(error){console.warn("Ron Core response failed",error);}
   }
  } if(!String(r||"").trim())r=answer(t);
+ // Use the trained native checkpoint when local rules and memory cannot answer.
+ // If this is the static GitHub Pages build, a missing same-origin API safely falls through.
+ if(!String(r||"").trim()&&!/^عل[ّ]?م رون\\s*(?::|،|,|-)/.test(normalizedInput)){
+  r=await queryNativeCheckpoint(t);
+ }
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  let webResult=null;
  const local=String(r||"").trim();
