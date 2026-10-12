@@ -18,6 +18,13 @@ test('persistence',async()=>{const file=path.join(fs.mkdtempSync(path.join(os.tm
 test('trust ranking',()=>{const r=new RonCore();r.store.set('x','y','صحيح',{source:'user'});assert.strictEqual(r.store.set('x','y','خطأ',{source:'search'}).status,'kept');});
 test('unparsed logged',async()=>{const r=new RonCore();assert.match(await say(r,'بلا بلا بلا'),/لم أفهم/);assert.strictEqual(r.store.unparsed.length,1);});
 test('smalltalk',async()=>{const r=new RonCore();assert.match(await say(r,'كيف حالك'),/بخير/);assert.match(await say(r,'مرحبا'),/مرحبًا/);});
+test('rule NLU splits multiword values on whitespace before applying token limits',()=>{
+ const {createRuleNLU}=require('./ron-core');
+ const nlu=createRuleNLU({personal:['عمر'],valueTokens:{default:2}});
+ const frames=nlu.parse('عمرك هو 15 سنة و شهرين');
+ assert.strictEqual(frames[0].type,'assert');
+ assert.strictEqual(frames[0].od,'15 سنة');
+});
 test('multi-hop reasoning',()=>{const s=new FactStore();s.set('القاهرة','جزء_من','مصر');s.set('مصر','جزء_من','افريقيا');assert.ok([...new Reasoner(s).infer().values()].some(v=>v.t.join() === 'القاهرة,جزء_من,افريقيا'));});
 test('safe arithmetic respects precedence, parentheses, decimals, and Arabic digits',()=>{
  assert.strictEqual(arithmetic('2 + 3 * 4'),'14');
