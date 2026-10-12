@@ -21,7 +21,9 @@ class CausalSelfAttention(nn.Module):
         qkv = self.qkv(x).view(batch, seq, 3, self.num_heads, self.head_dim)
         q, k, v = qkv.unbind(dim=2)
         q, k, v = (t.transpose(1, 2) for t in (q, k, v))
-        attended = F.scaled_dot_product_attention(q, k, v, attn_mask=~self.causal_mask[:seq, :seq])
+        # PyTorch SDPA can select memory-efficient/FlashAttention kernels for causal attention.
+        # is_causal=True preserves the same autoregressive mask without materializing a mask per call.
+        attended = F.scaled_dot_product_attention(q, k, v, is_causal=True)
         return self.out(attended.transpose(1, 2).contiguous().view(batch, seq, hidden))
 
 class TransformerBlock(nn.Module):
