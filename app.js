@@ -244,7 +244,7 @@ const explainPreviousReply=()=>{
 const nativeApiSessionId="web-"+Math.random().toString(36).slice(2,18);
 const queryNativeCheckpoint=async text=>{
  try{
-  const configured=typeof window.RON_API_BASE_URL==="string"?window.RON_API_BASE_URL.trim():"";
+  const configured=typeof window.RON_API_BASE_URL==="string"&&window.RON_API_BASE_URL.trim()?window.RON_API_BASE_URL.trim():"https://accurate-courage-production-8a31.up.railway.app";
   const base=configured.replace(/\/+$/,"");
   const response=await fetch(base+"/api/chat",{
    method:"POST",
