@@ -241,6 +241,22 @@ const explainPreviousReply=()=>{
   return "الرد السابق كان مقالًا طويلًا عن رون هاورد، لكنه لم يكن مرتبطًا بسؤالك «هل أنت معي؟». كان ذلك استدعاءً غير مناسب للنص، وكان يجب أن أجيب مباشرة: نعم، أنا معك.";
  return "أنت تسأل عن ردي السابق. كان مضمونه: «"+text.slice(0,220)+(text.length>220?"…":"")+"». إذا لم يجب عن سؤالك، فهذه مشكلة في اختيار السياق وكان ينبغي أن أرد بما يرتبط بطلبك.";
 };
+const nativeApiSessionId="web-"+Math.random().toString(36).slice(2,18);
+const queryNativeCheckpoint=async text=>{
+ try{
+  const configured=typeof window.RON_API_BASE_URL==="string"?window.RON_API_BASE_URL.trim():"";
+  const base=configured.replace(/\/+$/,"");
+  const response=await fetch(base+"/api/chat",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   cache:"no-store",
+   body:JSON.stringify({message:text,session_id:nativeApiSessionId,request_id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,8)})
+  });
+  if(!response.ok)return null;
+  const payload=await response.json();
+  return typeof payload.reply==="string"&&payload.reply.trim()?payload.reply.trim():null;
+ }catch(error){console.debug("Ron native checkpoint API unavailable; continuing with local runtime.",error);return null;}
+};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
