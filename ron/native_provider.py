@@ -109,15 +109,24 @@ class NativeCheckpointProvider:
         A conservative threshold avoids presenting weakly related examples as answers.
         """
         question_tokens = self._retrieval_tokens(user_text)
-        if len(question_tokens) < 2:
-            return None
         corpus_path = Path(__file__).resolve().parents[1] / "training" / "seed_corpus.txt"
         if not corpus_path.is_file():
+            return None
+        lines = [line.strip() for line in corpus_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        normalized_question = NativeCheckpointProvider._normalize_question(user_text)
+        # Exact curated matches are safe even for short questions with only one content token.
+        for index in range(0, len(lines) - 1, 2):
+            user_line, assistant_line = lines[index:index + 2]
+            if not user_line.startswith("المستخدم: ") or not assistant_line.startswith("رون: "):
+                continue
+            candidate_question = user_line[len("المستخدم: "):]
+            if NativeCheckpointProvider._normalize_question(candidate_question) == normalized_question:
+                return (assistant_line[len("رون: "):], 1.0)
+        if len(question_tokens) < 2:
             return None
         question_ngrams = self._char_ngrams(user_text)
         best: tuple[str, float] | None = None
         second_score = 0.0
-        lines = [line.strip() for line in corpus_path.read_text(encoding="utf-8").splitlines() if line.strip()]
         for index in range(0, len(lines) - 1, 2):
             user_line, assistant_line = lines[index:index + 2]
             if not user_line.startswith("المستخدم: ") or not assistant_line.startswith("رون: "):
