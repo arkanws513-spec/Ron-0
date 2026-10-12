@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/publish-requested-ron-checkpoint.yml'
+      - 'Dockerfile'
   workflow_dispatch:
 
 permissions:
