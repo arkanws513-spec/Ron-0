@@ -5,124 +5,219 @@
   "metrics": {
     "experiment": "ron0-native-character-lm",
     "status": "completed",
-    "checkpoint_source": "continued_existing_ron_checkpoint",
+    "checkpoint_source": "continued_best_checkpoint_after_corpus_change",
     "prior_selected_step": 9750,
-    "vocabulary_expanded": false,
+    "vocabulary_expanded": true,
     "seed": 1701,
-    "training_steps_this_run": 800,
-    "selected_checkpoint_step_this_run": 800,
-    "corpus_sha256": "54c7ceb3648a1b0ba66953dca7f6237d36ddfa43096a81efdef59c53d35b50d5",
+    "training_steps_this_run": 1750,
+    "selected_checkpoint_step_this_run": 1750,
+    "corpus_sha256": "6fdd7c5e581da4c38f1404b8d57fba6ece185b07d1f2a94490defd8ec9ebc9f3",
     "early_stopped": true,
     "early_stopping_patience_evaluations": 16,
     "stale_evaluations_at_stop": 16,
-    "best_validation_step_this_run": 0,
-    "training_steps_total": 10550,
-    "final_train_loss": 1.1201350651681423,
-    "final_validation_loss": 1.4768358394503593,
+    "best_validation_step_this_run": 950,
+    "training_steps_total": 11500,
+    "final_train_loss": 1.1062850654125214,
+    "final_validation_loss": 1.3973655365407467,
     "weights_persisted_from_final_training_step": true,
     "best_validation_weights_persisted": true,
-    "best_selected_step_total": 8950,
-    "best_checkpoint_source": "prior_best",
+    "best_selected_step_total": 10700,
+    "best_checkpoint_source": "this_run",
     "optimizer_state_persisted": true,
     "changed_parameter_tensors": 29,
-    "parameter_delta_l2": 10.330592201694918,
-    "parameters": 112960,
-    "vocab_size": 105,
-    "corpus_characters": 37159,
-    "training_pairs": 282,
-    "validation_pairs": 31,
+    "parameter_delta_l2": 24.839744959327493,
+    "parameters": 113216,
+    "vocab_size": 109,
+    "corpus_characters": 46369,
+    "training_pairs": 350,
+    "validation_pairs": 39,
     "split_strategy": "deterministic_conversation_pair_holdout",
-    "train_characters": 33549,
-    "validation_characters": 3610,
-    "initial_train_loss": 1.174559473991394,
-    "initial_validation_loss": 1.4597821980714798,
-    "best_validation_loss": 1.4474999383091927,
-    "last_train_loss": 1.1201350651681423,
-    "last_validation_loss": 1.4768358394503593,
-    "train_loss_reduction_percent": 4.63360179100224,
-    "validation_loss_reduction_percent": 0.0,
-    "best_checkpoint_validation_loss_delta_vs_continuation_start_percent": 0.841376184646809,
-    "elapsed_seconds": 6.46,
+    "train_characters": 41758,
+    "validation_characters": 4611,
+    "initial_train_loss": 1.2306389585137367,
+    "initial_validation_loss": 1.479758583009243,
+    "best_validation_loss": 1.3935294672846794,
+    "last_train_loss": 1.1062850654125214,
+    "last_validation_loss": 1.3973655365407467,
+    "train_loss_reduction_percent": 10.104823371705999,
+    "validation_loss_reduction_percent": 5.8272421403502,
+    "best_checkpoint_validation_loss_delta_vs_continuation_start_percent": 5.8272421403502,
+    "elapsed_seconds": 14.96,
     "history": [
       {
         "step": 50,
-        "train_loss": 1.1511253342032433,
-        "validation_loss": 1.4556326940655708
+        "train_loss": 1.1909540630877018,
+        "validation_loss": 1.442277692258358
       },
       {
         "step": 100,
-        "train_loss": 1.1158778183162212,
-        "validation_loss": 1.4488308280706406
+        "train_loss": 1.1872325204312801,
+        "validation_loss": 1.4305742792785168
       },
       {
         "step": 150,
-        "train_loss": 1.1275066807866096,
-        "validation_loss": 1.4631538949906826
+        "train_loss": 1.192967712879181,
+        "validation_loss": 1.4419520758092403
       },
       {
         "step": 200,
-        "train_loss": 1.1235052645206451,
-        "validation_loss": 1.4544471427798271
+        "train_loss": 1.1926751844584942,
+        "validation_loss": 1.4301277995109558
       },
       {
         "step": 250,
-        "train_loss": 1.1204864643514156,
-        "validation_loss": 1.4631078988313675
+        "train_loss": 1.1642576232552528,
+        "validation_loss": 1.4300943687558174
       },
       {
         "step": 300,
-        "train_loss": 1.1265711151063442,
-        "validation_loss": 1.4614831767976284
+        "train_loss": 1.1921695433557034,
+        "validation_loss": 1.4323083199560642
       },
       {
         "step": 350,
-        "train_loss": 1.1234366036951542,
-        "validation_loss": 1.478637795895338
+        "train_loss": 1.1659533977508545,
+        "validation_loss": 1.4162676148116589
       },
       {
         "step": 400,
-        "train_loss": 1.1020841412246227,
-        "validation_loss": 1.4618381820619106
+        "train_loss": 1.162746150046587,
+        "validation_loss": 1.4275001659989357
       },
       {
         "step": 450,
-        "train_loss": 1.1113032214343548,
-        "validation_loss": 1.4701691456139088
+        "train_loss": 1.147738490253687,
+        "validation_loss": 1.4126230739057064
       },
       {
         "step": 500,
-        "train_loss": 1.0939108841121197,
-        "validation_loss": 1.458714634180069
+        "train_loss": 1.1390512622892857,
+        "validation_loss": 1.404980357736349
       },
       {
         "step": 550,
-        "train_loss": 1.0971725843846798,
-        "validation_loss": 1.4623990952968597
+        "train_loss": 1.1355150043964386,
+        "validation_loss": 1.4080301895737648
       },
       {
         "step": 600,
-        "train_loss": 1.0997114777565002,
-        "validation_loss": 1.463350385427475
+        "train_loss": 1.1424124985933304,
+        "validation_loss": 1.4197120405733585
       },
       {
         "step": 650,
-        "train_loss": 1.0997540690004826,
-        "validation_loss": 1.4522469341754913
+        "train_loss": 1.1403307765722275,
+        "validation_loss": 1.411663044244051
       },
       {
         "step": 700,
-        "train_loss": 1.101134330034256,
-        "validation_loss": 1.4829133711755276
+        "train_loss": 1.1382425799965858,
+        "validation_loss": 1.4171457700431347
       },
       {
         "step": 750,
-        "train_loss": 1.1158463135361671,
-        "validation_loss": 1.4618283808231354
+        "train_loss": 1.1416620127856731,
+        "validation_loss": 1.4009562842547894
       },
       {
         "step": 800,
-        "train_loss": 1.1201350651681423,
-        "validation_loss": 1.4768358394503593
+        "train_loss": 1.133691567927599,
+        "validation_loss": 1.409148883074522
+      },
+      {
+        "step": 850,
+        "train_loss": 1.1490742862224579,
+        "validation_loss": 1.4244569763541222
+      },
+      {
+        "step": 900,
+        "train_loss": 1.1488482356071472,
+        "validation_loss": 1.401474755257368
+      },
+      {
+        "step": 950,
+        "train_loss": 1.1298804730176926,
+        "validation_loss": 1.3935294672846794
+      },
+      {
+        "step": 1000,
+        "train_loss": 1.1038263253867626,
+        "validation_loss": 1.403846099972725
+      },
+      {
+        "step": 1050,
+        "train_loss": 1.100819606333971,
+        "validation_loss": 1.4084633961319923
+      },
+      {
+        "step": 1100,
+        "train_loss": 1.111562043428421,
+        "validation_loss": 1.4095458798110485
+      },
+      {
+        "step": 1150,
+        "train_loss": 1.1162553615868092,
+        "validation_loss": 1.4094632305204868
+      },
+      {
+        "step": 1200,
+        "train_loss": 1.1223414577543736,
+        "validation_loss": 1.4056260250508785
+      },
+      {
+        "step": 1250,
+        "train_loss": 1.120844941586256,
+        "validation_loss": 1.4059976153075695
+      },
+      {
+        "step": 1300,
+        "train_loss": 1.1001491881906986,
+        "validation_loss": 1.4282207824289799
+      },
+      {
+        "step": 1350,
+        "train_loss": 1.0980453789234161,
+        "validation_loss": 1.4192144274711609
+      },
+      {
+        "step": 1400,
+        "train_loss": 1.1045415177941322,
+        "validation_loss": 1.4186545722186565
+      },
+      {
+        "step": 1450,
+        "train_loss": 1.1020426005125046,
+        "validation_loss": 1.434972919523716
+      },
+      {
+        "step": 1500,
+        "train_loss": 1.118558056652546,
+        "validation_loss": 1.417392585426569
+      },
+      {
+        "step": 1550,
+        "train_loss": 1.1025498248636723,
+        "validation_loss": 1.4213078208267689
+      },
+      {
+        "step": 1600,
+        "train_loss": 1.1149717047810555,
+        "validation_loss": 1.4154514521360397
+      },
+      {
+        "step": 1650,
+        "train_loss": 1.1091932281851768,
+        "validation_loss": 1.4056602492928505
+      },
+      {
+        "step": 1700,
+        "train_loss": 1.099115040153265,
+        "validation_loss": 1.400342907756567
+      },
+      {
+        "step": 1750,
+        "train_loss": 1.1062850654125214,
+        "validation_loss": 1.3973655365407467
       }
     ],
     "limitations": [
@@ -134,7 +229,7 @@
   },
   "evaluation": {
     "suite": "ron0-blind-surprise-v1",
-    "created_at_utc": "2026-10-12T09:52:11.114074+00:00",
+    "created_at_utc": "2026-10-12T10:09:08.904592+00:00",
     "training_corpus_exact_prompt_leaks": 0,
     "case_count": 15,
     "non_empty_answers": 15,
@@ -144,8 +239,8 @@
     "stable_answers": 15,
     "anti_degeneration_gate_threshold": 0.8,
     "anti_degeneration_gate_passed": true,
-    "answer_checks_passed": 1,
-    "answer_check_accuracy": 0.06666666666666667,
+    "answer_checks_passed": 2,
+    "answer_check_accuracy": 0.13333333333333333,
     "answer_check_threshold": 0.8,
     "critical_checks_passed": false,
     "critical_cases": [
@@ -162,7 +257,7 @@
       {
         "case": 1,
         "prompt": "لماذا يتغير طول الظل خلال اليوم؟",
-        "answer": "سأوضح المحدودة وتحفظ والتحقق والتدريب فقد تتعارض مع رون المعارضة، وأراجعة عند التحقق من القديمة",
+        "answer": "المعلومة عندما توضيح إلى أجزاء وما تدعمه التقدير أو الأنها والعشوائية، وأعيد من يتعلمها لا أثنا",
         "non_empty": true,
         "not_exact_echo": true,
         "answer_length": 95,
@@ -171,7 +266,7 @@
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "الشمس",
@@ -186,16 +281,16 @@
       {
         "case": 2,
         "prompt": "اشرح الفرق بين السبب والنتيجة بمثال جديد.",
-        "answer": "الخسارة النموذج المشكلة لكنها أمثلة لم يستخدم على متغير شربة وتُقى وتساعدني ومقارن التحقق والاع",
+        "answer": "أستخدم: الفكرة النسخة الاختبار الحقيقة؟",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 95,
+        "answer_length": 39,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "سبب",
@@ -209,16 +304,16 @@
       {
         "case": 3,
         "prompt": "إذا كانت كل الصناديق مغلقة ورأينا صندوقًا مفتوحًا، فهل تنطبق القاعدة عليه؟",
-        "answer": "التصحيح حدود التنوع من متغيير من أو التقييمها، وأتحقق من المعلومات من التعليها.",
+        "answer": "أذكر المعلومة مصدر النص يعبّر إلى أن أمثلة أدلة مراجعة المستولة إلى التعديل الجديد بالمعطيات، و",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 79,
+        "answer_length": 95,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "يخالف",
@@ -234,16 +329,16 @@
       {
         "case": 4,
         "prompt": "ماذا ينبغي أن تقول عندما لا تعرف الإجابة بثقة؟",
-        "answer": "المعلومات النموذج المشكلة لم يساوي تدريب هي متغير أن يقت.",
+        "answer": "أتعديل قدرة من الاختبارات والأدلة إلى التحقق من الجحادلة، وأوضح أما الاستنتاج في المتجاده.",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 57,
+        "answer_length": 90,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "لا أعرف",
@@ -258,16 +353,16 @@
       {
         "case": 5,
         "prompt": "حوّل هذه الفكرة إلى سؤال: النباتات تحتاج إلى الضوء.",
-        "answer": "يجب فحص الترقية، وأتحقق من التدريب تقييم من الإجابة وتوضيح معرفتي من التدريب التحقق من على أو ا",
+        "answer": "لا، ينبغي النموذج التدريب المناسبة الاستدلال اللغوي التدريب التدريب والسبب النسخة.",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 95,
+        "answer_length": 82,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "هل",
@@ -284,7 +379,7 @@
       {
         "case": 6,
         "prompt": "هل كلمة «ربما» تعبّر عن اليقين أم الاحتمال؟",
-        "answer": "لا. قد معنى المصدر هي يتوقع المعلومات النموذج وتنتاجج السعودية مثل متنوعة معرفة التحقق من السؤا",
+        "answer": "الأن تطأ مع التحقق من التدريب المقصود التدريب والأمثلة، وتنوعة النتيجة أما تدريب في الما تدريب.",
         "non_empty": true,
         "not_exact_echo": true,
         "answer_length": 95,
@@ -293,7 +388,7 @@
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "احتمال",
@@ -308,7 +403,7 @@
       {
         "case": 7,
         "prompt": "هل العبارة «اثنان زائد اثنين يساوي خمسة» صحيحة؟ وضّح باختصار.",
-        "answer": "لا. الطاقة يمكن اسمي بتدعم الطاقة الذاكرة والتدريب والتدريب المعلومات من العروف، وأختبارة الأرد",
+        "answer": "لا يمكن استخدم على أمثلة النتيجة مصدره المطلوب، وأحل مع التعديل إحدات متنوعة التقدير على النموذ",
         "non_empty": true,
         "not_exact_echo": true,
         "answer_length": 95,
@@ -317,7 +412,7 @@
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "لا",
@@ -332,7 +427,7 @@
       {
         "case": 8,
         "prompt": "اكتب ردًا قصيرًا يشرح معنى التعاون لطالب جديد.",
-        "answer": "لا، ويتك معلومات النموذج على معلومة ويستخدم متسق، ثم أختار أن يغيّر التدريب دائمًا يستخدم العوم",
+        "answer": "لا، يجب أن المقدد المعلومة تلف أستخدم معتمدة والبرنامج الموضوحة وتقييم المعطيات المتاحة والأفضل",
         "non_empty": true,
         "not_exact_echo": true,
         "answer_length": 95,
@@ -341,7 +436,7 @@
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "تعاون",
@@ -356,31 +451,7 @@
       {
         "case": 9,
         "prompt": "ما الفرق بين ملاحظة حدث واستنتاج سببه؟",
-        "answer": "أستخدم أولًا والإجابات موثوق، وأفصل المحادثة وتجربة التركير التدريب وتراضيف النموذج على معرفتي",
-        "non_empty": true,
-        "not_exact_echo": true,
-        "answer_length": 94,
-        "degenerate": false,
-        "model": "ron-native-checkpoint",
-        "native_weights_loaded": true,
-        "external_model_used": false,
-        "checkpoint": "best_validation",
-        "selected_training_step": 8950,
-        "generation_quality_fallback": false,
-        "expected_signals": [
-          "ملاحظة",
-          "استنتاج",
-          "سبب",
-          "evidence",
-          "inference"
-        ],
-        "answer_check_passed": false,
-        "critical": false
-      },
-      {
-        "case": 10,
-        "prompt": "أعد صياغة السؤال التالي دون تغيير معناه: كيف تتكوّن السحب؟",
-        "answer": "أتعلم من النموذج إلى من أمثلة مثلة من مصدر الأدلة منقدير ومقارنة والتعلّم من أو محدود، وأقارن ا",
+        "answer": "أتحقق من من النسخة بسبة على التدريب والعدد إن الذاكرة الكلات قابلًا قبل المستودع الاستنتاجات، ث",
         "non_empty": true,
         "not_exact_echo": true,
         "answer_length": 95,
@@ -389,7 +460,31 @@
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
+        "generation_quality_fallback": false,
+        "expected_signals": [
+          "ملاحظة",
+          "استنتاج",
+          "سبب",
+          "evidence",
+          "inference"
+        ],
+        "answer_check_passed": true,
+        "critical": false
+      },
+      {
+        "case": 10,
+        "prompt": "أعد صياغة السؤال التالي دون تغيير معناه: كيف تتكوّن السحب؟",
+        "answer": "أحدد محدود من توضيح التجربة مصدر النموذج التشغيل، وأحل لا أفهم والحقيقة والتدريب المرتباه عن ال",
+        "non_empty": true,
+        "not_exact_echo": true,
+        "answer_length": 95,
+        "degenerate": false,
+        "model": "ron-native-checkpoint",
+        "native_weights_loaded": true,
+        "external_model_used": false,
+        "checkpoint": "best_validation",
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "كيف",
@@ -404,16 +499,16 @@
       {
         "case": 11,
         "prompt": "Describe how to verify a conclusion from evidence.",
-        "answer": "sherores ats irat ist corect.",
+        "answer": "the an avesing a quod bereck an a tomed beasest and andest?",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 29,
+        "answer_length": 59,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "evidence",
@@ -428,16 +523,16 @@
       {
         "case": 12,
         "prompt": "What should Ron do if a request is ambiguous?",
-        "answer": "mationsing?",
+        "answer": "seving that stion ext angestest is stion.",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 11,
+        "answer_length": 41,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "توضيح",
@@ -452,16 +547,16 @@
       {
         "case": 13,
         "prompt": "Explain why a model can overfit its training examples.",
-        "answer": "panside the a shans the pout at ist and aem cont a mong?",
+        "answer": "soer be an ang?",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 56,
+        "answer_length": 15,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "training",
@@ -477,16 +572,16 @@
       {
         "case": 14,
         "prompt": "Rewrite this statement as a question: water freezes at zero degrees Celsius.",
-        "answer": "man dat ing is tore art u thansececk orntea mensece seame wing?",
+        "answer": "chat is geases femplede and shod la may?",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 63,
+        "answer_length": 40,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "what",
@@ -503,16 +598,16 @@
       {
         "case": 15,
         "prompt": "Give a short example of a cause and its effect.",
-        "answer": "Calin a sand a and gare s lossitt efte ae thesserdore ted cod eereat rray.",
+        "answer": "sherating?",
         "non_empty": true,
         "not_exact_echo": true,
-        "answer_length": 74,
+        "answer_length": 10,
         "degenerate": false,
         "model": "ron-native-checkpoint",
         "native_weights_loaded": true,
         "external_model_used": false,
         "checkpoint": "best_validation",
-        "selected_training_step": 8950,
+        "selected_training_step": 10700,
         "generation_quality_fallback": false,
         "expected_signals": [
           "because",
