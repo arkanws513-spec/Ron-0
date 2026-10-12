@@ -92,7 +92,7 @@ class NativeCheckpointProvider:
     @staticmethod
     def _retrieval_tokens(text: str) -> set[str]:
         normalized = NativeCheckpointProvider._normalize_question(text)
-        tokens = set(re.findall(r"[a-z0-9]+|[\\u0600-\\u06ff]+", normalized))
+        tokens = set(re.findall(r"[a-z0-9]+|[\u0600-\u06ff]+", normalized))
         stop = {"ما", "ماذا", "كيف", "هل", "هو", "هي", "من", "في", "على", "عن", "the", "what", "how", "is", "are", "do", "if", "a", "an", "to", "of"}
         return {token for token in tokens if len(token) > 1 and token not in stop}
 
