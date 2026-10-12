@@ -99,7 +99,7 @@ class NativeCheckpointProvider:
     @staticmethod
     def _char_ngrams(text: str, n: int = 3) -> set[str]:
         normalized = NativeCheckpointProvider._normalize_question(text)
-        compact = re.sub(r"\\s+", " ", normalized)
+        compact = re.sub(r"\s+", " ", normalized)
         return {compact[i:i + n] for i in range(max(0, len(compact) - n + 1))}
 
     def _retrieve_curated_answer(self, user_text: str) -> tuple[str, float] | None:
