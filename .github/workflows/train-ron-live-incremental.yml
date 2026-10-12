@@ -18,7 +18,7 @@ on:
         default: "5000"
         type: string
 
-# Separate group so this new run does not cancel the already-running legacy evaluation.
+# Keep this independent of the legacy workflow and never cancel an active run.
 concurrency:
   group: ron-live-incremental-${{ github.ref }}
   cancel-in-progress: false
@@ -40,16 +40,25 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Restore the currently live Ron weights
+      - name: Restore the latest available Ron weights
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ron/checkpoints
-          gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
-            --pattern ron_native_10m.pt --dir ron/checkpoints
-          test -s ron/checkpoints/ron_native_10m.pt
-          cp ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_training_continuation.pt
-          echo "Starting from the currently deployed Ron checkpoint."
+          # The live release may not exist yet on a new repository. Prefer live
+          # weights, then the saved training continuation, and only then initialize.
+          if gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
+            --pattern ron_native_10m.pt --dir ron/checkpoints; then
+            test -s ron/checkpoints/ron_native_10m.pt
+            cp ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_training_continuation.pt
+            echo "Starting from Ron's current live checkpoint."
+          elif gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
+            --pattern ron_training_continuation.pt --dir ron/checkpoints; then
+            test -s ron/checkpoints/ron_training_continuation.pt
+            echo "Starting from the latest saved training continuation; no live release was found."
+          else
+            echo "::warning::No persisted Ron checkpoint was found. The trainer will initialize the native model; this is not a continuation of live weights."
+          fi
 
       - name: Install dependencies
         run: |
@@ -63,7 +72,7 @@ jobs:
           python scripts/prepare_corpus.py
           python scripts/run_all_tests.py
 
-      - name: Continue base training from live weights
+      - name: Continue base training from available checkpoint
         env:
           RON_STEPS: ${{ inputs.training_steps || '6000' }}
           RON_BATCH_SIZE: "2"
@@ -71,7 +80,7 @@ jobs:
           RON_TRAINING_CHECKPOINT_PATH: ron/checkpoints/ron_training_continuation.pt
         run: python scripts/train_native_10m.py
 
-      - name: Fine-tune the same checkpoint on reviewed conversations
+      - name: Fine-tune Ron on reviewed conversations
         env:
           RON_SFT_STEPS: ${{ inputs.sft_steps || '5000' }}
           RON_SFT_BATCH_SIZE: "2"
@@ -82,7 +91,7 @@ jobs:
       - name: Verify a trained checkpoint exists
         run: test -s artifacts/native-10m/ron_native_10m_sft.pt
 
-      # Evaluation is recorded for diagnosis, but does not discard learned weight updates.
+      # Keep evaluation as a diagnostic gate, not a reason to discard learned weights.
       - name: Evaluate trained weights
         id: evaluation
         continue-on-error: true
@@ -94,7 +103,7 @@ jobs:
             --min-pass-rate 0.80 \
             --expected-case-count 300
 
-      - name: Keep the trained weights as Ron's current live checkpoint
+      - name: Keep the trained weights as Ron's current checkpoint
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -103,18 +112,18 @@ jobs:
           if ! gh release view ron-live-checkpoint --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
               --title "Ron live native checkpoint" \
-              --notes "Current Ron inference weights, updated after each incremental training run."
+              --notes "Current Ron inference checkpoint, updated after incremental training."
           fi
           gh release upload ron-live-checkpoint ron/checkpoints/ron_native_10m.pt \
             --repo "$GITHUB_REPOSITORY" --clobber
           if ! gh release view ron-training-continuation --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create ron-training-continuation --repo "$GITHUB_REPOSITORY" \
               --title "Ron training continuation" \
-              --notes "Archive of the latest trained Ron weights."
+              --notes "Saved Ron weights for the next incremental training run."
           fi
           gh release upload ron-training-continuation ron_training_continuation.pt \
             --repo "$GITHUB_REPOSITORY" --clobber
-          echo "Trained weights persisted as the current live checkpoint."
+          echo "Trained checkpoint saved to both releases."
 
       - name: Archive weights and evaluation report
         if: always()
