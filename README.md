@@ -58,3 +58,9 @@ The GitHub Actions workflow archives the pretraining candidate, SFT candidate, m
 - The current tokenizer is still character-level. A trained subword tokenizer (BPE/SentencePiece) is a priority before expecting strong multilingual generation.
 - The 10M-parameter model is a small experiment, not comparable in capability to frontier-scale assistants.
 - No OpenAI API, external inference model, or proprietary OpenAI internal tooling is required or introduced by this workflow. It uses common, reproducible techniques: a decoder-only Transformer, AdamW, learning-rate scheduling, held-out evaluation, supervised fine-tuning, and checkpoint gating.
+
+## Live checkpoint rollout
+
+The native HTTP runtime starts from the last locally available checkpoint and checks the public `ron-live-checkpoint` release for a promoted `ron_native_10m.pt` asset. It checks on startup and every five minutes, verifies the published SHA-256 digest when available, load-tests the candidate, and atomically swaps the in-memory provider only after validation succeeds. Failed downloads or invalid candidates leave the currently active weights untouched.
+
+Use `GET /api/health` to inspect the active checkpoint path, SHA-256, parameter count, training step, and checkpoint source. The browser UI calls the configured `window.RON_API_BASE_URL` when set, otherwise the project's deployed Ron API. Static hosting alone cannot run PyTorch; it needs to reach the native HTTP service for model-generated answers.
