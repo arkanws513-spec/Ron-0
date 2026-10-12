@@ -55,11 +55,11 @@ jobs:
           from pathlib import Path
           metrics = json.loads(Path("artifacts/native-baseline/metrics.json").read_text(encoding="utf-8"))
           evaluation = json.loads(Path("artifacts/native-baseline/surprise-eval.json").read_text(encoding="utf-8"))
-          promoted = bool(evaluation.get("anti_degeneration_gate_passed"))
+          promoted = bool(evaluation.get("quality_gate_passed"))
           report = {
               "attempt_status": "completed",
               "checkpoint_promoted": promoted,
-              "promotion_reason": "anti_degeneration_gate_passed" if promoted else "anti_degeneration_gate_failed",
+              "promotion_reason": "strict_answer_quality_gate_passed" if promoted else "strict_answer_quality_gate_failed",
               "metrics": metrics,
               "evaluation": evaluation,
           }
