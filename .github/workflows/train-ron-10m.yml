@@ -82,24 +82,16 @@ jobs:
             gh release download ron-live-checkpoint --repo "$GITHUB_REPOSITORY" \
               --pattern ron_native_10m.pt --dir ron/checkpoints || true
           fi
-      # If no quality-approved live checkpoint exists yet, continue experimental learning
-      # from the last failed candidate. This file is training-only and never served live.
-      - name: Restore latest experimental continuation for the next training run
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # Every run starts from the exact quality-approved checkpoint currently used by Ron.
+      # Failed experimental candidates are never the starting point for the next run.
+      - name: Prepare training from current live Ron weights
         run: |
           mkdir -p ron/checkpoints
-          if gh release download ron-training-continuation --repo "$GITHUB_REPOSITORY" \
-            --pattern ron_training_continuation.pt --dir ron/checkpoints; then
-            echo "Restored the latest experimental continuation separately from live runtime weights."
-          else
-            echo "No experimental continuation exists; a promoted checkpoint will be copied into the isolated training path if available."
-          fi
-      - name: Prepare isolated training continuation
-        run: |
-          mkdir -p ron/checkpoints
-          if [ ! -f ron/checkpoints/ron_training_continuation.pt ] && [ -f ron/checkpoints/ron_native_10m.pt ]; then
+          if [ -f ron/checkpoints/ron_native_10m.pt ]; then
             cp ron/checkpoints/ron_native_10m.pt ron/checkpoints/ron_training_continuation.pt
+            echo "Training initialized from the currently promoted Ron core weights."
+          else
+            echo "No promoted Ron checkpoint exists yet; the native trainer will initialize the first checkpoint."
           fi
       - name: Report checkpoint starting point and progressive difficulty
         env:
@@ -144,6 +136,26 @@ jobs:
           RON_SFT_SEQUENCE_LENGTH: "256"
           RON_ARABIC_BATCH_FRACTION: "0.65"
         run: python scripts/train_sft_10m.py
+      # Save the just-trained SFT weights before the slow blind evaluation.
+      # These are a continuation for future training only, never the live inference checkpoint.
+      - name: Persist trained weights before conversational evaluation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f artifacts/native-10m/ron_native_10m_sft.pt ]; then
+            echo "SFT checkpoint is missing; preserving previous training continuation."
+            exit 1
+          fi
+          cp artifacts/native-10m/ron_native_10m_sft.pt ron_training_continuation.pt
+          if ! gh release view ron-training-continuation --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create ron-training-continuation --repo "$GITHUB_REPOSITORY" \
+              --title "Ron training continuation" \
+              --notes "Saved trained Ron weights for continuation. Every new run starts from the approved live checkpoint; this asset is archival only and is not used as the next run's starting weights."
+          fi
+          gh release upload ron-training-continuation ron_training_continuation.pt \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Saved trained weights before blind evaluation."
+
       - name: Blind conversational evaluation
         id: conversation_eval
         continue-on-error: true
