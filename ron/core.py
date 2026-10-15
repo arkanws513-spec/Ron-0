@@ -13,7 +13,7 @@ from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
 from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
-from .arithmetic import Calculation, calculate_from_text, is_previous_calculation_request
+from .arithmetic import Calculation, calculate_from_text, is_previous_calculation_request, looks_like_arithmetic_expression
 
 @dataclass
 class RonCore:
