@@ -92,7 +92,7 @@ class RonCore:
             self.last_calculation = calculation
             return self._finish(text,f"الناتج: {calculation.answer}","ron-arithmetic",{"runtime":"ron-0","tool":"safe-arithmetic","expression":calculation.expression,"exact":True})
         normalized_text = text.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹","01234567890123456789")).lower()
-        asks_math = any(phrase in normalized_text for phrase in ("كم يساوي", "كم تساوي", "احسب", "احسب لي", "ناتج", "calculate", "what is", "how much is"))
+        asks_math = any(phrase in normalized_text for phrase in ("كم يساوي", "كم تساوي", "احسب", "احسب لي", "ناتج", "calculate"))
         if asks_math and not any(char.isdigit() for char in normalized_text):
             return self._finish(text,"ما العملية الحسابية التي تريدني أن أحسبها؟ اكتبها مثل: 458 × 345.", "ron-arithmetic", {"runtime":"ron-0","tool":"safe-arithmetic","needs_clarification":True})
         memories=self.memory.recall(text,limit=5)
