@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
-_EXPR_CANDIDATE = re.compile(r"(?<![A-Za-z_])([+-]?(?:[0-9]|\\()[0-9\s.+\-*/×÷()%]*[0-9)])")
+_EXPR_CANDIDATE = re.compile(r"(?<![A-Za-z_])([+-]?(?:[0-9]|\()[0-9\s.+\-*/×÷()%]*[0-9)])")
 _OPERATORS = {ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow}
 _UNARY = {ast.UAdd, ast.USub}
 _PREVIOUS_PATTERNS = (
