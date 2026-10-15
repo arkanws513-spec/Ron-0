@@ -76,3 +76,10 @@ def test_previous_calculation_without_prior_result_asks_for_context():
     response = core.respond("احسب العملية السابقة")
     assert "لا توجد عملية حسابية سابقة" in response.content
     assert response.metadata["needs_clarification"] is True
+
+
+def test_core_rejects_invalid_arithmetic_without_model_guessing():
+    core = RonCore(provider=FakeProvider())
+    response = core.respond("احسب 1 / 0")
+    assert response.metadata["invalid_expression"] is True
+    assert "بأمان" in response.content
