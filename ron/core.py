@@ -13,6 +13,7 @@ from .tools import ToolRegistry
 from .understanding import UnderstandingEngine
 from .reasoning import ReasoningEngine
 from .reasoning_advanced import AdvancedReasoner, WeightedEvidence, CausalLink
+from .arithmetic import Calculation, calculate_from_text, is_previous_calculation_request
 
 @dataclass
 class RonCore:
@@ -26,6 +27,7 @@ class RonCore:
     reasoning:ReasoningEngine=field(default_factory=ReasoningEngine)
     advanced_reasoning:AdvancedReasoner=field(default_factory=AdvancedReasoner)
     provider_startup_warnings:list[str]=field(default_factory=list,init=False)
+    last_calculation:Calculation|None=field(default=None,init=False)
 
     def __post_init__(self)->None:
         if self.provider is not None:
@@ -78,6 +80,21 @@ class RonCore:
         remembered_answer=answer_fact_question(text,self.memory)
         if remembered_answer is not None:
             return self._finish(text,remembered_answer,"ron-memory",{"runtime":"ron-0","memory_read":True})
+        # Route exact arithmetic to a bounded local evaluator before neural generation.
+        # This prevents the language model from guessing deterministic numeric results.
+        if is_previous_calculation_request(text):
+            if self.last_calculation is None:
+                return self._finish(text,"لا توجد عملية حسابية سابقة في هذه المحادثة. اكتب العملية التي تريد حسابها.", "ron-arithmetic", {"runtime":"ron-0","tool":"safe-arithmetic","needs_clarification":True})
+            previous = self.last_calculation
+            return self._finish(text,f"نتيجة العملية السابقة ({previous.expression}) هي {previous.answer}.","ron-arithmetic",{"runtime":"ron-0","tool":"safe-arithmetic","previous_calculation":True,"expression":previous.expression})
+        calculation = calculate_from_text(text)
+        if calculation is not None:
+            self.last_calculation = calculation
+            return self._finish(text,f"الناتج: {calculation.answer}","ron-arithmetic",{"runtime":"ron-0","tool":"safe-arithmetic","expression":calculation.expression,"exact":True})
+        normalized_text = text.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹","01234567890123456789")).lower()
+        asks_math = any(phrase in normalized_text for phrase in ("كم يساوي", "كم تساوي", "احسب", "احسب لي", "ناتج", "calculate", "what is", "how much is"))
+        if asks_math and not any(char.isdigit() for char in normalized_text):
+            return self._finish(text,"ما العملية الحسابية التي تريدني أن أحسبها؟ اكتبها مثل: 458 × 345.", "ron-arithmetic", {"runtime":"ron-0","tool":"safe-arithmetic","needs_clarification":True})
         memories=self.memory.recall(text,limit=5)
         related=self.memory.related(text,limit=8) if hasattr(self.memory,"related") else memories
         reasoning_facts=[]
