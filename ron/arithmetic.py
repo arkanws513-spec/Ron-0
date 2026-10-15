@@ -121,6 +121,12 @@ def evaluate_expression(expression: str) -> int | float:
     return visit(tree)
 
 
+def looks_like_arithmetic_expression(text: str) -> bool:
+    """Identify numeric operator patterns even when they fail safe evaluation."""
+    normalized = str(text).translate(_DIGITS).replace("×", "*").replace("÷", "/")
+    return bool(re.search(r"\\d\\s*(?:\\*\\*|//|[+*/%\\-])\\s*\\d", normalized))
+
+
 def calculate_from_text(text: str) -> Calculation | None:
     expression = extract_expression(text)
     if expression is None:
