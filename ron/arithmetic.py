@@ -56,7 +56,6 @@ def extract_expression(text: str) -> str | None:
         if not any(operator in candidate for operator in "+-*/%"):
             continue
         candidate = re.sub(r"\s+", "", candidate)
-        # Reject fragments cut from words or unsupported comparison/equality syntax.
         if not candidate or "=" in candidate or not re.fullmatch(r"[0-9.+\-*/()%]+", candidate):
             continue
         try:
@@ -77,6 +76,11 @@ def evaluate_expression(expression: str) -> int | float:
     except SyntaxError as exc:
         raise ArithmeticError("invalid arithmetic expression") from exc
 
+    def bounded(value: int | float) -> int | float:
+        if not math.isfinite(float(value)) or abs(value) > 10**100:
+            raise ArithmeticError("result outside supported range")
+        return value
+
     def visit(node: ast.AST) -> int | float:
         if isinstance(node, ast.Expression):
             return visit(node.body)
@@ -87,8 +91,7 @@ def evaluate_expression(expression: str) -> int | float:
             return value
         if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY:
             value = visit(node.operand)
-            result = value if isinstance(node.op, ast.UAdd) else -value
-            return bounded(result)
+            return bounded(value if isinstance(node.op, ast.UAdd) else -value)
         if isinstance(node, ast.BinOp) and type(node.op) in _OPERATORS:
             left, right = visit(node.left), visit(node.right)
             if isinstance(node.op, ast.Pow) and abs(right) > 12:
@@ -113,18 +116,13 @@ def evaluate_expression(expression: str) -> int | float:
             return bounded(result)
         raise ArithmeticError("unsupported syntax")
 
-    def bounded(value: int | float) -> int | float:
-        if not math.isfinite(float(value)) or abs(value) > 10**100:
-            raise ArithmeticError("result outside supported range")
-        return value
-
     return visit(tree)
 
 
 def looks_like_arithmetic_expression(text: str) -> bool:
     """Identify numeric operator patterns even when they fail safe evaluation."""
     normalized = str(text).translate(_DIGITS).replace("×", "*").replace("÷", "/")
-    return bool(re.search(r"\\d\\s*(?:\\*\\*|//|[+*/%\\-])\\s*\\d", normalized))
+    return bool(re.search(r"\d\s*(?:\*\*|//|[+*/%\-])\s*\d", normalized))
 
 
 def calculate_from_text(text: str) -> Calculation | None:
