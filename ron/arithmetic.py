@@ -93,20 +93,23 @@ def evaluate_expression(expression: str) -> int | float:
             left, right = visit(node.left), visit(node.right)
             if isinstance(node.op, ast.Pow) and abs(right) > 12:
                 raise ArithmeticError("exponent outside supported range")
-            if isinstance(node.op, ast.Add):
-                result = left + right
-            elif isinstance(node.op, ast.Sub):
-                result = left - right
-            elif isinstance(node.op, ast.Mult):
-                result = left * right
-            elif isinstance(node.op, ast.Div):
-                result = left / right
-            elif isinstance(node.op, ast.FloorDiv):
-                result = left // right
-            elif isinstance(node.op, ast.Mod):
-                result = left % right
-            else:
-                result = left ** right
+            try:
+                if isinstance(node.op, ast.Add):
+                    result = left + right
+                elif isinstance(node.op, ast.Sub):
+                    result = left - right
+                elif isinstance(node.op, ast.Mult):
+                    result = left * right
+                elif isinstance(node.op, ast.Div):
+                    result = left / right
+                elif isinstance(node.op, ast.FloorDiv):
+                    result = left // right
+                elif isinstance(node.op, ast.Mod):
+                    result = left % right
+                else:
+                    result = left ** right
+            except (ZeroDivisionError, OverflowError) as exc:
+                raise ArithmeticError("invalid arithmetic operation") from exc
             return bounded(result)
         raise ArithmeticError("unsupported syntax")
 
