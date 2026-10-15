@@ -91,6 +91,8 @@ class RonCore:
         if calculation is not None:
             self.last_calculation = calculation
             return self._finish(text,f"الناتج: {calculation.answer}","ron-arithmetic",{"runtime":"ron-0","tool":"safe-arithmetic","expression":calculation.expression,"exact":True})
+        if looks_like_arithmetic_expression(text):
+            return self._finish(text,"لم أتمكن من حساب هذه العملية بأمان. تحقق من الأقواس والعمليات، ثم أعد كتابتها بصيغة واضحة.", "ron-arithmetic", {"runtime":"ron-0","tool":"safe-arithmetic","invalid_expression":True})
         normalized_text = text.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹","01234567890123456789")).lower()
         asks_math = any(phrase in normalized_text for phrase in ("كم يساوي", "كم تساوي", "احسب", "احسب لي", "ناتج", "calculate"))
         if asks_math and not any(char.isdigit() for char in normalized_text):
