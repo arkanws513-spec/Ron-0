@@ -59,3 +59,10 @@ def test_bpe_provider_loads_matching_checkpoint_and_answers_deterministic_basics
     response = provider.generate(ModelRequest(messages=(Message(role="user", content="ما اسمك"),)))
     assert response.content == "أنا رون، مساعد محلي قيد التطوير."
     assert response.metadata["tokenizer_type"] == "byte_bpe"
+
+    # Exercise the open-ended native decode path (including incremental KV caching).
+    open_response = provider.generate(ModelRequest(messages=(
+        Message(role="user", content="Explain a new fictional concept called flarble."),
+    )))
+    assert open_response.content
+    assert open_response.metadata["tokenizer_type"] == "byte_bpe"
