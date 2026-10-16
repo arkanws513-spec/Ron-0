@@ -44,7 +44,14 @@ class RonCore:
             if not checkpoint.is_file():
                 continue
             try:
-                self.provider = NativeCheckpointProvider(checkpoint)
+                # Checkpoint formats are explicit: never interpret BPE IDs as characters.
+                import torch
+                payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
+                if payload.get("tokenizer_type") == "byte_bpe":
+                    from .bpe_provider import BpeCheckpointProvider
+                    self.provider = BpeCheckpointProvider(checkpoint)
+                else:
+                    self.provider = NativeCheckpointProvider(checkpoint)
                 return
             except Exception as exc:
                 self.provider_startup_warnings.append(
