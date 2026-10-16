@@ -1,0 +1,131 @@
+name: Train Ron native BPE candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      pretraining_steps:
+        description: Optimizer steps for BPE pretraining
+        required: true
+        default: "5000"
+        type: string
+      sft_steps:
+        description: Optimizer steps for assistant-only BPE fine-tuning
+        required: true
+        default: "2000"
+        type: string
+      batch_size:
+        description: Training batch size
+        required: true
+        default: "2"
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/train_native_bpe.py'
+      - 'scripts/train_sft_bpe.py'
+      - 'scripts/prepare_corpus.py'
+      - 'scripts/download_english_corpus.py'
+      - 'scripts/download_oasst1_english.py'
+      - 'training/arabic_sft_seed.txt'
+      - 'ron/model.py'
+      - 'ron/model_config.py'
+      - 'ron/tokenizer.py'
+      - 'ron/bpe_provider.py'
+      - '.github/workflows/train-ron-bpe.yml'
+
+concurrency:
+  group: ron-bpe-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  train-bpe-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install training and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[model]" pytest
+
+      - name: Download English public-domain starter corpus
+        run: python scripts/download_english_corpus.py
+
+      - name: Download reviewed English dialogue corpus
+        run: python scripts/download_oasst1_english.py
+
+      - name: Normalize, deduplicate, and validate pretraining corpus
+        run: python scripts/prepare_corpus.py
+
+      - name: Audit training material sizes and source manifests
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path(".")
+          corpus = root / "training/corpus.txt"
+          english = root / "training/corpus/oasst1/english_dialogues.txt"
+          arabic = root / "training/arabic_sft_seed.txt"
+          manifest = root / "training/corpus_manifest.json"
+          for path in (corpus, english, arabic, manifest):
+              if not path.is_file():
+                  raise SystemExit(f"Required training material missing: {path}")
+          pretrain = corpus.read_text(encoding="utf-8")
+          en = english.read_text(encoding="utf-8")
+          ar = arabic.read_text(encoding="utf-8")
+          report = json.loads(manifest.read_text(encoding="utf-8"))
+          print(json.dumps({
+              "pretraining_characters": len(pretrain),
+              "pretraining_paragraphs": len([p for p in pretrain.split("\n\n") if p.strip()]),
+              "english_dialogue_characters": len(en),
+              "english_dialogue_examples": len([p for p in en.split("\n\n") if p.strip()]),
+              "arabic_sft_characters": len(ar),
+              "pretraining_manifest_sources": len(report.get("source_files", [])),
+          }, ensure_ascii=False, indent=2))
+          if len(pretrain) < 100_000 or len(en) < 10_000 or len(ar) < 10_000:
+              raise SystemExit("Training materials did not meet minimum size gates.")
+          if len(report.get("source_files", [])) < 5:
+              raise SystemExit("Too few manifest-recorded pretraining sources; refusing training.")
+          PY
+
+      - name: Run repository tests before training
+        run: python scripts/run_all_tests.py
+
+      - name: Train isolated BPE pretraining candidate
+        env:
+          RON_BPE_STEPS: ${{ inputs.pretraining_steps || '5000' }}
+          RON_BPE_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
+          RON_BPE_SEQUENCE_LENGTH: "256"
+          RON_BPE_VOCAB_SIZE: "4096"
+        run: python scripts/train_native_bpe.py
+
+      - name: Fine-tune candidate on reviewed English and Arabic dialogue
+        env:
+          RON_BPE_SFT_STEPS: ${{ inputs.sft_steps || '2000' }}
+          RON_BPE_SFT_BATCH_SIZE: ${{ inputs.batch_size || '2' }}
+          RON_BPE_SFT_SEQUENCE_LENGTH: "256"
+        run: python scripts/train_sft_bpe.py
+
+      - name: Upload candidate weights, metrics, and source manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ron-native-bpe-candidate-${{ github.run_id }}
+          path: |
+            artifacts/native-bpe/
+            training/corpus_manifest.json
+            training/gutenberg_sources.json
+            training/oasst1_manifest.json
+          if-no-files-found: warn
+          retention-days: 30
