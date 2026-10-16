@@ -1,6 +1,9 @@
 """Deterministic Arabic memory with short/long tiers and lightweight relationships."""
 from __future__ import annotations
 import re
+import json
+import sqlite3
+from pathlib import Path
 from dataclasses import dataclass,field
 from .contracts import MemoryItem
 _DIACRITICS=re.compile(r"[ًٌٍَُِّْـ]"); _SPACES=re.compile(r"\s+"); _PUNCT=re.compile(r"[؟?!.,،؛;:()\[\]{}]")
