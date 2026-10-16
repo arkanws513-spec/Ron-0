@@ -46,8 +46,14 @@ class RonCore:
             try:
                 # Checkpoint formats are explicit: never interpret BPE IDs as characters.
                 import torch
-                payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
-                if payload.get("tokenizer_type") == "byte_bpe":
+                try:
+                    payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
+                except Exception:
+                    # Preserve the legacy provider's own validation/error type and
+                    # compatibility with provider injection/mocking; malformed files
+                    # will still fail closed when that provider loads them.
+                    payload = {}
+                if isinstance(payload, dict) and payload.get("tokenizer_type") == "byte_bpe":
                     from .bpe_provider import BpeCheckpointProvider
                     self.provider = BpeCheckpointProvider(checkpoint)
                 else:
