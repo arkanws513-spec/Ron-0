@@ -150,7 +150,7 @@ def main():
     started = time.time()
     history = []
     for step in range(1, STEPS + 1):
-        x, y = batch(train_data_ar if random.random() < 0.65 else train_data_en, BATCH)
+        x, y = batch(train_ar if random.random() < 0.65 else train_en, BATCH)
         optimizer.zero_grad(set_to_none=True)
         loss = model(x, y).loss
         if loss is None or not torch.isfinite(loss):
@@ -159,10 +159,10 @@ def main():
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         if step % 50 == 0 or step == STEPS:
-            val_en, val_ar = evaluate(model, val_en), evaluate(model, val_ar)
-            val = (val_en + val_ar) / 2
-            history.append({"step": step, "validation_loss": val, "english_loss": val_en, "arabic_loss": val_ar})
-            print(f"bpe_sft_step={step} validation_loss={val:.4f} en={val_en:.4f} ar={val_ar:.4f}", flush=True)
+            val_loss_en, val_loss_ar = evaluate(model, val_en), evaluate(model, val_ar)
+            val = (val_loss_en + val_loss_ar) / 2
+            history.append({"step": step, "validation_loss": val, "english_loss": val_loss_en, "arabic_loss": val_loss_ar})
+            print(f"bpe_sft_step={step} validation_loss={val:.4f} en={val_loss_en:.4f} ar={val_loss_ar:.4f}", flush=True)
             if val < best_val:
                 best_val, best_step = val, step
                 best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
