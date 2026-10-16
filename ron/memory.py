@@ -36,3 +36,56 @@ class InMemoryStore:
         ranked=self._rank(query); return [x[2] for x in ranked[:max(1,limit)]] if limit>0 else []
     def tiers(self)->dict[str,list[MemoryItem]]:
         values=list(self.items.values()); return {"short":values[-self.short_limit:],"long":values[:-self.short_limit][-self.long_limit:]}
+
+
+class SQLiteMemoryStore(InMemoryStore):
+    """SQLite-backed local memory that survives process restarts.
+
+    The store mirrors records into the inherited in-memory index for fast retrieval.
+    Configure it explicitly with RON_MEMORY_DB_PATH; the default remains in-memory
+    so tests and isolated sessions never share personal data accidentally.
+    """
+
+    def __init__(self, path: str) -> None:
+        self._json = json
+        self._sqlite3 = sqlite3
+        self.path = Path(path).expanduser()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        super().__init__()
+        with self._sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """CREATE TABLE IF NOT EXISTS ron_memory (
+                    key TEXT PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    metadata_json TEXT NOT NULL
+                )"""
+            )
+            rows = connection.execute(
+                "SELECT key, content, metadata_json FROM ron_memory ORDER BY rowid"
+            ).fetchall()
+        for key, content, metadata_json in rows:
+            try:
+                metadata = self._json.loads(metadata_json)
+                if not isinstance(metadata, dict):
+                    metadata = {}
+            except (TypeError, ValueError):
+                metadata = {}
+            self.items[key] = MemoryItem(key=key, content=content, metadata=metadata)
+
+    def remember(self, item: MemoryItem) -> None:
+        # Validate before touching persistent state.
+        if not item.key.strip():
+            raise ValueError("memory key cannot be empty")
+        if not item.content.strip():
+            raise ValueError("memory content cannot be empty")
+        metadata_json = self._json.dumps(item.metadata, ensure_ascii=False, sort_keys=True)
+        with self._sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """INSERT INTO ron_memory(key, content, metadata_json)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(key) DO UPDATE SET
+                     content = excluded.content,
+                     metadata_json = excluded.metadata_json""",
+                (item.key, item.content, metadata_json),
+            )
+        self.items[item.key] = item
