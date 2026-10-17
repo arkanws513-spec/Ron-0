@@ -49,3 +49,8 @@ python -m ron.native_chat_server
 ## حدود النموذج
 
 هذا نموذج صغير (0.5B)، لذلك قد يخطئ في الأسئلة المعقدة أو التفاصيل الدقيقة. تنظيف المستودع لا يعني أن النموذج أصبح بمستوى GPT-3؛ لكنه يزيل المسارات المتنافسة ويجعل مسار التوليد واضحًا وقابلًا للاختبار.
+
+
+## Training the currently deployed Qwen model
+
+The production server currently uses Qwen2.5-0.5B-Instruct GGUF. For a training path that targets this same base model, see [the Qwen LoRA training guide](training/QWEN_LORA.md), [the trainer](scripts/train_qwen_lora.py), [the 300-case bilingual evaluator](scripts/evaluate_qwen_lora.py), and [the merge step](scripts/merge_qwen_lora.py). This experimental path creates a separate adapter and never replaces live weights automatically. It requires a CUDA GPU; no new training run is claimed until its artifacts and blind evaluation report exist.
