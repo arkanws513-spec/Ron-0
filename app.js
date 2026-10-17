@@ -242,6 +242,34 @@ const explainPreviousReply=()=>{
  return "أنت تسأل عن ردي السابق. كان مضمونه: «"+text.slice(0,220)+(text.length>220?"…":"")+"». إذا لم يجب عن سؤالك، فهذه مشكلة في اختيار السياق وكان ينبغي أن أرد بما يرتبط بطلبك.";
 };
 const nativeApiSessionId="web-"+Math.random().toString(36).slice(2,18);
+const ARABIC_COMMON_WORDS=new Set(("انا اسمي رون نعم لا هذا هذه ذلك التي الذي هو هي من في على الى عن مع ما ماذا كيف يمكن استطيع تستطيع لان لكن اذا كان تكون يكون يوجد توجد هناك هنا شيء فكرة شرح يعني تعني معنى سؤال اجابة جواب صحيح خطا القاهرة مصر فرنسا باريس عاصمة مدينة دولة العالم الناس اللغة العربية الانجليزية كلمة كلمات معلومات معلومة تعلم تتعلم نموذج تدريب بيانات مثال امثلة عملية حساب الناتج يساوي ضرب جمع طرح قسمة اشرح افهم تفهم اريد تريد بعد قبل الان اليوم جديد بسيطة بسيط صغير كبير جيد رائع ممتاز مرحبا اهلا بخير جاهز مساعد اساعدك اساعد شكرا فضلا اكتب قل اخبرني اسال احتاج نحتاج يجب ينبغي اعتقد ربما بالتأكيد غالبا عادة مثلا مثل يستخدم تستخدم يعمل تعمل يعتمد تعتمد نتيجة السبب اسباب جزء اجزاء طريقة طرق نعرف يمكننا خطوة خطوات اول ثاني ثم لذلك لهذا عندما بينما غير واضح مفهومة مفهوم طبيعي طبيعية دقيقة دقيق موثوق يحتاج يحتاجون يقول تقول قال قالت يشرح تشرح شرحا بسيطا بشكل بسيط اولا ثانيا لماذا كيف يكون هل من فضلك اريد ان اشرح لك تساعدني اساعدك معرفة فهم اللغة فكرة العالم الحياة الماء الشمس الارض طاقة كم كثير قليل اكثر اقل مهم مفيد مفيدة معروف مختلفة مختلف واحدة واحد بعض كل كلما حتى جدا هنا هناك الذي التي الذين كيفما احيانا دائما ابدا غالبا".split(/\s+/).map(norm)));
+const nativeReplyLooksUsable=(reply,userText)=>{
+ const text=String(reply||"").trim();
+ if(text.length<2||text.length>1400)return false;
+ const compact=text.replace(/\s+/g,"");
+ if(/(.{3,10})\1{2,}/u.test(compact)||(/[\u0600-\u06ff]/.test(text)&&/[A-Za-z]{5,}/.test(text)&&!/[\u0600-\u06ff]/.test(text.slice(0,80))))return false;
+ const words=text.split(/\s+/).filter(Boolean);
+ const inputWords=String(userText||"").trim().split(/\s+/).filter(Boolean);
+ if(inputWords.length>=4&&words.length<3)return false;
+ if(/[\u0600-\u06ff]/.test(userText)){
+  const letters=[...text].filter(c=>/[A-Za-z\u0600-\u06ff]/.test(c));
+  const arabic=letters.filter(c=>/[\u0600-\u06ff]/.test(c)).length;
+  if(letters.length&&arabic/letters.length<0.65)return false;
+  const arabicWords=words.map(w=>norm(w.replace(/^[^\u0600-\u06ffA-Za-z]+|[^\u0600-\u06ffA-Za-z]+$/g,""))).filter(w=>/[\u0600-\u06ff]/.test(w));
+  if(arabicWords.length>=6){
+   const known=arabicWords.filter(w=>ARABIC_COMMON_WORDS.has(w)||w.length<=3).length;
+   if(known/arabicWords.length<0.30)return false;
+  }
+ }
+ return true;
+};
+const safeFallbackFor=text=>{
+ const n=norm(text);
+ if(/^(ماذا تعني|ما معنى ذلك|ماذا تقصد|ما المقصود بذلك)$/.test(n))return "ردّي السابق لم يكن واضحًا، وأعتذر عن ذلك. اكتب الفكرة أو الكلمة التي تريد شرحها وسأحاول تبسيطها.";
+ if(/اشرح|شرح|معنى|فكرة/.test(n))return "نعم، أستطيع مساعدتك. ما الفكرة التي تريد أن أشرحها لك؟";
+ if(analyzeIntent(text)==="question"||/[؟?]/.test(text))return "أريد مساعدتك، لكن لم أستطع تكوين إجابة واضحة لهذا السؤال بعد. هل يمكنك صياغته بطريقة أبسط؟";
+ return "فهمت كلامك. أخبرني ما الذي تريد أن نفعله بعد ذلك.";
+};
 const queryNativeCheckpoint=async text=>{
  try{
   const configured=typeof window.RON_API_BASE_URL==="string"&&window.RON_API_BASE_URL.trim()?window.RON_API_BASE_URL.trim():"https://accurate-courage-production-8a31.up.railway.app";
@@ -254,11 +282,19 @@ const queryNativeCheckpoint=async text=>{
   });
   if(!response.ok)return null;
   const payload=await response.json();
-  return typeof payload.reply==="string"&&payload.reply.trim()?payload.reply.trim():null;
+  return typeof payload.reply==="string"&&payload.reply.trim()?{reply:payload.reply.trim(),generationStatus:String(payload.generation_status||""),health:payload.health||null}:null;
  }catch(error){console.debug("Ron native checkpoint API unavailable; continuing with local runtime.",error);return null;}
 };
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ if(/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(n))return "نعم، بالتأكيد. ما الفكرة التي تريد أن أشرحها لك؟";
+ if(/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(n)){
+  const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
+  const priorUser=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user");
+  if(previous&&!nativeReplyLooksUsable(previous.text,priorUser?.text||""))return "أعتذر، كان ردي السابق غير واضح. ما الفكرة أو الكلمة التي تريد أن أشرحها ببساطة؟";
+  if(previous)return "هل تقصد ردي السابق؟ أستطيع توضيحه، أو يمكنك تحديد الكلمة التي لم تكن واضحة.";
+  return "ما الكلمة أو الفكرة التي تريد أن أشرحها؟";
+ }
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
  if(isReadinessQuestion(n))return "أيوه، جاهز.";
  if(isWithMeQuestion(n))return "أيوه، أنا معاك. قولّي نكمل منين.";
@@ -325,7 +361,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
- const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
+ const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(normalizedInput)||/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim()){
   const core=globalThis.ronCore;
@@ -337,7 +373,19 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
     if(candidate&&!failed)r=candidate;
    }catch(error){console.warn("Ron Core response failed",error);}
   }
- } if(!String(r||"").trim())r=answer(t);
+ }
+ let nativeRejected=false;
+ const nativeEligible=!/^(?:ابحث|دورلي|دور لي|ابحث لي|ابحث عن|ابحث في|دور عن)/.test(norm(t))&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(norm(t));
+ if(!String(r||"").trim()&&nativeEligible&&typeof fetch==="function"){
+  const native=await queryNativeCheckpoint(t);
+  if(native&&native.generationStatus!=="native_quality_fallback"&&nativeReplyLooksUsable(native.reply,t))r=native.reply;
+  else nativeRejected=true;
+ }
+ if(!String(r||"").trim()){
+  const localFallback=answer(t);
+  r=nativeRejected&&!nativeReplyLooksUsable(localFallback,t)?safeFallbackFor(t):localFallback;
+ }
+ if(nativeRejected&&!nativeReplyLooksUsable(String(r||""),t))r=safeFallbackFor(t);
  let webResult=null;
  const local=String(r||"").trim();
  const n=norm(t);
