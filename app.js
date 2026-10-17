@@ -147,6 +147,25 @@ const queryRonLocalModel=async text=>{
   return typeof payload.reply==="string"&&payload.reply.trim()?{reply:payload.reply.trim(),generationStatus:String(payload.generation_status||""),health:payload.health||null}:null;
  }catch(error){console.error("Ron local Qwen API request failed.",error);return null;}
 };
+// Missing intent helpers restored: these are used by both local replies and the send path.
+const isEgyptCapitalPreference=n=>/(?:من الآن|من فضلك).*(?:عاصمة مصر|القاهرة).*(?:فقط|باختصار)/.test(n);
+const isReadinessQuestion=n=>/^(?:جاهز|انت جاهز|هل انت جاهز|مستعد|هل انت مستعد)[؟?]*$/.test(n);
+const isWithMeQuestion=n=>/^(?:انت معايا|هل انت معايا|معايا|انت معي|هل انت معي)[؟?]*$/.test(n);
+const isPreviousReplyQuestion=n=>/^(?:ماذا كان ردك|ما ردك السابق|ماذا قلت|ردك السابق|وضح ردك السابق)[؟?]*$/.test(n);
+const isPendingCommentConfirmation=n=>/^(?:نعم|ايوه|أيوه|اه|تمام|علق عليه|نعم علق عليه)$/.test(n)&&messages.some(m=>m.role==="user");
+const isCommentCommand=n=>/^(?:علق عليه|علّق عليه|اشرح كلامي|حلل كلامي)$/.test(n);
+const isIncompleteMathQuestion=n=>/^(?:احسب|حل المسألة|ما الناتج|احسب لي)[؟?]*$/.test(n);
+const isEgyptCapitalQuestion=n=>/^(?:ما هي|ماهو|ما هو|ايه|ما)\s+عاصمة\s+مصر[؟?]*$/.test(n);
+const isNameQuestion=n=>/^(?:ما اسمي|ما هو اسمي|ايه اسمي|هل تعرف اسمي)[؟?]*$/.test(n);
+const isAgeQuestion=n=>/^(?:كم عمري|ما عمري|هل تعرف عمري)[؟?]*$/.test(n);
+const isRonNameQuestion=n=>/^(?:ما اسمك|ما هو اسمك|اسمك ايه|من انت|من أنت)[؟?]*$/.test(n);
+const isRonAgeQuestion=n=>/^(?:كم عمرك|ما عمرك|هل لك عمر)[؟?]*$/.test(n);
+const isBothNamesQuestion=n=>/^(?:ما اسمي وما اسمك|ما اسمينا|ما اسمك واسمي)[؟?]*$/.test(n);
+const isProfileQuestion=n=>/^(?:ماذا تعرف عني|ما الذي تعرفه عني|ما معلوماتي)[؟?]*$/.test(n);
+const nativeReplyLooksUsable=(reply)=>typeof reply==="string"&&reply.trim().length>0&&!/حدث خطأ أثناء تشغيل نموذج رون|تعذّر الاتصال بمحرك الاستدلال/.test(reply);
+const explainPreviousReply=()=>{const previous=messages.slice(0,-1).reverse().find(m=>m.role==="ron");return previous?"كان ردي السابق: "+previous.text:"لم أرسل ردًا سابقًا في هذه المحادثة بعد.";};
+const commentOnPreviousUserMessage=()=>{const previous=messages.slice(0,-1).reverse().find(m=>m.role==="user");return previous?"أرى أنك قلت: «"+previous.text+"». ما الجانب الذي تريدني أن أعلّق عليه؟":"لا توجد رسالة سابقة لأعلّق عليها بعد.";};
+const teach=t=>"أستطيع حفظ معلومة واضحة عندما تكتب: علّم رون: ثم اكتب المعلومة.";
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),fact=facts[0]||null;
  if(/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(n))return "نعم، بالتأكيد. ما الفكرة التي تريد أن أشرحها لك؟";
