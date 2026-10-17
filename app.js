@@ -371,7 +371,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  if(!String(r||"").trim()&&nativeEligible&&typeof fetch==="function"){
   const native=await queryNativeCheckpoint(t);
   if(native&&native.generationStatus!=="native_quality_fallback"&&nativeReplyLooksUsable(native.reply,t))r=native.reply;
-  else if(native)nativeRejected=true;
+  else nativeRejected=true;
  }
  if(!String(r||"").trim()){
   const localFallback=answer(t);
