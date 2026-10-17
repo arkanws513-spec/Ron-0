@@ -192,7 +192,7 @@ const extractCapitalFact=text=>{
  const raw=String(text||"").trim();
  if(/[؟?]/.test(raw))return null;
  const s=norm(raw).replace(/[،,.;!]+$/,"").trim();
- const m=s.match(/^عاصم(?:ة|ه)\\s+(.+?)\\s+(?:هي|تكون|تتمثل في)\\s+(.+)$/);
+ const m=s.match(/^عاصم(?:ة|ه)\s+(.+?)\s+(?:هي|تكون|تتمثل في)\s+(.+)$/);
  if(!m)return null;
  const country=capitalCatalog.find(x=>x.aliases.some(a=>norm(a)===m[1].trim()));
  const capital=cleanValue(m[2]);
@@ -206,7 +206,7 @@ const rememberCapitalFact=fact=>{
 };
 const capitalAnswer=text=>{
  const n=norm(text);
- if(!/عاصم(?:ة|ه)/.test(n)||!/(?:^|\\s)(?:ما|ايه|اي|هل)(?:\\s|$)/.test(n)&&!/[؟?]/.test(String(text)))return null;
+ if(!/عاصم(?:ة|ه)/.test(n)||!/(?:^|\s)(?:ما|ايه|اي|هل)(?:\s|$)/.test(n)&&!/[؟?]/.test(String(text)))return null;
  const matches=capitalCatalog.filter(c=>c.aliases.some(a=>n.includes(norm(a))));
  if(!matches.length)return null;
  const unique=[...new Map(matches.map(c=>[norm(c.country),c])).values()];
