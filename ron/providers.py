@@ -6,8 +6,10 @@ injected later without changing the core, and credentials stay outside source.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import ipaddress
 import json
 import os
+from urllib.parse import urlsplit
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -43,6 +45,40 @@ class LocalTeachingProvider:
         )
 
 @dataclass(frozen=True)
+def _validate_local_endpoint(endpoint: str) -> None:
+    """Reject remote endpoints: this adapter is deliberately local-only."""
+    try:
+        parsed = urlsplit(str(endpoint))
+        hostname = parsed.hostname
+        port = parsed.port  # Also validates malformed port syntax.
+    except (TypeError, ValueError) as exc:
+        raise ValueError("local model endpoint must be a valid local HTTP URL") from exc
+
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("local model endpoint must be a valid local HTTP URL")
+
+    normalized_host = hostname.rstrip(".").lower()
+    is_loopback = normalized_host == "localhost"
+    try:
+        is_loopback = is_loopback or ipaddress.ip_address(normalized_host).is_loopback
+    except ValueError:
+        # Deliberately do not resolve arbitrary DNS names: they could point to
+        # a public service or change between validation and connection.
+        pass
+
+    if not is_loopback:
+        raise ValueError(
+            "remote model endpoints are disabled; use localhost or a loopback IP"
+        )
+
+
 class LocalHTTPModelProvider:
     """Call a model running locally through an OpenAI-compatible HTTP API.
 
@@ -54,6 +90,13 @@ class LocalHTTPModelProvider:
     endpoint: str = "http://127.0.0.1:11434/v1/chat/completions"
     model: str = "local-model"
     timeout: float = 120.0
+
+    def __post_init__(self) -> None:
+        _validate_local_endpoint(self.endpoint)
+        if not self.model.strip():
+            raise ValueError("local model name cannot be empty")
+        if not 0 < self.timeout <= 600:
+            raise ValueError("local model timeout must be between 0 and 600 seconds")
 
     @classmethod
     def from_environment(cls) -> "LocalHTTPModelProvider":
