@@ -96,6 +96,7 @@ def main() -> None:
     parser.add_argument("--min-pass-rate", type=float, default=0.80)
     parser.add_argument("--min-language-pass-rate", type=float, default=0.80)
     parser.add_argument("--expected-case-count", type=int, default=300)
+    parser.add_argument("--expected-question-families", type=int, default=100)
     args = parser.parse_args()
 
     import torch
@@ -108,6 +109,11 @@ def main() -> None:
     case_ids = [str(case.get("id", "")).strip() for case in cases]
     if any(not case_id for case_id in case_ids) or len(set(case_ids)) != len(case_ids):
         raise SystemExit("Every evaluation case must have a non-empty unique id.")
+    family_ids = {re.sub(r"_v\\d+$", "", case_id) for case_id in case_ids}
+    if len(family_ids) != args.expected_question_families:
+        raise SystemExit(
+            f"Expected exactly {args.expected_question_families} question families; found {len(family_ids)}."
+        )
     language_counts = {
         language: sum(classify_language(case) == language for case in cases)
         for language in ("ar", "en")
