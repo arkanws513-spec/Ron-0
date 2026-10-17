@@ -77,6 +77,12 @@ def test_promotion_accepts_only_a_matching_candidate_that_passed_both_gates(tmp_
         "parameter_count": 11_000_000,
         "case_count": 20,
         "critical_case_count": 8,
+        "evaluation_mode": "neural_only",
+        "min_language_pass_rate": 0.80,
+        "language_metrics": {
+            "ar": {"case_count": 10, "pass_rate": 0.90},
+            "en": {"case_count": 10, "pass_rate": 0.90},
+        },
     }), encoding="utf-8")
     metrics_path.write_text(json.dumps({"validation_loss_improved": True}), encoding="utf-8")
     allowed, reason = validate_promotion(candidate, report_path, metrics_path)
@@ -123,6 +129,12 @@ def test_repository_blind_evaluation_set_has_unique_ids_and_required_coverage():
     assert {"hard300_001_v1", "hard300_001_v2", "hard300_100_v3"} <= ids
     assert len(cases) == 300
     assert sum(bool(case.get("critical")) for case in cases) >= 40
+    from scripts.evaluate_native_checkpoint import classify_language
+    language_counts = {
+        language: sum(classify_language(case) == language for case in cases)
+        for language in ("ar", "en")
+    }
+    assert language_counts == {"ar": 150, "en": 150}
 
 
 def test_promotion_rejects_a_pass_report_with_insufficient_evaluation_coverage(tmp_path):

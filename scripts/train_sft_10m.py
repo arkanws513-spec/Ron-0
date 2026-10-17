@@ -78,7 +78,9 @@ def encode_examples(examples: list[str], vocab: dict[str, int]):
                 response_mask.append(assistant_role and position >= response_start)
             newline_id = vocab.get("\n", unknown_id)
             tokens.append(newline_id)
-            response_mask.append(False)
+            # Teach Ron to terminate each answer. Without this target the model
+            # learns answer characters but receives no direct signal to stop.
+            response_mask.append(assistant_role)
         # Blank-line separators are not prediction targets.
         tokens.append(vocab.get("\n", unknown_id))
         response_mask.append(False)

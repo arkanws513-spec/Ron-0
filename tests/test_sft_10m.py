@@ -14,7 +14,9 @@ def test_sft_masks_user_text_and_trains_only_ron_response_characters():
     assistant_start = user_end + 1
     response_start = assistant_start + len("Ron: ")
     assert not mask[:response_start].any()
-    assert mask[response_start:assistant_start + len("Ron: Check evidence before trusting a claim.")].all()
+    answer_end = assistant_start + len("Ron: Check evidence before trusting a claim.")
+    assert mask[response_start:answer_end].all()
+    assert mask[answer_end]  # the newline is the assistant-turn stop target
     assert unknown == 0
     assert len(tokens) >= total
 
@@ -38,7 +40,9 @@ def test_sft_preserves_line_boundaries_and_masks_arabic_user_turns():
     assistant_start = user_end + 1
     response_start = assistant_start + len("رون: ")
     assert not mask[:response_start].any()
-    assert mask[response_start:assistant_start + len("رون: الناتج ثمانية.")].all()
+    answer_end = assistant_start + len("رون: الناتج ثمانية.")
+    assert mask[response_start:answer_end].all()
+    assert mask[answer_end]  # Arabic answers must also learn to stop
     assert unknown == 0
     assert len(tokens) > len(example)
 

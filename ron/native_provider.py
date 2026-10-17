@@ -17,7 +17,9 @@ from .generation_quality import guard_generated_text
 class NativeCheckpointProvider:
     """Load Ron's own trained checkpoint and generate from its character vocabulary."""
 
-    def __init__(self, checkpoint_path: str | Path | None = None) -> None:
+    def __init__(self, checkpoint_path: str | Path | None = None, *, neural_only: bool = False) -> None:
+        # Evaluation can bypass curated rules/retrieval to measure the neural generator itself.
+        self.neural_only = bool(neural_only)
         configured_path = checkpoint_path or os.environ.get("RON_NATIVE_CHECKPOINT_PATH")
         checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
         if configured_path:
@@ -224,7 +226,7 @@ class NativeCheckpointProvider:
                 metadata={"runtime": "ron-0", "provider": "native-checkpoint"},
             )
 
-        known_answer = self._known_core_answer(request, user_text)
+        known_answer = None if self.neural_only else self._known_core_answer(request, user_text)
         if known_answer is not None:
             return ModelResponse(
                 content=known_answer,
@@ -245,7 +247,7 @@ class NativeCheckpointProvider:
                 },
             )
 
-        retrieved = self._retrieve_curated_answer(user_text)
+        retrieved = None if self.neural_only else self._retrieve_curated_answer(user_text)
         if retrieved is not None:
             answer, score = retrieved
             return ModelResponse(
@@ -329,6 +331,7 @@ class NativeCheckpointProvider:
                 "checkpoint_source": self.checkpoint_source,
                 "external_model_used": False,
                 "native_generated_answer_rejected": generation_rejected,
+                "neural_only_generation": self.neural_only,
                 "generation_quality_fallback": generation_rejected,
             },
         )
