@@ -4,6 +4,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     RON_HOST=0.0.0.0 \
     RON_CPU_THREADS=4 \
+    RON_MODEL_MAX_TOKENS=256 \
     RON_MODEL_ID=Qwen/Qwen2.5-0.5B-Instruct-GGUF \
     RON_MODEL_FILE=qwen2.5-0.5b-instruct-q4_k_m.gguf
 
