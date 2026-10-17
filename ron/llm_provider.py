@@ -23,7 +23,7 @@ class QwenChatProvider:
     def __init__(self, *, model=None, model_path: str | Path | None = None) -> None:
         self.model_id = os.getenv("RON_MODEL_ID", DEFAULT_REPO)
         self.filename = os.getenv("RON_MODEL_FILE", DEFAULT_FILE)
-        self.max_tokens = min(512, max(32, int(os.getenv("RON_MAX_NEW_TOKENS", "256"))))
+        self.max_tokens = min(512, max(32, int(os.getenv("RON_MODEL_MAX_TOKENS", "256"))))
         self.context_size = min(8192, max(1024, int(os.getenv("RON_CONTEXT_SIZE", "4096"))))
         self._lock = threading.RLock()
 
