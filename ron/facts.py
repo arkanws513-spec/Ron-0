@@ -138,7 +138,7 @@ def extract_facts(text: str) -> list[ExtractedFact]:
         value = natural_name.group(1).strip(" .،,؛;؟؟")
         first_word = value.split(maxsplit=1)[0] if value else ""
         if first_word not in _NON_NAME_STARTS and not re.match(
-            r"^(?:عمري|سني|احب|لا احب|بسالك|بسألك|اسالك|اسألك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\\b",
+            r"^(?:عمري|سني|احب|لا احب|بسالك|بسألك|اسالك|اسألك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\b",
             value,
         ):
             if _valid_name_candidate(value):
