@@ -1,4 +1,4 @@
-from scripts.evaluate_qwen_lora import assess, contains_text, normalize
+from scripts.evaluate_qwen_lora import assess, classify_language, contains_text, normalize
 
 
 def test_ascii_required_words_use_token_boundaries():
@@ -37,3 +37,9 @@ def test_evaluator_detects_forbidden_ascii_word_at_boundary():
     })
     assert result["passed"] is True
     assert result["forbidden_found"] == []
+
+
+
+def test_explicit_language_label_overrides_prompt_heuristic():
+    assert classify_language({"language": "ar", "prompt": "What is 2+2?"}) == "ar"
+    assert classify_language({"language": "en", "prompt": "ما عاصمة مصر؟"}) == "en"
