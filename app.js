@@ -181,10 +181,48 @@ const arithmeticMatch=text=>{
 const isCapabilityQuestion=n=>/(?:ماذا تستطيع ان تفعل|ماذا تستطيع|ماذا يمكنك ان تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|بماذا تستطيع مساعدتي|كيف يمكنك مساعدتي|كيف تساعدني|ما الذي يمكنك مساعدتي فيه)/.test(n);
 const capabilityAnswer=()=>"أستطيع إجراء محادثة، والإجابة عن الأسئلة البسيطة، وشرح الأفكار، والمساعدة في الحسابات الأساسية، والاحتفاظ بالمعلومات التي تعلّمني إياها صراحةً في ذاكرة هذا الجهاز. ما زالت قدراتي محدودة، وقد أخطئ في الأسئلة المعقدة؛ ولا أملك حاليًا قدرة مضمونة على تنفيذ كل مهمة أو البحث في الإنترنت من تلقاء نفسي.";
 const arithmeticAnswer=text=>{const m=arithmeticMatch(text);if(!m)return null;if(m.error)return m.error;const op=({"*":"×","x":"×","/":"÷","+":"+","-":"−","×":"×","÷":"÷"})[m.op]||m.op;const fmt=n=>new Intl.NumberFormat("en-US",{maximumFractionDigits:10,useGrouping:true}).format(n);return fmt(m.left)+" "+op+" "+fmt(m.right)+" = "+fmt(m.value);};
+const capitalCatalog=[
+ {country:"مصر",aliases:["مصر"],capital:"القاهرة"},
+ {country:"فرنسا",aliases:["فرنسا"],capital:"باريس"},
+ {country:"إنجلترا",aliases:["انجلترا"],capital:"لندن"},
+ {country:"المملكة المتحدة",aliases:["المملكة المتحدة","المملكه المتحده","بريطانيا"],capital:"لندن"}
+];
+const savedCapitalFact=country=>lessons.slice().reverse().find(x=>x&&x.kind==="relation"&&x.relation==="capital_of"&&norm(x.object)===norm(country));
+const extractCapitalFact=text=>{
+ const raw=String(text||"").trim();
+ if(/[؟?]/.test(raw))return null;
+ const s=norm(raw).replace(/[،,.;!]+$/,"").trim();
+ const m=s.match(/^عاصم(?:ة|ه)\\s+(.+?)\\s+(?:هي|تكون|تتمثل في)\\s+(.+)$/);
+ if(!m)return null;
+ const country=capitalCatalog.find(x=>x.aliases.some(a=>norm(a)===m[1].trim()));
+ const capital=cleanValue(m[2]);
+ if(!country||!capital||capital.length>50)return null;
+ return {country:country.country,capital};
+};
+const rememberCapitalFact=fact=>{
+ lessons=lessons.filter(x=>!(x&&x.kind==="relation"&&x.relation==="capital_of"&&norm(x.object)===norm(fact.country)));
+ lessons.push({key:"capital_of:"+norm(fact.country),kind:"relation",relation:"capital_of",subject:fact.capital,object:fact.country,text:"عاصمة "+fact.country+" هي "+fact.capital,at:new Date().toISOString()});
+ save();
+};
+const capitalAnswer=text=>{
+ const n=norm(text);
+ if(!/عاصم(?:ة|ه)/.test(n)||!/(?:^|\\s)(?:ما|ايه|اي|هل)(?:\\s|$)/.test(n)&&!/[؟?]/.test(String(text)))return null;
+ const matches=capitalCatalog.filter(c=>c.aliases.some(a=>n.includes(norm(a))));
+ if(!matches.length)return null;
+ const unique=[...new Map(matches.map(c=>[norm(c.country),c])).values()];
+ return unique.map(c=>{
+  const learned=savedCapitalFact(c.country);
+  return "عاصمة "+c.country+" هي "+(learned?.subject||c.capital);
+ }).join("، ")+".";
+};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),fact=facts[0]||null;
  const calculation=arithmeticAnswer(t);
  if(calculation)return calculation;
+ const capitalFact=extractCapitalFact(t);
+ if(capitalFact){rememberCapitalFact(capitalFact);return "تم. سأحفظ أن عاصمة "+capitalFact.country+" هي "+capitalFact.capital+" لاستخدامها في هذه المحادثة وعلى هذا الجهاز."}
+ const capitals=capitalAnswer(t);
+ if(capitals)return capitals;
  if(isCapabilityQuestion(n))return capabilityAnswer();
  if(/^(?:لماذا|ليه|لما ذا)[؟?]*$/.test(n)){
   const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
@@ -263,7 +301,7 @@ const localLessonAnswer=n=>{
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  let r=null;
  const n=norm(t);
- const localMemoryCommand=arithmeticMatch(t)!==null||isCapabilityQuestion(n)||extractFacts(t).length>0||/^(?:مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا|ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)(?:[؟? !،,.]*)$/.test(t.trim())||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
+ const localMemoryCommand=arithmeticMatch(t)!==null||isCapabilityQuestion(n)||extractCapitalFact(t)!==null||capitalAnswer(t)!==null||extractFacts(t).length>0||/^(?:مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا|ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)(?:[؟? !،,.]*)$/.test(t.trim())||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
  if(localMemoryCommand){r=answer(t);}else{
   const generated=await queryRonLocalModel(t);
   if(generated&&generated.reply)r=generated.reply;
