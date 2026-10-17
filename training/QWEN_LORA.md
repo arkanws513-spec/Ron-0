@@ -2,7 +2,7 @@
 
 ## Target and boundary
 
-The currently deployed Ron HTTP service loads **Qwen2.5-0.5B-Instruct GGUF** through `llama-cpp-python`. The old `Ron-10M` character-level Transformer experiment is a different model and is **not** the model currently serving conversations. This track fine-tunes the matching Hugging Face Qwen base model with LoRA; it does not touch live weights.
+The only supported training target in this repository is the same **Qwen2.5-0.5B-Instruct** model used by Ron's live HTTP service through `llama-cpp-python`. This track fine-tunes that matching Hugging Face base model with LoRA; it does not train a separate Ron-native model or touch live weights.
 
 The output is an adapter candidate only. Training never changes Railway settings or replaces the production model automatically.
 
