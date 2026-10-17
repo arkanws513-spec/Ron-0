@@ -55,3 +55,38 @@ def test_qwen3_teacher_is_explicit_and_local(monkeypatch):
     teacher = Qwen3TeacherProvider.from_environment()
     assert teacher.model == "qwen3:1.7b"
     assert teacher.endpoint.startswith("http://127.0.0.1:")
+
+
+def test_local_http_provider_rejects_remote_endpoints():
+    import pytest
+
+    from ron.providers import LocalHTTPModelProvider
+
+    for endpoint in (
+        "https://api.example.com/v1/chat/completions",
+        "http://192.0.2.10:11434/v1/chat/completions",
+        "http://user:password@127.0.0.1:11434/v1/chat/completions",
+        "file:///etc/passwd",
+    ):
+        with pytest.raises(ValueError):
+            LocalHTTPModelProvider(endpoint=endpoint)
+
+
+def test_local_http_provider_accepts_loopback_endpoints():
+    from ron.providers import LocalHTTPModelProvider
+
+    assert LocalHTTPModelProvider(endpoint="http://localhost:11434/v1/chat/completions")
+    assert LocalHTTPModelProvider(endpoint="http://[::1]:11434/v1/chat/completions")
+
+
+def test_local_http_provider_rejects_invalid_timeout_and_empty_model():
+    import pytest
+
+    from ron.providers import LocalHTTPModelProvider
+
+    with pytest.raises(ValueError):
+        LocalHTTPModelProvider(timeout=0)
+    with pytest.raises(ValueError):
+        LocalHTTPModelProvider(timeout=601)
+    with pytest.raises(ValueError):
+        LocalHTTPModelProvider(model=" ")
