@@ -1,0 +1,7 @@
+# Training-only dependencies. Do not install these in the lightweight Railway inference image.
+torch>=2.3
+transformers>=4.46,<5
+peft>=0.13
+accelerate>=1.1
+safetensors>=0.4
+huggingface-hub>=0.25,<2
