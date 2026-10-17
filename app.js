@@ -148,7 +148,7 @@ const queryRonLocalModel=async text=>{
  }catch(error){console.error("Ron local Qwen API request failed.",error);return null;}
 };
 const answer=t=>{
- const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ const n=norm(t),facts=extractFacts(t),fact=facts[0]||null;
  if(/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(n))return "نعم، بالتأكيد. ما الفكرة التي تريد أن أشرحها لك؟";
  if(/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(n)){
   const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
@@ -171,7 +171,7 @@ const answer=t=>{
  if(/^(ماذا تستطيع|ايه اللي تقدر تعمله|ماذا يمكنك ان تفعل|ماذا يمكنك|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(n))return "أستطيع فهم المحادثة، حفظ ما تعلّمني إياه، استخدام معرفتي المحلية، إجراء استدلال بسيط، والبحث في الإنترنت عندما أحتاج معلومة غير موجودة لدي. وويمكنني الاعتماد على نواتي المحلية والبحث في الإنترنت عند الحاجة.";
  if(/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً)$/.test(n))return "شكرًا! أنا جاهز نكمل.";
  if(/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n))return teach(t);
- if(ronFacts.length&&!isRonNameQuestion(n)&&!isRonAgeQuestion(n)&&!isNameQuestion(n)&&!isAgeQuestion(n)){ronFacts.forEach(x=>saveFact(x.key,x.text));const rn=ronFacts.find(x=>x.key==="ron.name"),ra=ronFacts.find(x=>x.key==="ron.age");if(rn&&ra)return "تم. حفظت أن اسمي "+rn.text+" وأن عمري "+ra.text+".";if(ra)return "تم. حفظت أن عمري "+ra.text+".";return "تم. حفظت أن اسمي "+rn.text+".";}
+
  if(/^(?:نعم\s+)?(?:علق\s+عليه|علّق\s+عليه|اشرح\s+كلامي|حلل\s+كلامي)$/.test(n)){
   const prior=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user"&&!/^(?:مظبوط|صح|تمام|نعم|ايوه|أيوه|اه|اها|ممتاز|جميل|شكرا|شكرًا|نعم علق عليه|علق عليه|اشرح كلامي|حلل كلامي)$/.test(norm(m.text)));
   const savedName=lessons.find(x=>x.key==="user.name");
@@ -222,7 +222,7 @@ const localLessonAnswer=n=>{
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  let r=null;
  const n=norm(t);
- const localMemoryCommand=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
+ const localMemoryCommand=extractFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
  if(localMemoryCommand){r=answer(t);}else{
   const generated=await queryRonLocalModel(t);
   if(generated&&generated.reply)r=generated.reply;
