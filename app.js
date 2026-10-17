@@ -241,7 +241,7 @@ const localLessonAnswer=n=>{
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  let r=null;
  const n=norm(t);
- const localMemoryCommand=extractFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
+ const localMemoryCommand=extractFacts(t).length>0||/^(?:مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا|ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)(?:[؟? !،,.]*)$/.test(t.trim())||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
  if(localMemoryCommand){r=answer(t);}else{
   const generated=await queryRonLocalModel(t);
   if(generated&&generated.reply)r=generated.reply;
