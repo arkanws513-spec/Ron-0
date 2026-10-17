@@ -166,8 +166,30 @@ const nativeReplyLooksUsable=(reply)=>typeof reply==="string"&&reply.trim().leng
 const explainPreviousReply=()=>{const previous=messages.slice(0,-1).reverse().find(m=>m.role==="ron");return previous?"كان ردي السابق: "+previous.text:"لم أرسل ردًا سابقًا في هذه المحادثة بعد.";};
 const commentOnPreviousUserMessage=()=>{const previous=messages.slice(0,-1).reverse().find(m=>m.role==="user");return previous?"أرى أنك قلت: «"+previous.text+"». ما الجانب الذي تريدني أن أعلّق عليه؟":"لا توجد رسالة سابقة لأعلّق عليها بعد.";};
 const teach=t=>"أستطيع حفظ معلومة واضحة عندما تكتب: علّم رون: ثم اكتب المعلومة.";
+// Deterministic handling for basic arithmetic and honest descriptions of Ron's current abilities.
+const arithmeticMatch=text=>{
+ const s=String(text||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/,/g,"").trim();
+ const m=s.match(/(-?\d+(?:\.\d+)?)\s*([+\-×x*÷/])\s*(-?\d+(?:\.\d+)?)/i);
+ if(!m)return null;
+ const cue=/^(?:كم يساوي|احسب|ما ناتج|ناتج|احسب لي|كم حاصل|ما حاصل)/i.test(s)||s===m[0]||s===m[0]+"="||s===m[0]+"؟";
+ if(!cue)return null;
+ const left=Number(m[1]),right=Number(m[3]);let value;
+ switch(m[2]){case "+":value=left+right;break;case "-":value=left-right;break;case "*":case "×":case "x":value=left*right;break;case "/":case "÷":if(right===0)return {error:"لا يمكن القسمة على صفر."};value=left/right;break;default:return null;}
+ if(!Number.isFinite(value))return null;
+ return {left,right,op:m[2],value};
+};
+const isCapabilityQuestion=n=>/(?:ماذا تستطيع ان تفعل|ماذا تستطيع|ماذا يمكنك ان تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|بماذا تستطيع مساعدتي|كيف يمكنك مساعدتي|كيف تساعدني|ما الذي يمكنك مساعدتي فيه)/.test(n);
+const capabilityAnswer=()=>"أستطيع إجراء محادثة، والإجابة عن الأسئلة البسيطة، وشرح الأفكار، والمساعدة في الحسابات الأساسية، والاحتفاظ بالمعلومات التي تعلّمني إياها صراحةً في ذاكرة هذا الجهاز. ما زالت قدراتي محدودة، وقد أخطئ في الأسئلة المعقدة؛ ولا أملك حاليًا قدرة مضمونة على تنفيذ كل مهمة أو البحث في الإنترنت من تلقاء نفسي.";
+const arithmeticAnswer=text=>{const m=arithmeticMatch(text);if(!m)return null;if(m.error)return m.error;const op=({"*":"×","x":"×","/":"÷","+":"+","-":"−","×":"×","÷":"÷"})[m.op]||m.op;const fmt=n=>new Intl.NumberFormat("en-US",{maximumFractionDigits:10,useGrouping:true}).format(n);return fmt(m.left)+" "+op+" "+fmt(m.right)+" = "+fmt(m.value);};
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),fact=facts[0]||null;
+ const calculation=arithmeticAnswer(t);
+ if(calculation)return calculation;
+ if(isCapabilityQuestion(n))return capabilityAnswer();
+ if(/^(?:لماذا|ليه|لما ذا)[؟?]*$/.test(n)){
+  const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
+  if(previous&&/(?:لا استطيع القيام باي شيء|لا استطيع مساعدتك|لم اتعلم القدرة|لا املك القدرة)/i.test(norm(previous.text)))return "أعتذر، كان ردي السابق خاطئًا ومتناقضًا. أستطيع إجراء محادثة والإجابة عن بعض الأسئلة والحسابات الأساسية، لكن قدراتي ما زالت محدودة.";
+ }
  if(/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(n))return "نعم، بالتأكيد. ما الفكرة التي تريد أن أشرحها لك؟";
  if(/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(n)){
   const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
@@ -241,7 +263,7 @@ const localLessonAnswer=n=>{
 const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({role:"user",text:t});bubble("user",t);input.value="";input.style.height="auto";if(send){send.disabled=true;send.classList?.add("thinking");if(send.dataset)send.dataset.originalText=send.textContent||"إرسال";send.textContent="رون يفكر";}setTimeout(async()=>{try{
  let r=null;
  const n=norm(t);
- const localMemoryCommand=extractFacts(t).length>0||/^(?:مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا|ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)(?:[؟? !،,.]*)$/.test(t.trim())||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
+ const localMemoryCommand=arithmeticMatch(t)!==null||isCapabilityQuestion(n)||extractFacts(t).length>0||/^(?:مرحبا|اهلا|أهلا|السلام عليكم|سلام|هاي|هلا|ازيك|إزيك|كيف حالك|عامل ايه|عامل إيه)(?:[؟? !،,.]*)$/.test(t.trim())||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n)||isNameQuestion(n)||isAgeQuestion(n)||isRonNameQuestion(n)||isRonAgeQuestion(n)||isBothNamesQuestion(n)||isProfileQuestion(n)||n.includes("ماذا تعلمت")||n.includes("ما الذي تعلمته")||n.includes("امسح الذاكره")||n.includes("امسح الذاكرة")||isEgyptCapitalPreference(n);
  if(localMemoryCommand){r=answer(t);}else{
   const generated=await queryRonLocalModel(t);
   if(generated&&generated.reply)r=generated.reply;
