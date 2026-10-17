@@ -60,13 +60,13 @@ def is_degenerate_answer(answer: str) -> bool:
     return is_degenerate_text(answer)
 
 
-def evaluate(checkpoint: Path | None = None) -> dict:
+def evaluate(checkpoint: Path | None = None, *, neural_only: bool = False) -> dict:
     corpus = (ROOT / "training" / "seed_corpus.txt").read_text(encoding="utf-8")
     leaked = [prompt for prompt in BLIND_PROMPTS if prompt in corpus]
     if leaked:
         raise RuntimeError(f"Blind prompts found verbatim in training corpus: {leaked!r}")
 
-    provider = NativeCheckpointProvider(checkpoint)
+    provider = NativeCheckpointProvider(checkpoint, neural_only=neural_only)
     rows = []
     for index, prompt in enumerate(BLIND_PROMPTS, start=1):
         request = ModelRequest(
@@ -85,6 +85,9 @@ def evaluate(checkpoint: Path | None = None) -> dict:
             "degenerate": is_degenerate_answer(answer) or bool(response.metadata.get("native_generated_answer_rejected")),
             "model": response.model,
             "native_weights_loaded": bool(response.metadata.get("native_weights_loaded")),
+            "deterministic_core_response": bool(response.metadata.get("deterministic_core_response", False)),
+            "curated_retrieval_used": bool(response.metadata.get("curated_retrieval_used", False)),
+            "neural_only_generation": bool(response.metadata.get("neural_only_generation", False)),
             "external_model_used": bool(response.metadata.get("external_model_used", False)),
             "checkpoint": response.metadata.get("inference_checkpoint"),
             "selected_training_step": response.metadata.get("selected_training_step"),
@@ -106,6 +109,8 @@ def evaluate(checkpoint: Path | None = None) -> dict:
     quality_gate_passed = anti_degeneration_gate_passed and answer_accuracy >= 0.8 and critical_checks_passed
     return {
         "suite": "ron0-blind-surprise-v1",
+        "inference_mode": "neural_only" if neural_only else "full_provider",
+        "neural_only_requested": neural_only,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "training_corpus_exact_prompt_leaks": len(leaked),
         "case_count": len(rows),
@@ -137,8 +142,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, default=ROOT / "ron" / "checkpoints" / "ron_native_baseline.pt")
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--neural-only", action="store_true", help="Bypass deterministic answers and curated retrieval to evaluate the native neural generator only.")
     args = parser.parse_args()
-    report = evaluate(args.checkpoint)
+    report = evaluate(args.checkpoint, neural_only=args.neural_only)
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
