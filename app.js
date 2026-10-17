@@ -287,6 +287,14 @@ const queryNativeCheckpoint=async text=>{
 };
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
+ if(/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(n))return "نعم، بالتأكيد. ما الفكرة التي تريد أن أشرحها لك؟";
+ if(/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(n)){
+  const previous=messages.slice(0,-1).slice().reverse().find(m=>m.role==="ron");
+  const priorUser=messages.slice(0,-1).slice().reverse().find(m=>m.role==="user");
+  if(previous&&!nativeReplyLooksUsable(previous.text,priorUser?.text||""))return "أعتذر، كان ردي السابق غير واضح. ما الفكرة أو الكلمة التي تريد أن أشرحها ببساطة؟";
+  if(previous)return "هل تقصد ردي السابق؟ أستطيع توضيحه، أو يمكنك تحديد الكلمة التي لم تكن واضحة.";
+  return "ما الكلمة أو الفكرة التي تريد أن أشرحها؟";
+ }
  if(isEgyptCapitalPreference(n)){preferences.shortEgyptCapital=true;savePreferences();return "تم. سأجيب عن عاصمة مصر بكلمة «القاهرة» فقط.";}
  if(isReadinessQuestion(n))return "أيوه، جاهز.";
  if(isWithMeQuestion(n))return "أيوه، أنا معاك. قولّي نكمل منين.";
@@ -353,7 +361,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  let r=null;
  // Deterministic intents run before retrieval so unrelated memories cannot override exact questions.
  const normalizedInput=norm(t);
- const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
+ const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(normalizedInput)||/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
  if(!String(r||"").trim()){
   const core=globalThis.ronCore;
