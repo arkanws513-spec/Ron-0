@@ -76,6 +76,38 @@ def build_turn_examples(transcripts: list[str], max_history: int = 8) -> list[di
     return list(unique.values())
 
 
+def normalize_prompt(text: str) -> str:
+    value = str(text or "").casefold()
+    value = value.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    value = value.replace("ى", "ي").replace("ة", "ه")
+    return re.sub(r"[^\\w\\u0600-\\u06ff]+", " ", value).strip()
+
+
+def exclude_evaluation_overlap(
+    examples: list[dict[str, Any]], cases: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], int]:
+    """Remove exact evaluation prompts from training to reduce avoidable leakage."""
+    held_out = set()
+    for case in cases:
+        if str(case.get("prompt", "")).strip():
+            held_out.add(normalize_prompt(case["prompt"]))
+        for message in case.get("messages") or []:
+            if isinstance(message, dict) and message.get("role") == "user":
+                held_out.add(normalize_prompt(message.get("content", "")))
+    kept = []
+    removed = 0
+    for example in examples:
+        user_prompts = [
+            normalize_prompt(message["content"])
+            for message in example["messages"] if message["role"] == "user"
+        ]
+        if any(prompt and prompt in held_out for prompt in user_prompts):
+            removed += 1
+        else:
+            kept.append(example)
+    return kept, removed
+
+
 def split_by_language(
     examples: list[dict[str, Any]], seed: int = 42, validation_fraction: float = 0.1
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -176,6 +208,11 @@ def main() -> None:
 
     transcripts, source_counts = load_transcripts()
     examples = build_turn_examples(transcripts)
+    eval_cases_path = ROOT / "training" / "qwen_eval_cases.json"
+    excluded_eval_examples = 0
+    if eval_cases_path.is_file():
+        eval_cases = json.loads(eval_cases_path.read_text(encoding="utf-8"))
+        examples, excluded_eval_examples = exclude_evaluation_overlap(examples, eval_cases)
     counts = {language: sum(item["language"] == language for item in examples) for language in ("ar", "en")}
     if counts["ar"] < 100 or counts["en"] < 100:
         raise SystemExit(
@@ -299,6 +336,7 @@ def main() -> None:
         "validation_examples": len(val_data),
         "language_examples": counts,
         "source_dialogue_blocks": source_counts,
+        "exact_evaluation_prompts_excluded": excluded_eval_examples,
         "best_validation_loss": best_loss,
         "elapsed_seconds": round(time.time() - start, 2),
         "note": "Experimental adapter only. It has not been blind-evaluated, merged, converted to GGUF, or deployed.",
