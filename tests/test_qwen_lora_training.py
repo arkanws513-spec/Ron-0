@@ -85,3 +85,26 @@ def test_evaluation_overlap_exclusion_handles_arabic_and_punctuation():
     assert removed == 2
     assert len(kept) == 1
     assert kept[0]["messages"][0]["content"] == "Explain photosynthesis"
+
+
+
+def test_validation_split_keeps_same_root_prompt_in_one_partition():
+    examples = []
+    for language in ("ar", "en"):
+        for prompt_index in range(12):
+            for turn_index in range(3):
+                examples.append({
+                    "language": language,
+                    "messages": [
+                        {"role": "user", "content": f"root question {language} {prompt_index}"},
+                        {"role": "assistant", "content": f"answer {turn_index}"},
+                    ],
+                })
+    train, validation = split_by_language(examples, seed=11)
+    def roots(items):
+        return {
+            (item["language"], item["messages"][0]["content"])
+            for item in items
+        }
+    assert roots(train).isdisjoint(roots(validation))
+    assert {item["language"] for item in validation} == {"ar", "en"}
