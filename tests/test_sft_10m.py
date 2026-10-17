@@ -84,10 +84,10 @@ def test_sft_mixed_batch_achieves_target_arabic_fraction_with_small_batches():
 def test_sft_combines_arabic_corpora_and_removes_exact_duplicates():
     from scripts.train_sft_10m import combine_unique_examples
 
-    seed = "المستخدم: ما عاصمة مصر؟\\nرون: القاهرة."
-    oasst = "المستخدم: ما عاصمة مصر؟\\nرون: القاهرة.\\n\\nالمستخدم: ما معنى الدليل؟\\nرون: معلومة يمكن فحصها."
+    seed = "المستخدم: ما عاصمة مصر؟\nرون: القاهرة."
+    oasst = "المستخدم: ما عاصمة مصر؟\nرون: القاهرة.\n\nالمستخدم: ما معنى الدليل؟\nرون: معلومة يمكن فحصها."
     combined = combine_unique_examples(seed, oasst)
-    examples = [part for part in combined.strip().split("\\n\\n") if part]
+    examples = [part for part in combined.strip().split("\n\n") if part]
     assert len(examples) == 2
     assert examples[0] == seed
     assert "ما معنى الدليل؟" in examples[1]
