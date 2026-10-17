@@ -51,3 +51,31 @@ def test_oasst_rejected_or_non_english_root_is_skipped():
     }
     assert list(iter_conversation_examples(rejected)) == []
     assert list(iter_conversation_examples(non_english)) == []
+
+
+
+def test_oasst_arabic_dialogue_is_exported_with_arabic_role_labels():
+    tree = {
+        "prompt": {
+            "role": "prompter",
+            "lang": "ar",
+            "text": "اشرح لماذا نحتاج إلى التحقق من الأدلة قبل استخلاص النتائج بطريقة بسيطة.",
+            "deleted": False,
+            "review_result": True,
+            "labels": {},
+            "replies": [{
+                "role": "assistant",
+                "lang": "ar",
+                "text": "يساعد التحقق من الأدلة على التمييز بين النتيجة المدعومة والتخمين.",
+                "deleted": False,
+                "review_result": True,
+                "labels": {},
+                "replies": [],
+            }],
+        }
+    }
+    arabic = list(iter_conversation_examples(tree, language="ar"))
+    assert len(arabic) == 1
+    assert arabic[0].startswith("المستخدم: ")
+    assert "\\nرون: " in arabic[0]
+    assert list(iter_conversation_examples(tree, language="en")) == []
