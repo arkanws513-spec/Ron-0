@@ -54,7 +54,7 @@ class QwenChatProvider:
             model_path=self.model_path,
             n_ctx=self.context_size,
             n_threads=max(1, int(os.getenv("RON_CPU_THREADS", str(min(4, os.cpu_count() or 2))))),
-            n_batch=128,
+            n_batch=64,
             n_gpu_layers=0,
             verbose=False,
         )
