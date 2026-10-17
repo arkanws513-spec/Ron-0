@@ -25,7 +25,7 @@ python scripts/download_oasst1_english.py
 python scripts/train_qwen_lora.py --steps 500 --batch-size 1 --gradient-accumulation 8 --max-sequence-length 512
 ```
 
-The trainer refuses to start on CPU unless `--allow-cpu` is explicitly supplied. It requires at least 100 assistant-turn examples in each language, uses a deterministic per-language train/validation split, masks prompt tokens from the SFT loss, and saves the best validation-loss adapter under `artifacts/qwen-lora-candidate/adapter`.
+The trainer refuses to start on CPU unless `--allow-cpu` is explicitly supplied. It requires at least 100 assistant-turn examples in each language, uses a deterministic per-language split grouped by the root user prompt (to prevent overlapping dialogue prefixes from leaking across train/validation), masks prompt tokens from the SFT loss, and saves the best validation-loss adapter under `artifacts/qwen-lora-candidate/adapter`.
 
 ## Blind evaluation
 
@@ -37,7 +37,7 @@ python scripts/evaluate_qwen_lora.py \
   --min-pass-rate 0.80 --min-language-pass-rate 0.80
 ```
 
-The gate requires exactly 300 cases, at least 40 critical cases, at least 80% overall and in each language, and the same minimum on critical cases. This is a necessary filter, not a proof of general intelligence. Review failures and compare the base model and candidate on the same cases before promotion.
+The gate requires exactly 300 cases with unique IDs and at least 100 cases per language, at least 40 critical cases, at least 80% overall and in each language, and the same minimum on critical cases. This is a necessary filter, not a proof of general intelligence. Review failures and compare the base model and candidate on the same cases before promotion.
 
 ## Merge and export
 
