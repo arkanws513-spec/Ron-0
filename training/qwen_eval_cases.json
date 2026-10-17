@@ -5,7 +5,8 @@
     "contains": [
       "Cairo"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_001_v2",
@@ -13,7 +14,8 @@
     "contains": [
       "Cairo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_001_v3",
@@ -21,7 +23,8 @@
     "contains": [
       "Cairo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_002_v1",
@@ -29,7 +32,8 @@
     "contains": [
       "Paris"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_002_v2",
@@ -37,7 +41,8 @@
     "contains": [
       "Paris"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_002_v3",
@@ -45,7 +50,8 @@
     "contains": [
       "Paris"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_003_v1",
@@ -53,7 +59,8 @@
     "contains": [
       "London"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_003_v2",
@@ -61,7 +68,8 @@
     "contains": [
       "London"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_003_v3",
@@ -69,7 +77,8 @@
     "contains": [
       "London"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_004_v1",
@@ -77,7 +86,8 @@
     "contains": [
       "Tokyo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_004_v2",
@@ -85,7 +95,8 @@
     "contains": [
       "Tokyo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_004_v3",
@@ -93,7 +104,8 @@
     "contains": [
       "Tokyo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_005_v1",
@@ -101,7 +113,8 @@
     "contains": [
       "Rome"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_005_v2",
@@ -109,7 +122,8 @@
     "contains": [
       "Rome"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_005_v3",
@@ -117,7 +131,8 @@
     "contains": [
       "Rome"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_006_v1",
@@ -125,7 +140,8 @@
     "contains": [
       "Riyadh"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_006_v2",
@@ -133,7 +149,8 @@
     "contains": [
       "Riyadh"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_006_v3",
@@ -141,7 +158,8 @@
     "contains": [
       "Riyadh"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_007_v1",
@@ -149,7 +167,8 @@
     "contains": [
       "Rabat"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_007_v2",
@@ -157,7 +176,8 @@
     "contains": [
       "Rabat"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_007_v3",
@@ -165,7 +185,8 @@
     "contains": [
       "Rabat"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_008_v1",
@@ -173,7 +194,8 @@
     "contains": [
       "Amman"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_008_v2",
@@ -181,7 +203,8 @@
     "contains": [
       "Amman"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_008_v3",
@@ -189,7 +212,8 @@
     "contains": [
       "Amman"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_009_v1",
@@ -197,7 +221,8 @@
     "contains": [
       "Ottawa"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_009_v2",
@@ -205,7 +230,8 @@
     "contains": [
       "Ottawa"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_009_v3",
@@ -213,7 +239,8 @@
     "contains": [
       "Ottawa"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_010_v1",
@@ -221,7 +248,8 @@
     "contains": [
       "Canberra"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_010_v2",
@@ -229,7 +257,8 @@
     "contains": [
       "Canberra"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_010_v3",
@@ -237,7 +266,8 @@
     "contains": [
       "Canberra"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_011_v1",
@@ -245,7 +275,8 @@
     "contains": [
       "56"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_011_v2",
@@ -253,7 +284,8 @@
     "contains": [
       "56"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_011_v3",
@@ -261,7 +293,8 @@
     "contains": [
       "56"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_012_v1",
@@ -269,7 +302,8 @@
     "contains": [
       "63"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_012_v2",
@@ -277,7 +311,8 @@
     "contains": [
       "63"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_012_v3",
@@ -285,7 +320,8 @@
     "contains": [
       "63"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_013_v1",
@@ -293,7 +329,8 @@
     "contains": [
       "12"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_013_v2",
@@ -301,7 +338,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_013_v3",
@@ -309,7 +347,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_014_v1",
@@ -317,7 +356,8 @@
     "contains": [
       "25"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_014_v2",
@@ -325,7 +365,8 @@
     "contains": [
       "25"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_014_v3",
@@ -333,7 +374,8 @@
     "contains": [
       "25"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_015_v1",
@@ -341,7 +383,8 @@
     "contains": [
       "45"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_015_v2",
@@ -349,7 +392,8 @@
     "contains": [
       "45"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_015_v3",
@@ -357,7 +401,8 @@
     "contains": [
       "45"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_016_v1",
@@ -365,7 +410,8 @@
     "contains": [
       "53"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_016_v2",
@@ -373,7 +419,8 @@
     "contains": [
       "53"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_016_v3",
@@ -381,7 +428,8 @@
     "contains": [
       "53"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_017_v1",
@@ -389,7 +437,8 @@
     "contains": [
       "x = 3"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_017_v2",
@@ -397,7 +446,8 @@
     "contains": [
       "x = 3"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_017_v3",
@@ -405,7 +455,8 @@
     "contains": [
       "x = 3"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_018_v1",
@@ -413,7 +464,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_018_v2",
@@ -421,7 +473,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_018_v3",
@@ -429,7 +482,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_019_v1",
@@ -437,7 +491,8 @@
     "contains": [
       "144"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_019_v2",
@@ -445,7 +500,8 @@
     "contains": [
       "144"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_019_v3",
@@ -453,7 +509,8 @@
     "contains": [
       "144"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_020_v1",
@@ -461,7 +518,8 @@
     "contains": [
       "9"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_020_v2",
@@ -469,7 +527,8 @@
     "contains": [
       "9"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_020_v3",
@@ -477,7 +536,8 @@
     "contains": [
       "9"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_021_v1",
@@ -485,7 +545,8 @@
     "contains": [
       "Mercury"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_021_v2",
@@ -493,7 +554,8 @@
     "contains": [
       "Mercury"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_021_v3",
@@ -501,7 +563,8 @@
     "contains": [
       "Mercury"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_022_v1",
@@ -509,7 +572,8 @@
     "contains": [
       "Jupiter"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_022_v2",
@@ -517,7 +581,8 @@
     "contains": [
       "Jupiter"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_022_v3",
@@ -525,7 +590,8 @@
     "contains": [
       "Jupiter"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_023_v1",
@@ -533,7 +599,8 @@
     "contains": [
       "المريخ"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_023_v2",
@@ -541,7 +608,8 @@
     "contains": [
       "المريخ"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_023_v3",
@@ -549,7 +617,8 @@
     "contains": [
       "المريخ"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_024_v1",
@@ -557,7 +626,8 @@
     "contains": [
       "oxygen"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_024_v2",
@@ -565,7 +635,8 @@
     "contains": [
       "oxygen"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_024_v3",
@@ -573,7 +644,8 @@
     "contains": [
       "oxygen"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_025_v1",
@@ -581,7 +653,8 @@
     "contains": [
       "H2O"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_025_v2",
@@ -589,7 +662,8 @@
     "contains": [
       "H2O"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_025_v3",
@@ -597,7 +671,8 @@
     "contains": [
       "H2O"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_026_v1",
@@ -605,7 +680,8 @@
     "contains": [
       "0"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_026_v2",
@@ -613,7 +689,8 @@
     "contains": [
       "0"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_026_v3",
@@ -621,7 +698,8 @@
     "contains": [
       "0"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_027_v1",
@@ -629,7 +707,8 @@
     "contains": [
       "heart"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_027_v2",
@@ -637,7 +716,8 @@
     "contains": [
       "heart"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_027_v3",
@@ -645,7 +725,8 @@
     "contains": [
       "heart"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_028_v1",
@@ -653,7 +734,8 @@
     "contains": [
       "brain"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_028_v2",
@@ -661,7 +743,8 @@
     "contains": [
       "brain"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_028_v3",
@@ -669,7 +752,8 @@
     "contains": [
       "brain"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_029_v1",
@@ -677,7 +761,8 @@
     "contains": [
       "gravity"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_029_v2",
@@ -685,7 +770,8 @@
     "contains": [
       "gravity"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_029_v3",
@@ -693,7 +779,8 @@
     "contains": [
       "gravity"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_030_v1",
@@ -701,7 +788,8 @@
     "contains": [
       "no"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_030_v2",
@@ -709,7 +797,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_030_v3",
@@ -717,7 +806,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_031_v1",
@@ -725,7 +815,8 @@
     "contains": [
       "7"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_031_v2",
@@ -733,7 +824,8 @@
     "contains": [
       "7"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_031_v3",
@@ -741,7 +833,8 @@
     "contains": [
       "7"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_032_v1",
@@ -749,7 +842,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_032_v2",
@@ -757,7 +851,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_032_v3",
@@ -765,7 +860,8 @@
     "contains": [
       "12"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_033_v1",
@@ -773,7 +869,8 @@
     "contains": [
       "60"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_033_v2",
@@ -781,7 +878,8 @@
     "contains": [
       "60"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_033_v3",
@@ -789,7 +887,8 @@
     "contains": [
       "60"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_034_v1",
@@ -797,7 +896,8 @@
     "contains": [
       "60"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_034_v2",
@@ -805,7 +905,8 @@
     "contains": [
       "60"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_034_v3",
@@ -813,7 +914,8 @@
     "contains": [
       "60"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_035_v1",
@@ -821,7 +923,8 @@
     "contains": [
       "البرتغالية"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_035_v2",
@@ -829,7 +932,8 @@
     "contains": [
       "البرتغالية"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_035_v3",
@@ -837,7 +941,8 @@
     "contains": [
       "البرتغالية"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_036_v1",
@@ -845,7 +950,8 @@
     "contains": [
       "العربية"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_036_v2",
@@ -853,7 +959,8 @@
     "contains": [
       "العربية"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_036_v3",
@@ -861,7 +968,8 @@
     "contains": [
       "العربية"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_037_v1",
@@ -869,7 +977,8 @@
     "contains": [
       "موثوق"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_037_v2",
@@ -877,7 +986,8 @@
     "contains": [
       "موثوق"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_037_v3",
@@ -885,7 +995,8 @@
     "contains": [
       "موثوق"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_038_v1",
@@ -893,7 +1004,8 @@
     "contains": [
       "تفاحة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_038_v2",
@@ -901,7 +1013,8 @@
     "contains": [
       "تفاحة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_038_v3",
@@ -909,7 +1022,8 @@
     "contains": [
       "تفاحة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_039_v1",
@@ -917,7 +1031,8 @@
     "contains": [
       "بطيء"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_039_v2",
@@ -925,7 +1040,8 @@
     "contains": [
       "بطيء"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_039_v3",
@@ -933,7 +1049,8 @@
     "contains": [
       "بطيء"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_040_v1",
@@ -941,7 +1058,8 @@
     "contains": [
       "كتب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_040_v2",
@@ -949,7 +1067,8 @@
     "contains": [
       "كتب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_040_v3",
@@ -957,7 +1076,8 @@
     "contains": [
       "كتب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_041_v1",
@@ -965,7 +1085,8 @@
     "contains": [
       "fact"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_041_v2",
@@ -973,7 +1094,8 @@
     "contains": [
       "fact"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_041_v3",
@@ -981,7 +1103,8 @@
     "contains": [
       "fact"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_042_v1",
@@ -989,7 +1112,8 @@
     "contains": [
       "testable"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_042_v2",
@@ -997,7 +1121,8 @@
     "contains": [
       "testable"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_042_v3",
@@ -1005,7 +1130,8 @@
     "contains": [
       "testable"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_043_v1",
@@ -1013,7 +1139,8 @@
     "contains": [
       "no"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_043_v2",
@@ -1021,7 +1148,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_043_v3",
@@ -1029,7 +1157,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_044_v1",
@@ -1037,7 +1166,8 @@
     "contains": [
       "test"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_044_v2",
@@ -1045,7 +1175,8 @@
     "contains": [
       "test"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_044_v3",
@@ -1053,7 +1184,8 @@
     "contains": [
       "test"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_045_v1",
@@ -1061,7 +1193,8 @@
     "contains": [
       "verify"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_045_v2",
@@ -1069,7 +1202,8 @@
     "contains": [
       "verify"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_045_v3",
@@ -1077,7 +1211,8 @@
     "contains": [
       "verify"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_046_v1",
@@ -1085,7 +1220,8 @@
     "contains": [
       "لا أعرف"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_046_v2",
@@ -1093,7 +1229,8 @@
     "contains": [
       "لا أعرف"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_046_v3",
@@ -1101,7 +1238,8 @@
     "contains": [
       "لا أعرف"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_047_v1",
@@ -1109,7 +1247,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_047_v2",
@@ -1117,7 +1256,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_047_v3",
@@ -1125,7 +1265,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_048_v1",
@@ -1133,7 +1274,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_048_v2",
@@ -1141,7 +1283,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_048_v3",
@@ -1149,7 +1292,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_049_v1",
@@ -1157,7 +1301,8 @@
     "contains": [
       "التعميم"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_049_v2",
@@ -1165,7 +1310,8 @@
     "contains": [
       "التعميم"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_049_v3",
@@ -1173,7 +1319,8 @@
     "contains": [
       "التعميم"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_050_v1",
@@ -1181,7 +1328,8 @@
     "contains": [
       "بيانات التدريب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_050_v2",
@@ -1189,7 +1337,8 @@
     "contains": [
       "بيانات التدريب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_050_v3",
@@ -1197,7 +1346,8 @@
     "contains": [
       "بيانات التدريب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_051_v1",
@@ -1205,7 +1355,8 @@
     "contains": [
       "تقليل التحيز"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_051_v2",
@@ -1213,7 +1364,8 @@
     "contains": [
       "تقليل التحيز"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_051_v3",
@@ -1221,7 +1373,8 @@
     "contains": [
       "تقليل التحيز"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_052_v1",
@@ -1229,7 +1382,8 @@
     "contains": [
       "Python"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_052_v2",
@@ -1237,7 +1391,8 @@
     "contains": [
       "Python"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_052_v3",
@@ -1245,7 +1400,8 @@
     "contains": [
       "Python"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_053_v1",
@@ -1253,7 +1409,8 @@
     "contains": [
       "5"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_053_v2",
@@ -1261,7 +1418,8 @@
     "contains": [
       "5"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_053_v3",
@@ -1269,7 +1427,8 @@
     "contains": [
       "5"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_054_v1",
@@ -1277,7 +1436,8 @@
     "contains": [
       "def"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_054_v2",
@@ -1285,7 +1445,8 @@
     "contains": [
       "def"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_054_v3",
@@ -1293,7 +1454,8 @@
     "contains": [
       "def"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_055_v1",
@@ -1301,7 +1463,8 @@
     "contains": [
       "bool"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_055_v2",
@@ -1309,7 +1472,8 @@
     "contains": [
       "bool"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_055_v3",
@@ -1317,7 +1481,8 @@
     "contains": [
       "bool"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_056_v1",
@@ -1325,7 +1490,8 @@
     "contains": [
       "التكرار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_056_v2",
@@ -1333,7 +1499,8 @@
     "contains": [
       "التكرار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_056_v3",
@@ -1341,7 +1508,8 @@
     "contains": [
       "التكرار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_057_v1",
@@ -1349,7 +1517,8 @@
     "contains": [
       "الأخطاء"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_057_v2",
@@ -1357,7 +1526,8 @@
     "contains": [
       "الأخطاء"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_057_v3",
@@ -1365,7 +1535,8 @@
     "contains": [
       "الأخطاء"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_058_v1",
@@ -1373,7 +1544,8 @@
     "contains": [
       "صياغة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_058_v2",
@@ -1381,7 +1553,8 @@
     "contains": [
       "صياغة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_058_v3",
@@ -1389,7 +1562,8 @@
     "contains": [
       "صياغة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_059_v1",
@@ -1397,7 +1571,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_059_v2",
@@ -1405,7 +1580,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_059_v3",
@@ -1413,7 +1589,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_060_v1",
@@ -1421,7 +1598,8 @@
     "contains": [
       "استعادة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_060_v2",
@@ -1429,7 +1607,8 @@
     "contains": [
       "استعادة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_060_v3",
@@ -1437,7 +1616,8 @@
     "contains": [
       "استعادة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_061_v1",
@@ -1445,7 +1625,8 @@
     "contains": [
       "رسالة الخطأ"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_061_v2",
@@ -1453,7 +1634,8 @@
     "contains": [
       "رسالة الخطأ"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_061_v3",
@@ -1461,7 +1643,8 @@
     "contains": [
       "رسالة الخطأ"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_062_v1",
@@ -1469,7 +1652,8 @@
     "contains": [
       "يتواصل"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_062_v2",
@@ -1477,7 +1661,8 @@
     "contains": [
       "يتواصل"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_062_v3",
@@ -1485,7 +1670,8 @@
     "contains": [
       "يتواصل"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_063_v1",
@@ -1493,7 +1679,8 @@
     "contains": [
       "توضيح"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_063_v2",
@@ -1501,7 +1688,8 @@
     "contains": [
       "توضيح"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_063_v3",
@@ -1509,7 +1697,8 @@
     "contains": [
       "توضيح"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_064_v1",
@@ -1517,7 +1706,8 @@
     "contains": [
       "الأدلة"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_064_v2",
@@ -1525,7 +1715,8 @@
     "contains": [
       "الأدلة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_064_v3",
@@ -1533,7 +1724,8 @@
     "contains": [
       "الأدلة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_065_v1",
@@ -1541,7 +1733,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_065_v2",
@@ -1549,7 +1742,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_065_v3",
@@ -1557,7 +1751,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_066_v1",
@@ -1565,7 +1760,8 @@
     "contains": [
       "غير مؤكد"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_066_v2",
@@ -1573,7 +1769,8 @@
     "contains": [
       "غير مؤكد"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_066_v3",
@@ -1581,7 +1778,8 @@
     "contains": [
       "غير مؤكد"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_067_v1",
@@ -1589,7 +1787,8 @@
     "contains": [
       "تجيب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_067_v2",
@@ -1597,7 +1796,8 @@
     "contains": [
       "تجيب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_067_v3",
@@ -1605,7 +1805,8 @@
     "contains": [
       "تجيب"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_068_v1",
@@ -1613,7 +1814,8 @@
     "contains": [
       "الانحدار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_068_v2",
@@ -1621,7 +1823,8 @@
     "contains": [
       "الانحدار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_068_v3",
@@ -1629,7 +1832,8 @@
     "contains": [
       "الانحدار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_069_v1",
@@ -1637,7 +1841,8 @@
     "contains": [
       "تنظيم"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_069_v2",
@@ -1645,7 +1850,8 @@
     "contains": [
       "تنظيم"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_069_v3",
@@ -1653,7 +1859,8 @@
     "contains": [
       "تنظيم"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_070_v1",
@@ -1661,7 +1868,8 @@
     "contains": [
       "أصحح"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_070_v2",
@@ -1669,7 +1877,8 @@
     "contains": [
       "أصحح"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_070_v3",
@@ -1677,7 +1886,8 @@
     "contains": [
       "أصحح"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_071_v1",
@@ -1685,7 +1895,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_071_v2",
@@ -1693,7 +1904,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_071_v3",
@@ -1701,7 +1913,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_072_v1",
@@ -1709,7 +1922,8 @@
     "contains": [
       "نمط"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_072_v2",
@@ -1717,7 +1931,8 @@
     "contains": [
       "نمط"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_072_v3",
@@ -1725,7 +1940,8 @@
     "contains": [
       "نمط"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_073_v1",
@@ -1733,7 +1949,8 @@
     "contains": [
       "التكرار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_073_v2",
@@ -1741,7 +1958,8 @@
     "contains": [
       "التكرار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_073_v3",
@@ -1749,7 +1967,8 @@
     "contains": [
       "التكرار"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_074_v1",
@@ -1757,7 +1976,8 @@
     "contains": [
       "ترخيص"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_074_v2",
@@ -1765,7 +1985,8 @@
     "contains": [
       "ترخيص"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_074_v3",
@@ -1773,7 +1994,8 @@
     "contains": [
       "ترخيص"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_075_v1",
@@ -1781,7 +2003,8 @@
     "contains": [
       "صحة"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_075_v2",
@@ -1789,7 +2012,8 @@
     "contains": [
       "صحة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_075_v3",
@@ -1797,7 +2021,8 @@
     "contains": [
       "صحة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_076_v1",
@@ -1805,7 +2030,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_076_v2",
@@ -1813,7 +2039,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_076_v3",
@@ -1821,7 +2048,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_077_v1",
@@ -1829,7 +2057,8 @@
     "contains": [
       "رموز"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_077_v2",
@@ -1837,7 +2066,8 @@
     "contains": [
       "رموز"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_077_v3",
@@ -1845,7 +2075,8 @@
     "contains": [
       "رموز"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_078_v1",
@@ -1853,7 +2084,8 @@
     "contains": [
       "أوزان"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_078_v2",
@@ -1861,7 +2093,8 @@
     "contains": [
       "أوزان"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_078_v3",
@@ -1869,7 +2102,8 @@
     "contains": [
       "أوزان"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_079_v1",
@@ -1877,7 +2111,8 @@
     "contains": [
       "استعادة"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_079_v2",
@@ -1885,7 +2120,8 @@
     "contains": [
       "استعادة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_079_v3",
@@ -1893,7 +2129,8 @@
     "contains": [
       "استعادة"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_080_v1",
@@ -1901,7 +2138,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_080_v2",
@@ -1909,7 +2147,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_080_v3",
@@ -1917,7 +2156,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_081_v1",
@@ -1925,7 +2165,8 @@
     "contains": [
       "السياق"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_081_v2",
@@ -1933,7 +2174,8 @@
     "contains": [
       "السياق"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_081_v3",
@@ -1941,7 +2183,8 @@
     "contains": [
       "السياق"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_082_v1",
@@ -1949,7 +2192,8 @@
     "contains": [
       "لا"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_082_v2",
@@ -1957,7 +2201,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_082_v3",
@@ -1965,7 +2210,8 @@
     "contains": [
       "لا"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_083_v1",
@@ -1973,7 +2219,8 @@
     "contains": [
       "رون"
     ],
-    "critical": true
+    "critical": true,
+    "language": "ar"
   },
   {
     "id": "hard300_083_v2",
@@ -1981,7 +2228,8 @@
     "contains": [
       "رون"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_083_v3",
@@ -1989,7 +2237,8 @@
     "contains": [
       "رون"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_084_v1",
@@ -1997,7 +2246,8 @@
     "contains": [
       "Ron"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_084_v2",
@@ -2005,7 +2255,8 @@
     "contains": [
       "Ron"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_084_v3",
@@ -2013,7 +2264,8 @@
     "contains": [
       "Ron"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_085_v1",
@@ -2021,7 +2273,8 @@
     "contains": [
       "Cairo"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_085_v2",
@@ -2029,7 +2282,8 @@
     "contains": [
       "Cairo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_085_v3",
@@ -2037,7 +2291,8 @@
     "contains": [
       "Cairo"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_086_v1",
@@ -2045,7 +2300,8 @@
     "contains": [
       "42"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_086_v2",
@@ -2053,7 +2309,8 @@
     "contains": [
       "42"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_086_v3",
@@ -2061,7 +2318,8 @@
     "contains": [
       "42"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_087_v1",
@@ -2069,7 +2327,8 @@
     "contains": [
       "H2O"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_087_v2",
@@ -2077,7 +2336,8 @@
     "contains": [
       "H2O"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_087_v3",
@@ -2085,7 +2345,8 @@
     "contains": [
       "H2O"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_088_v1",
@@ -2093,7 +2354,8 @@
     "contains": [
       "oxygen"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_088_v2",
@@ -2101,7 +2363,8 @@
     "contains": [
       "oxygen"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_088_v3",
@@ -2109,7 +2372,8 @@
     "contains": [
       "oxygen"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_089_v1",
@@ -2117,7 +2381,8 @@
     "contains": [
       "don't know"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_089_v2",
@@ -2125,7 +2390,8 @@
     "contains": [
       "don't know"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_089_v3",
@@ -2133,7 +2399,8 @@
     "contains": [
       "don't know"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_090_v1",
@@ -2141,7 +2408,8 @@
     "contains": [
       "no"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_090_v2",
@@ -2149,7 +2417,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_090_v3",
@@ -2157,7 +2426,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_091_v1",
@@ -2165,7 +2435,8 @@
     "contains": [
       "no"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_091_v2",
@@ -2173,7 +2444,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_091_v3",
@@ -2181,7 +2453,8 @@
     "contains": [
       "no"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_092_v1",
@@ -2189,7 +2462,8 @@
     "contains": [
       "def"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_092_v2",
@@ -2197,7 +2471,8 @@
     "contains": [
       "def"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_092_v3",
@@ -2205,7 +2480,8 @@
     "contains": [
       "def"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_093_v1",
@@ -2213,7 +2489,8 @@
     "contains": [
       "items"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_093_v2",
@@ -2221,7 +2498,8 @@
     "contains": [
       "items"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_093_v3",
@@ -2229,7 +2507,8 @@
     "contains": [
       "items"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_094_v1",
@@ -2237,7 +2516,8 @@
     "contains": [
       "cold"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_094_v2",
@@ -2245,7 +2525,8 @@
     "contains": [
       "cold"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_094_v3",
@@ -2253,7 +2534,8 @@
     "contains": [
       "cold"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_095_v1",
@@ -2261,7 +2543,8 @@
     "contains": [
       "7"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_095_v2",
@@ -2269,7 +2552,8 @@
     "contains": [
       "7"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_095_v3",
@@ -2277,7 +2561,8 @@
     "contains": [
       "7"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_096_v1",
@@ -2285,7 +2570,8 @@
     "contains": [
       "Mars"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_096_v2",
@@ -2293,7 +2579,8 @@
     "contains": [
       "Mars"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_096_v3",
@@ -2301,7 +2588,8 @@
     "contains": [
       "Mars"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_097_v1",
@@ -2309,7 +2597,8 @@
     "contains": [
       "gravity"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_097_v2",
@@ -2317,7 +2606,8 @@
     "contains": [
       "gravity"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_097_v3",
@@ -2325,7 +2615,8 @@
     "contains": [
       "gravity"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_098_v1",
@@ -2333,7 +2624,8 @@
     "contains": [
       "verify"
     ],
-    "critical": true
+    "critical": true,
+    "language": "en"
   },
   {
     "id": "hard300_098_v2",
@@ -2341,7 +2633,8 @@
     "contains": [
       "verify"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_098_v3",
@@ -2349,7 +2642,8 @@
     "contains": [
       "verify"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_099_v1",
@@ -2357,7 +2651,8 @@
     "contains": [
       "training data"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_099_v2",
@@ -2365,7 +2660,8 @@
     "contains": [
       "training data"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_099_v3",
@@ -2373,7 +2669,8 @@
     "contains": [
       "training data"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_100_v1",
@@ -2381,7 +2678,8 @@
     "contains": [
       "generalization"
     ],
-    "critical": false
+    "critical": false,
+    "language": "en"
   },
   {
     "id": "hard300_100_v2",
@@ -2389,7 +2687,8 @@
     "contains": [
       "generalization"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   },
   {
     "id": "hard300_100_v3",
@@ -2397,6 +2696,7 @@
     "contains": [
       "generalization"
     ],
-    "critical": false
+    "critical": false,
+    "language": "ar"
   }
 ]
