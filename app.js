@@ -206,7 +206,7 @@ const rememberCapitalFact=fact=>{
 };
 const capitalAnswer=text=>{
  const n=norm(text);
- if(!/عاصم(?:ة|ه)/.test(n)||!/(?:^|\s)(?:ما|ايه|اي|هل)(?:\s|$)/.test(n)&&!/[؟?]/.test(String(text)))return null;
+ if(!/عاصم(?:ة|ه)/.test(n)||!/(?:^|\s)(?:ما|ماهي|ماهو|ايه|اي|هل)(?:\s|$)/.test(n)&&!/[؟?]/.test(String(text)))return null;
  const matches=capitalCatalog.filter(c=>c.aliases.some(a=>n.includes(norm(a))));
  if(!matches.length)return null;
  const unique=[...new Map(matches.map(c=>[norm(c.country),c])).values()];
