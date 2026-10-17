@@ -1,24 +1,23 @@
 # Ron-0 — رون
 
-Ron-0 is an independent assistant project. The active conversational generation engine is now a ready-made, instruction-tuned local language model, not Ron's former tiny character-level prototype.
+رون-0 يستخدم مسارًا واحدًا فقط لتوليد الردود:
 
-## Active inference engine
+- **النموذج اللغوي:** Qwen2.5-0.5B-Instruct، نسخة GGUF بضغط Q4_K_M.
+- **محرك الاستدلال:** llama.cpp من خلال llama-cpp-python.
+- **التوكنيزر:** مضمّن في ملف GGUF المطابق للنموذج.
+- **التشغيل:** النموذج يُحمّل على خادم رون، ويُولّد الردود فعليًا من الأوزان. لا تُستخدم واجهة استدلال خارجية.
+- **الذاكرة:** سجل المحادثة يقدّم السياق للنموذج؛ أما معلومات الملف الشخصي وأوامر الذاكرة الصريحة فتظل وظائف محلية منفصلة ولا تحل محل توليد الإجابات العامة.
 
-- **Model:** Qwen2.5-0.5B-Instruct, GGUF Q4_K_M quantization (about 491 MB).
-- **Inference runtime:** llama.cpp through `llama-cpp-python`.
-- **Tokenizer:** bundled in the GGUF model; it is loaded with the matching model.
-- **Conversation:** instruction-tuned chat format with multi-turn history.
-- **External inference API:** not used. Inference runs locally inside the Ron server.
-- **License:** Qwen2.5 model card lists Apache-2.0; review the upstream license before redistribution.
+## مصدر النموذج
 
-The first launch downloads the model file from Hugging Face into its cache. Later launches reuse the cache if the host preserves it. The repository does not commit hundreds of megabytes of model weights.
+- النموذج: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF
+- محرك الاستدلال: https://github.com/abetlen/llama-cpp-python
 
-Model source: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF
-Runtime source: https://github.com/abetlen/llama-cpp-python
+لا تُحفظ أوزان النموذج الكبيرة داخل Git؛ ينزّلها الخادم إلى ذاكرة Hugging Face المؤقتة عند أول تشغيل. يجب أن يدعم المضيف تنزيل النموذج وتوفير مساحة تخزين مؤقتة مناسبة.
 
-## Run
+## التشغيل
 
-Python 3.11+ and a C/C++ build toolchain may be required if a compatible prebuilt wheel is not available for the host:
+يتطلب Python 3.11 أو أحدث، وأدوات بناء C/C++ إذا لم يتوفر wheel مناسب:
 
 ```bash
 python -m pip install --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu "llama-cpp-python>=0.3.16" "huggingface-hub>=0.25,<2"
@@ -26,27 +25,27 @@ python -m pip install --no-deps -e .
 python -m ron.native_chat_server
 ```
 
-On first launch, the server downloads the default Q4_K_M model (approximately 491 MB). Set `RON_MODEL_CACHE` to a persistent cache directory if the deployment platform supports persistent storage.
+أول تشغيل ينزّل ملف النموذج (نحو 491 ميغابايت). استخدم `RON_MODEL_CACHE` إذا كان المضيف يوفّر قرصًا دائمًا.
 
-## Environment
+## الإعدادات
 
-- `RON_MODEL_ID`: defaults to `Qwen/Qwen2.5-0.5B-Instruct-GGUF`
-- `RON_MODEL_FILE`: defaults to `qwen2.5-0.5b-instruct-q4_k_m.gguf`
-- `RON_MODEL_REVISION`: defaults to `main`
-- `RON_MODEL_CACHE`: optional Hugging Face cache directory
-- `RON_CONTEXT_SIZE`: defaults to 4096 tokens
-- `RON_MODEL_MAX_TOKENS`: defaults to 256
-- `RON_CPU_THREADS`: defaults to at most 4
-- `RON_ALLOWED_ORIGIN`: CORS origin; defaults to `*`
+- `RON_MODEL_ID`: الافتراضي `Qwen/Qwen2.5-0.5B-Instruct-GGUF`
+- `RON_MODEL_FILE`: الافتراضي `qwen2.5-0.5b-instruct-q4_k_m.gguf`
+- `RON_MODEL_REVISION`: الافتراضي `main`
+- `RON_MODEL_CACHE`: مسار اختياري لذاكرة النموذج
+- `RON_CONTEXT_SIZE`: الافتراضي 4096
+- `RON_MODEL_MAX_TOKENS`: الافتراضي 256
+- `RON_CPU_THREADS`: الافتراضي حتى 4
+- `RON_ALLOWED_ORIGIN`: إعداد CORS؛ الافتراضي `*`
 
-## API
+## واجهة الخادم
 
-- `GET /api/health` reports the active model and runtime.
-- `POST /api/chat` accepts JSON containing `message`, and optional `session_id` and `request_id`.
-- Static web assets are served from the same process.
+- `GET /api/health`: حالة محرك الاستدلال وبيانات النموذج.
+- `POST /api/chat`: يستقبل `message` و`session_id` الاختياري.
+- تُخدّم ملفات الواجهة من الخادم نفسه.
 
-## Important limitations
+إذا تعذر الوصول إلى خادم النموذج أو فشل التوليد، تعرض الواجهة رسالة خطأ صريحة ولا تستبدل الرد العام بإجابة مسترجعة من الذاكرة أو بمحرك متصفح بديل.
 
-A 0.5B model is a substantial improvement over the old 113K-parameter character model, but it is still small and can make mistakes, especially on complex reasoning or Arabic nuance. The new model has not been fine-tuned on Ron's personal data. Keep deterministic tools (such as arithmetic) separate from language generation when accuracy matters.
+## حدود النموذج
 
-The previous native training code and reports remain in the repository for audit and reproducibility, but the live chat server no longer loads or generates from those checkpoints. They are not the active conversational brain.
+هذا نموذج صغير (0.5B)، لذلك قد يخطئ في الأسئلة المعقدة أو التفاصيل الدقيقة. تنظيف المستودع لا يعني أن النموذج أصبح بمستوى GPT-3؛ لكنه يزيل المسارات المتنافسة ويجعل مسار التوليد واضحًا وقابلًا للاختبار.

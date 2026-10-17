@@ -1,4 +1,4 @@
-name: Ron CI
+name: Ron Single Runtime CI
 
 on:
   push:
@@ -12,29 +12,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Check browser JavaScript syntax
-        run: |
-          node --check app.js
-          node --check ron-core.js
-      - name: Install package and test tools
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[model]" pytest
-      - name: Run centralized Ron test suite
-        run: python scripts/run_all_tests.py
-
-  neural-only-evaluation:
-    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -42,19 +19,11 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Install native model dependencies
+      - name: Check frontend syntax
+        run: node --check app.js
+      - name: Install package and tests
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[model]"
-      - name: Run neural-only blind evaluation
-        run: |
-          mkdir -p artifacts
-          python scripts/surprise_eval.py --neural-only --output artifacts/neural-only-eval.json
-      - name: Upload neural-only evaluation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ron0-neural-only-evaluation
-          path: artifacts/neural-only-eval.json
-          if-no-files-found: warn
-          retention-days: 30
+          python -m pip install -e ".[test]"
+      - name: Test the single inference path
+        run: python -m pytest tests/test_contracts.py tests/test_llm_provider.py

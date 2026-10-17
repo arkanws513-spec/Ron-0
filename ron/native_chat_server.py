@@ -37,7 +37,7 @@ class NativeChatRuntime:
             "runtime": "ron-0-llama-cpp",
             "provider": type(self.provider).__name__,
             "model": self.model_id,
-            "weights_loaded": True,
+            "weights_loaded": bool(getattr(self.provider, "model", None)),
             "local_weights": True,
             "external_inference_api": False,
             "model_path": self.model_path,
