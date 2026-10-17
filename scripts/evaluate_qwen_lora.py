@@ -109,7 +109,7 @@ def main() -> None:
     case_ids = [str(case.get("id", "")).strip() for case in cases]
     if any(not case_id for case_id in case_ids) or len(set(case_ids)) != len(case_ids):
         raise SystemExit("Every evaluation case must have a non-empty unique id.")
-    family_ids = {re.sub(r"_v\\d+$", "", case_id) for case_id in case_ids}
+    family_ids = {re.sub(r"_v\d+$", "", case_id) for case_id in case_ids}
     if len(family_ids) != args.expected_question_families:
         raise SystemExit(
             f"Expected exactly {args.expected_question_families} question families; found {len(family_ids)}."
