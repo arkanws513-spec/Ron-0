@@ -15,6 +15,10 @@ The output is an adapter candidate only. Training never changes Railway settings
 
 OASST1 is declared Apache-2.0 by its dataset card; retain source/license records and review data quality. Automated filters are imperfect, so inspect samples before using generated corpora.
 
+## GitHub Actions GPU workflow
+
+`.github/workflows/qwen-lora-training.yml` defines a manual GPU training workflow and uploads the adapter/report as a workflow artifact. It deliberately targets a runner labeled `self-hosted, linux, x64, gpu`; it will not run on the standard `ubuntu-latest` runner because that runner has no CUDA GPU. To use this path, the workflow must first be merged into the repository's default branch and a compatible GPU runner must be registered and online. GitHub-hosted GPU larger runners require an eligible organization/enterprise plan and explicit runner configuration; they are not enabled automatically for this personal repository. No paid runner is provisioned by this repository change.
+
 ## Train without a local GPU
 
 If you do not have a local CUDA GPU, open the [Google Colab training notebook](https://colab.research.google.com/github/arkanws513-spec/Ron-0/blob/training/qwen-lora-finetune/notebooks/ron0_qwen_lora_colab.ipynb). Select a GPU runtime if one is available and save outputs to your Google Drive. Free GPU availability and session limits vary; this notebook does not deploy or replace production weights.
