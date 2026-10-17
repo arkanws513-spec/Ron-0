@@ -68,6 +68,25 @@ def assess(answer: str, case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def aggregate_question_families(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Aggregate prompt variants into question families so paraphrases cannot inflate the gate."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for result in results:
+        family_id = re.sub(r"_v\\d+$", "", str(result.get("id", "unnamed")))
+        groups.setdefault(family_id, []).append(result)
+    families = []
+    for family_id, variants in sorted(groups.items()):
+        families.append({
+            "id": family_id,
+            "language": variants[0]["language"],
+            "variant_count": len(variants),
+            "passed": all(item["passed"] for item in variants),
+            "critical": any(item["critical"] for item in variants),
+            "failed_variant_ids": [item["id"] for item in variants if not item["passed"]],
+        })
+    return families
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-model", default="Qwen/Qwen2.5-0.5B-Instruct")
@@ -140,31 +159,58 @@ def main() -> None:
         }
     critical = [item for item in results if item["critical"]]
     critical_rate = sum(item["passed"] for item in critical) / max(1, len(critical))
+
+    families = aggregate_question_families(results)
+    family_passed = sum(item["passed"] for item in families)
+    family_pass_rate = family_passed / max(1, len(families))
+    family_language_metrics = {}
+    for language in ("ar", "en"):
+        group = [item for item in families if item["language"] == language]
+        family_language_metrics[language] = {
+            "family_count": len(group),
+            "passed": sum(item["passed"] for item in group),
+            "pass_rate": sum(item["passed"] for item in group) / max(1, len(group)),
+        }
+    critical_families = [item for item in families if item["critical"]]
+    critical_family_rate = (
+        sum(item["passed"] for item in critical_families) / max(1, len(critical_families))
+    )
     passed_gate = (
         passed / total >= args.min_pass_rate
-        and all(metric["case_count"] > 0 and metric["pass_rate"] >= args.min_language_pass_rate for metric in language_metrics.values())
+        and family_pass_rate >= args.min_pass_rate
+        and all(metric["family_count"] > 0 and metric["pass_rate"] >= args.min_language_pass_rate
+                for metric in family_language_metrics.values())
         and critical_rate >= args.min_pass_rate
+        and critical_family_rate >= args.min_pass_rate
     )
     report = {
         "passed": passed_gate,
         "case_count": total,
         "passed_count": passed,
         "pass_rate": passed / total,
+        "question_family_count": len(families),
+        "question_family_passed_count": family_passed,
+        "question_family_pass_rate": family_pass_rate,
         "critical_case_count": len(critical),
         "critical_pass_rate": critical_rate,
+        "critical_question_family_count": len(critical_families),
+        "critical_question_family_pass_rate": critical_family_rate,
         "min_pass_rate": args.min_pass_rate,
         "min_language_pass_rate": args.min_language_pass_rate,
         "language_metrics": language_metrics,
+        "question_family_language_metrics": family_language_metrics,
         "base_model": args.base_model,
         "adapter": str(args.adapter),
         "evaluation_mode": "qwen_lora_neural_only",
+        "question_families": families,
         "results": results,
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({key: report[key] for key in (
-        "passed", "case_count", "passed_count", "pass_rate", "critical_case_count",
-        "critical_pass_rate", "language_metrics", "evaluation_mode"
+        "passed", "case_count", "passed_count", "pass_rate", "question_family_count",
+        "question_family_pass_rate", "critical_case_count", "critical_pass_rate",
+        "critical_question_family_pass_rate", "question_family_language_metrics", "evaluation_mode"
     )}, ensure_ascii=False, indent=2))
     if not passed_gate:
         raise SystemExit("Blind bilingual generation gate failed; do not merge or deploy this candidate.")
