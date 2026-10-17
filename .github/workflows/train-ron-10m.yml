@@ -8,6 +8,8 @@ on:
       - 'scripts/prepare_corpus.py'
       - 'scripts/download_english_corpus.py'
       - 'scripts/download_oasst1_english.py'
+      - 'training/corpus/oasst1/arabic_dialogues.txt'
+      - 'tests/test_oasst_downloader.py'
       - 'scripts/train_sft_10m.py'
       - 'training/arabic_sft_seed.txt'
       - 'tests/test_sft_10m.py'
@@ -115,6 +117,19 @@ jobs:
         run: python scripts/download_english_corpus.py
       - name: Download reviewed English dialogue dataset
         run: python scripts/download_oasst1_english.py
+      - name: Verify reviewed Arabic dialogue coverage
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          corpus = Path("training/corpus/oasst1/arabic_dialogues.txt")
+          manifest = json.loads(Path("training/oasst1_manifest.json").read_text(encoding="utf-8"))
+          text = corpus.read_text(encoding="utf-8") if corpus.is_file() else ""
+          examples = int(manifest.get("unique_arabic_conversation_prefixes", 0))
+          print(json.dumps({"arabic_examples": examples, "arabic_characters": len(text)}, ensure_ascii=False))
+          if examples < 100 or len(text) < 10_000:
+              raise SystemExit("Reviewed Arabic OASST dialogue corpus is too small; refusing an underpowered bilingual SFT run.")
+          PY
       - name: Normalize and deduplicate pretraining corpus
         run: python scripts/prepare_corpus.py
       - name: Run all Ron tests before training
