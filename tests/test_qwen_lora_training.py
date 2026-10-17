@@ -3,6 +3,8 @@ from scripts.train_qwen_lora import (
     encode_completion,
     parse_dialogue_blocks,
     split_by_language,
+    normalize_prompt,
+    exclude_evaluation_overlap,
 )
 
 
@@ -52,3 +54,34 @@ def test_completion_encoder_masks_prompt_tokens_only():
     )
     assert encoded["input_ids"] == [10, 11, 12, 13, 14]
     assert encoded["labels"] == [-100, -100, -100, 13, 14]
+
+
+
+def test_prompt_normalization_preserves_words_and_arabic_letters():
+    assert normalize_prompt("What is 2 + 2?") == "what is 2 2"
+    assert normalize_prompt("ما عاصمة مصر؟") == "ما عاصمه مصر"
+
+
+def test_evaluation_overlap_exclusion_handles_arabic_and_punctuation():
+    examples = [
+        {"language": "en", "messages": [
+            {"role": "user", "content": "What is 2 + 2?"},
+            {"role": "assistant", "content": "4"},
+        ]},
+        {"language": "ar", "messages": [
+            {"role": "user", "content": "ما عاصمة مصر؟"},
+            {"role": "assistant", "content": "القاهرة"},
+        ]},
+        {"language": "en", "messages": [
+            {"role": "user", "content": "Explain photosynthesis"},
+            {"role": "assistant", "content": "Plants use light"},
+        ]},
+    ]
+    cases = [
+        {"prompt": "What is 2+2?"},
+        {"prompt": "ما عاصمة مصر؟"},
+    ]
+    kept, removed = exclude_evaluation_overlap(examples, cases)
+    assert removed == 2
+    assert len(kept) == 1
+    assert kept[0]["messages"][0]["content"] == "Explain photosynthesis"
