@@ -80,7 +80,7 @@ def normalize_prompt(text: str) -> str:
     value = str(text or "").casefold()
     value = value.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
     value = value.replace("ى", "ي").replace("ة", "ه")
-    return re.sub(r"[^\\w\\u0600-\\u06ff]+", " ", value).strip()
+    return re.sub(r"[^\w\u0600-\u06ff]+", " ", value).strip()
 
 
 def exclude_evaluation_overlap(
