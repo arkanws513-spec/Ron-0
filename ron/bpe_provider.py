@@ -86,23 +86,48 @@ class BpeCheckpointProvider:
         seed = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], "big") % (2**63 - 1)
         generator = torch.Generator(device="cpu").manual_seed(seed)
         eos_id = self.tokenizer.backend.token_to_id("<eos>")
+
+        # Prefill once, then feed only the newly generated token while the cache
+        # fits the context window. At rollover, rebuild the cache from the exact
+        # sliding window so position embeddings retain the same semantics.
+        context = result[:, -self.config.max_sequence_length:]
+        output = self.model(context, use_cache=True)
+        cache = output.past_key_values
+        logits = output.logits[:, -1, :].float().squeeze(0)
+
         for _ in range(min(160, self.config.max_sequence_length)):
-            logits = self.model(result[:, -self.config.max_sequence_length:]).logits[:, -1, :].float().squeeze(0) / 0.8
-            probabilities = torch.softmax(logits, dim=-1)
+            sampling_logits = logits / 0.8
+            probabilities = torch.softmax(sampling_logits, dim=-1)
             sorted_probs, sorted_ids = torch.sort(probabilities, descending=True)
             cumulative = sorted_probs.cumsum(0)
             sorted_probs[cumulative - sorted_probs >= 0.90] = 0
             filtered = torch.zeros_like(probabilities)
             filtered.scatter_(0, sorted_ids, sorted_probs)
             total = filtered.sum()
-            next_id = int(torch.argmax(logits).item()) if not torch.isfinite(total) or total.item() <= 0 else int(torch.multinomial(filtered / total, 1, generator=generator).item())
+            next_id = int(torch.argmax(sampling_logits).item()) if not torch.isfinite(total) or total.item() <= 0 else int(torch.multinomial(filtered / total, 1, generator=generator).item())
             if eos_id is not None and next_id == eos_id:
                 break
             generated.append(next_id)
             result = torch.cat((result, torch.tensor([[next_id]], dtype=torch.long)), dim=1)
             decoded = self.tokenizer.decode(generated)
-            if "\n" in decoded:
+            if "\\n" in decoded:
                 break
+
+            assert cache is not None
+            cached_length = cache[0][0].shape[-2]
+            if cached_length < self.config.max_sequence_length:
+                output = self.model(
+                    result[:, -1:],
+                    past_key_values=cache,
+                    use_cache=True,
+                )
+            else:
+                output = self.model(
+                    result[:, -self.config.max_sequence_length:],
+                    use_cache=True,
+                )
+            cache = output.past_key_values
+            logits = output.logits[:, -1, :].float().squeeze(0)
         raw = self.tokenizer.decode(generated).split("\n", 1)[0].strip()
         answer, rejected = guard_generated_text(
             raw,
