@@ -93,3 +93,21 @@ def test_name_correction_does_not_store_the_rest_of_the_sentence():
 def test_sentence_like_natural_statement_does_not_overwrite_name():
     assert extract_facts("انا بسألك عن اسمي") == []
     assert extract_facts("انا عايز اسألك عن اسمي") == []
+
+
+def test_ordinary_first_person_statements_do_not_overwrite_profile_name():
+    for statement in (
+        "انا سعيد",
+        "انا متعب",
+        "انا جاهز",
+        "انا في البيت",
+        "انا مشغول",
+        "انا بخير",
+        "انا طالب",
+    ):
+        assert extract_facts(statement) == [], statement
+
+
+def test_explicit_and_supported_natural_name_forms_are_preserved():
+    assert extract_fact("اسمي اركانوس").value == "اركانوس"
+    assert extract_fact("انا زيريوس الاول").value == "زيريوس الاول"
