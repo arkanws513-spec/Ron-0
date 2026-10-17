@@ -375,7 +375,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
   if(native&&native.reply)r=native.reply;
   else nativeRejected=true;
  }
- if(!String(r||"").trim()){
+ if(!String(r||"").trim()&&(explicitWebSearchEarly||learningCommandEarly)){
   const core=globalThis.ronCore;
   if(core){
    try{
