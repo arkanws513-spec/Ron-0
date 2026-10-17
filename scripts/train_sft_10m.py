@@ -23,6 +23,7 @@ from ron.model_config import RonModelConfig
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "training" / "corpus" / "oasst1" / "english_dialogues.txt"
 ARABIC_CORPUS = ROOT / "training" / "arabic_sft_seed.txt"
+ARABIC_OASST_CORPUS = ROOT / "training" / "corpus" / "oasst1" / "arabic_dialogues.txt"
 PRETRAINED = ROOT / "artifacts" / "native-10m" / "ron_native_10m.pt"
 LIVE_CHECKPOINT = ROOT / "ron" / "checkpoints" / "ron_native_10m.pt"
 OUT = ROOT / "artifacts" / "native-10m"
@@ -46,6 +47,17 @@ def split_examples(corpus: str, seed: int = SEED, validation_fraction: float = 0
     train = [example for index, example in enumerate(examples) if index not in validation_ids]
     validation = [example for index, example in enumerate(examples) if index in validation_ids]
     return train, validation
+
+
+def combine_unique_examples(*corpora: str) -> str:
+    """Merge Arabic instruction corpora while removing exact duplicate dialogue examples."""
+    unique: dict[str, None] = {}
+    for corpus in corpora:
+        for example in corpus.replace("\r\n", "\n").split("\n\n"):
+            cleaned = example.strip()
+            if cleaned:
+                unique.setdefault(cleaned, None)
+    return "\n\n".join(unique) + ("\n" if unique else "")
 
 
 def encode_examples(examples: list[str], vocab: dict[str, int]):
@@ -195,8 +207,11 @@ def main() -> None:
     model.eval()
 
     english_dialogues = CORPUS.read_text(encoding="utf-8")
-    arabic_dialogues = ARABIC_CORPUS.read_text(encoding="utf-8") if ARABIC_CORPUS.is_file() else ""
-    # Mix reviewed English dialogues with the curated Arabic conversation curriculum.
+    arabic_seed = ARABIC_CORPUS.read_text(encoding="utf-8") if ARABIC_CORPUS.is_file() else ""
+    arabic_oasst = ARABIC_OASST_CORPUS.read_text(encoding="utf-8") if ARABIC_OASST_CORPUS.is_file() else ""
+    # Mix reviewed Arabic OASST examples with the hand-curated Arabic curriculum,
+    # removing exact duplicates before splitting to avoid train/validation leakage.
+    arabic_dialogues = combine_unique_examples(arabic_seed, arabic_oasst)
     dialogue_text = english_dialogues.rstrip() + ("\n\n" + arabic_dialogues.strip() if arabic_dialogues.strip() else "") + "\n"
     old_vocab = dict(vocab)
     for char in sorted(set(dialogue_text) - set(vocab)):
