@@ -17,6 +17,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / "training" / "corpus" / "oasst1"
 OUTPUT = DEST / "english_dialogues.txt"
+ARABIC_OUTPUT = DEST / "arabic_dialogues.txt"
 MANIFEST = ROOT / "training" / "oasst1_manifest.json"
 URL = (
     "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/main/"
@@ -35,10 +36,13 @@ FILTER_LABELS = (
 )
 
 
-def is_acceptable_message(node: dict) -> bool:
+def is_acceptable_message(node: dict, language: str = "en") -> bool:
     if node.get("deleted") is True or node.get("review_result") is False:
         return False
-    if node.get("lang") not in (None, "en"):
+    if language == "en":
+        if node.get("lang") not in (None, "en"):
+            return False
+    elif node.get("lang") != language:
         return False
     labels = node.get("labels") or {}
     for name in FILTER_LABELS:
@@ -56,14 +60,19 @@ def clean_message(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def iter_conversation_examples(tree: dict):
-    """Yield English User/Ron prefixes ending in a reviewed assistant response."""
+def iter_conversation_examples(tree: dict, language: str = "en"):
+    """Yield reviewed dialogue prefixes in English or Arabic."""
+    if language not in {"en", "ar"}:
+        raise ValueError("language must be 'en' or 'ar'")
     def walk(node: dict, path: list[tuple[str, str]]):
-        if not is_acceptable_message(node):
+        if not is_acceptable_message(node, language=language):
             return
         role = node["role"]
         text = clean_message(node["text"])
-        label = "User" if role == "prompter" else "Ron"
+        if language == "ar":
+            label = "المستخدم" if role == "prompter" else "رون"
+        else:
+            label = "User" if role == "prompter" else "Ron"
         current = path + [(label, text)]
         if role == "assistant" and any(item[0] == "User" for item in current):
             rendered = "\n".join(f"{speaker}: {message}" for speaker, message in current[-MAX_TURNS:])
@@ -86,7 +95,7 @@ def main() -> None:
     with urlopen(request, timeout=120) as response:
         compressed = response.read()
     digest = hashlib.sha256(compressed).hexdigest()
-    examples: set[str] = set()
+    examples_by_language: dict[str, set[str]] = {"en": set(), "ar": set()}
     tree_count = 0
     import io
     with gzip.GzipFile(fileobj=io.BytesIO(compressed), mode="rb") as stream:
@@ -95,25 +104,31 @@ def main() -> None:
                 continue
             tree = json.loads(line.decode("utf-8"))
             tree_count += 1
-            examples.update(iter_conversation_examples(tree))
+            for language in ("en", "ar"):
+                examples_by_language[language].update(iter_conversation_examples(tree, language=language))
 
-    if len(examples) < 100:
+    if len(examples_by_language["en"]) < 100:
         raise RuntimeError(
-            f"Only {len(examples)} acceptable English conversation examples were produced; refusing to write a tiny corpus."
+            f"Only {len(examples_by_language['en'])} acceptable English conversation examples were produced; refusing to write a tiny corpus."
         )
-    rendered = "\n\n".join(sorted(examples)) + "\n"
-    OUTPUT.write_text(rendered, encoding="utf-8")
+    rendered_by_language = {
+        language: "\n\n".join(sorted(examples)) + "\n"
+        for language, examples in examples_by_language.items() if examples
+    }
+    OUTPUT.write_text(rendered_by_language["en"], encoding="utf-8")
+    ARABIC_OUTPUT.write_text(rendered_by_language.get("ar", ""), encoding="utf-8")
     manifest = {
         "dataset": "OpenAssistant Conversations Dataset (OASST1), ready-for-export trees",
         "source_url": URL,
         "license": "Apache-2.0 (dataset card declaration; retain source/license records)",
         "compressed_source_sha256": digest,
         "tree_count": tree_count,
-        "unique_english_conversation_prefixes": len(examples),
-        "output": str(OUTPUT.relative_to(ROOT)),
-        "output_characters": len(rendered),
+        "unique_english_conversation_prefixes": len(examples_by_language["en"]),
+        "unique_arabic_conversation_prefixes": len(examples_by_language["ar"]),
+        "outputs": {"english": str(OUTPUT.relative_to(ROOT)), "arabic": str(ARABIC_OUTPUT.relative_to(ROOT))},
+        "output_characters": {"english": len(rendered_by_language["en"]), "arabic": len(rendered_by_language.get("ar", ""))},
         "filters": {
-            "language": "English only",
+            "language": "Separate English and Arabic corpora; Arabic examples require lang=ar",
             "deleted_or_explicitly_rejected": "excluded",
             "label_score_threshold": MAX_FLAG_SCORE,
             "label_categories": list(FILTER_LABELS),
@@ -124,8 +139,10 @@ def main() -> None:
     MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({
         "trees": tree_count,
-        "examples": len(examples),
-        "characters": len(rendered),
+        "english_examples": len(examples_by_language["en"]),
+        "arabic_examples": len(examples_by_language["ar"]),
+        "english_characters": len(rendered_by_language["en"]),
+        "arabic_characters": len(rendered_by_language.get("ar", "")),
         "manifest": str(MANIFEST.relative_to(ROOT)),
     }, ensure_ascii=False, indent=2))
 
