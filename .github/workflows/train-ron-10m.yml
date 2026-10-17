@@ -8,6 +8,7 @@ on:
       - 'scripts/prepare_corpus.py'
       - 'scripts/download_english_corpus.py'
       - 'scripts/download_oasst1_english.py'
+      - 'scripts/download_arabic_wikipedia.py'
       - 'scripts/train_sft_10m.py'
       - 'training/arabic_sft_seed.txt'
       - 'tests/test_sft_10m.py'
@@ -115,6 +116,10 @@ jobs:
         run: python scripts/download_english_corpus.py
       - name: Download reviewed English dialogue dataset
         run: python scripts/download_oasst1_english.py
+      # Arabic must be present during pretraining so SFT does not introduce
+      # randomly initialized Arabic character embeddings after the fact.
+      - name: Download attributed Arabic Wikipedia language corpus
+        run: python scripts/download_arabic_wikipedia.py
       - name: Normalize and deduplicate pretraining corpus
         run: python scripts/prepare_corpus.py
       - name: Run all Ron tests before training
