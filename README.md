@@ -64,3 +64,18 @@ The GitHub Actions workflow archives the pretraining candidate, SFT candidate, m
 The deployed scalable HTTP runtime keeps its current model available as a fallback while checking the public `ron-live-checkpoint` release for a promoted `ron_native_10m.pt` asset. It checks on startup and every five minutes, verifies the published SHA-256 digest when available, load-tests the candidate, and atomically swaps the native provider only after validation succeeds. Once the 10M checkpoint is promoted, open-ended inference uses those weights; failed downloads or invalid candidates leave the active provider untouched.
 
 Use `GET /api/health` to inspect `active_inference_provider`, `active_checkpoint`, `active_checkpoint_sha256`, and `active_parameter_count`. The browser UI calls the configured `window.RON_API_BASE_URL` when set, otherwise the deployed Ron API. Static hosting alone cannot run PyTorch; it must reach the Ron HTTP service for model-generated answers.
+
+
+## Optional durable Python-core memory
+
+The Python orchestration core uses isolated in-memory storage by default. To persist its structured facts across process restarts, set `RON_MEMORY_DB_PATH` to a local SQLite file before starting Ron:
+
+```bash
+# Linux/macOS example; choose a private, writable directory.
+export RON_MEMORY_DB_PATH="$HOME/.ron-0/memory.sqlite3"
+python -m your_ron_entrypoint
+```
+
+The parent directory is created automatically. Existing facts are loaded on startup and updates are committed to SQLite. Leave the variable unset for isolated/in-memory sessions and tests. The browser UI has its own localStorage-based data and is not redirected to this SQLite file by this setting.
+
+**Privacy note:** the database stores memory content and metadata as local plaintext SQLite data. Keep it in a user-controlled directory with appropriate file permissions, and include it in backups only if you intend to preserve those memories.

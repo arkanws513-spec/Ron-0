@@ -1,11 +1,12 @@
 """Ron orchestration core: intent -> memory -> conversation context -> model -> learning."""
 from __future__ import annotations
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_facts
 from .intent import detect_intent
-from .memory import InMemoryStore
+from .memory import InMemoryStore, SQLiteMemoryStore
 from .providers import LocalTeachingProvider
 from .self_improvement import Experience, SelfImprovementEngine
 from .session import Conversation
@@ -18,7 +19,7 @@ from .arithmetic import Calculation, calculate_from_text, is_previous_calculatio
 @dataclass
 class RonCore:
     provider:ModelProvider|None=None
-    memory:MemoryStore=field(default_factory=InMemoryStore)
+    memory:MemoryStore|None=None
     tools:ToolRegistry=field(default_factory=ToolRegistry)
     self_improvement:SelfImprovementEngine=field(default_factory=SelfImprovementEngine)
     conversation:Conversation=field(default_factory=lambda:Conversation(session_id="default"))
@@ -30,6 +31,9 @@ class RonCore:
     last_calculation:Calculation|None=field(default=None,init=False)
 
     def __post_init__(self)->None:
+        if self.memory is None:
+            memory_path = os.environ.get("RON_MEMORY_DB_PATH", "").strip()
+            self.memory = SQLiteMemoryStore(memory_path) if memory_path else InMemoryStore()
         if self.provider is not None:
             return
         checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
