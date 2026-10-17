@@ -2,7 +2,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 import os
-from pathlib import Path
 from .contracts import MemoryItem, MemoryStore, Message, ModelProvider, ModelRequest, ModelResponse
 from .facts import answer_fact_question, extract_facts
 from .intent import detect_intent
@@ -36,39 +35,10 @@ class RonCore:
             self.memory = SQLiteMemoryStore(memory_path) if memory_path else InMemoryStore()
         if self.provider is not None:
             return
-        checkpoint_dir = Path(__file__).resolve().parent / "checkpoints"
-        # Prefer Ron-10M, then try the baseline. A damaged/incompatible checkpoint
-        # must not prevent the offline teaching fallback from starting.
-        candidates = (
-            checkpoint_dir / "ron_native_10m.pt",
-            checkpoint_dir / "ron_native_baseline.pt",
-        )
-        from .native_provider import NativeCheckpointProvider
-        for checkpoint in candidates:
-            if not checkpoint.is_file():
-                continue
-            try:
-                # Checkpoint formats are explicit: never interpret BPE IDs as characters.
-                import torch
-                try:
-                    payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
-                except Exception:
-                    # Preserve the legacy provider's own validation/error type and
-                    # compatibility with provider injection/mocking; malformed files
-                    # will still fail closed when that provider loads them.
-                    payload = {}
-                if isinstance(payload, dict) and payload.get("tokenizer_type") == "byte_bpe":
-                    from .bpe_provider import BpeCheckpointProvider
-                    self.provider = BpeCheckpointProvider(checkpoint)
-                else:
-                    self.provider = NativeCheckpointProvider(checkpoint)
-                return
-            except Exception as exc:
-                self.provider_startup_warnings.append(
-                    f"{checkpoint.name}:{type(exc).__name__}"
-                )
-        # A clear offline fallback for checkouts that do not yet contain usable weights.
-        self.provider = LocalTeachingProvider()
+        # The active default is the ready-made instruction-tuned model.
+        # Never silently choose the old character-level checkpoint for chat.
+        from .llm_provider import QwenChatProvider
+        self.provider = QwenChatProvider()
 
     def _finish(self,text:str,content:str,model:str,metadata:dict)->ModelResponse:
         response=ModelResponse(content=content,model=model,metadata=metadata)

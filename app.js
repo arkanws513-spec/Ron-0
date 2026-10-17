@@ -270,7 +270,7 @@ const safeFallbackFor=text=>{
  if(analyzeIntent(text)==="question"||/[؟?]/.test(text))return "أريد مساعدتك، لكن لم أستطع تكوين إجابة واضحة لهذا السؤال بعد. هل يمكنك صياغته بطريقة أبسط؟";
  return "فهمت كلامك. أخبرني ما الذي تريد أن نفعله بعد ذلك.";
 };
-const queryNativeCheckpoint=async text=>{
+const queryRonLocalModel=async text=>{
  try{
   const configured=typeof window.RON_API_BASE_URL==="string"&&window.RON_API_BASE_URL.trim()?window.RON_API_BASE_URL.trim():"https://accurate-courage-production-8a31.up.railway.app";
   const base=configured.replace(/\/+$/,"");
@@ -283,7 +283,7 @@ const queryNativeCheckpoint=async text=>{
   if(!response.ok)return null;
   const payload=await response.json();
   return typeof payload.reply==="string"&&payload.reply.trim()?{reply:payload.reply.trim(),generationStatus:String(payload.generation_status||""),health:payload.health||null}:null;
- }catch(error){console.debug("Ron native checkpoint API unavailable; continuing with local runtime.",error);return null;}
+ }catch(error){console.debug("Ron local Qwen API unavailable; using browser fallback.",error);return null;}
 };
 const answer=t=>{
  const n=norm(t),facts=extractFacts(t),ronFacts=extractRonFacts(t),fact=facts[0]||null;
@@ -363,7 +363,19 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  const normalizedInput=norm(t);
  const deterministicInput=analyzeIntent(t)==="greeting"||isWithMeQuestion(normalizedInput)||isPreviousReplyQuestion(normalizedInput)||isPendingCommentConfirmation(normalizedInput)||isCommentCommand(normalizedInput)||isNameQuestion(normalizedInput)||isAgeQuestion(normalizedInput)||isRonNameQuestion(normalizedInput)||isRonAgeQuestion(normalizedInput)||isBothNamesQuestion(normalizedInput)||isReadinessQuestion(normalizedInput)||isIncompleteMathQuestion(normalizedInput)||/^(?:اذا\\s+)?هل تستطيع ان تشرح لي فكر(?:ه|ة)$/.test(normalizedInput)||/^(?:ماذا تعني|ماذا تقصد|ما معنى ذلك)$/.test(normalizedInput)||isEgyptCapitalPreference(normalizedInput)||isEgyptCapitalQuestion(normalizedInput)||/^(?:(?:و)?\s*)?(?:ماذا تستطيع(?:\s+أن)?\s+تفعل|ماذا يمكنك(?:\s+أن)?\s+تفعل|ما الذي تستطيع فعله|ما هي قدراتك|ايه قدراتك|قدراتك)$/.test(normalizedInput)||/^(?:(?:هذا|دي|ده|دا)\s+)?(?:عظيم|رائع|ممتاز|جميل|جيد|جيد جدا|جيد جدًا|حلو|كويس|احسنت|أحسنت|تمام|شكرا|شكرًا|شكراً|رون|يا رون)$/.test(normalizedInput);
  if(deterministicInput||extractFacts(t).length>0||extractRonFacts(t).length>0||/^(?:اسمك|اسمك\s+هو|انت\s+اسمك)\s+(?:رون\s+)?(?:فعلا|حقا)[؟?]*$/.test(normalizedInput))r=answer(t);
- if(!String(r||"").trim()){
+ const explicitWebSearchEarly=/^(?:ابحث|دورلي|دور لي|ابحث لي|ابحث عن|ابحث في|دور عن)/.test(norm(t));
+ const learningCommandEarly=/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(norm(t));
+ let nativeRejected=false;
+ const nativeEligible=!explicitWebSearchEarly&&!learningCommandEarly;
+ // The trained local Qwen model is now the primary conversational generator.
+ // Deterministic profile/greeting/math-intent answers above remain in front;
+ // browser retrieval is only a fallback when the local model is unavailable.
+ if(!String(r||"").trim()&&nativeEligible&&typeof fetch==="function"){
+  const native=await queryRonLocalModel(t);
+  if(native&&native.reply)r=native.reply;
+  else nativeRejected=true;
+ }
+ if(!String(r||"").trim()&&(explicitWebSearchEarly||learningCommandEarly)){
   const core=globalThis.ronCore;
   if(core){
    try{
@@ -371,15 +383,8 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
     const candidate=String(cr?.reply||"").trim();
     const failed=/^(لم أفهم الجملة|فهمت أنه سؤال، لكن صياغته|فهمت سؤالك لكن لا أعرف الإجابة|أداة البحث غير مفعّلة)/.test(candidate);
     if(candidate&&!failed)r=candidate;
-   }catch(error){console.warn("Ron Core response failed",error);}
+   }catch(error){console.warn("Ron legacy browser fallback failed",error);}
   }
- }
- let nativeRejected=false;
- const nativeEligible=!/^(?:ابحث|دورلي|دور لي|ابحث لي|ابحث عن|ابحث في|دور عن)/.test(norm(t))&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(norm(t));
- if(!String(r||"").trim()&&nativeEligible&&typeof fetch==="function"){
-  const native=await queryNativeCheckpoint(t);
-  if(native&&native.generationStatus!=="native_quality_fallback"&&nativeReplyLooksUsable(native.reply,t))r=native.reply;
-  else nativeRejected=true;
  }
  if(!String(r||"").trim()){
   const localFallback=answer(t);
@@ -394,7 +399,7 @@ const sendMessage=()=>{const t=input.value.trim();if(!t)return;messages.push({ro
  if(!local&&shouldWebSearch){try{const searchQuery=resolveFollowUp(t)||t;webResult=await globalThis.RonWebSearch.answer(searchQuery);if(webResult?.answer){r=webResult.answer+"\n\nالمصدر: "+webResult.source+" — "+webResult.title;globalThis.RonWebSearch.remember?.(t,webResult);globalThis.RonLearning?.addKnowledge?.({text:"سؤال: "+t+" | إجابة: "+webResult.answer,kind:"web-fact",source:webResult.source,confidence:.65,url:webResult.url});}}catch(error){console.warn("Ron web search unavailable",error)}}
  // Prefer real web results when a search was requested; otherwise use Ron's promoted native weights.
  if(!String(r||"").trim()&&typeof fetch==="function"&&!explicitWebSearch&&!/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(normalizedInput)){
-  r=await queryNativeCheckpoint(t);
+  r=await queryRonLocalModel(t);
  }
  if(!String(r||"").trim() && (analyzeIntent(t)==="question"||analyzeIntent(t)==="follow_up"))r=globalThis.RonAgent?.answer?.(t)||null;
  const learning=extractFacts(t).length>0||extractRonFacts(t).length>0||/^عل[ّ]?م رون\s*(?::|،|,|-)/.test(n);

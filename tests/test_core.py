@@ -100,47 +100,34 @@ def test_why_followup_reuses_previous_topic_and_dialogue():
 
 
 
-def test_core_falls_back_when_native_checkpoints_are_unloadable(monkeypatch):
-    from pathlib import Path
-    import ron.native_provider as native_provider
-    from ron.providers import LocalTeachingProvider
+def test_core_uses_qwen_provider_by_default(monkeypatch):
+    import ron.llm_provider as llm_provider
 
-    monkeypatch.setattr(
-        Path,
-        "is_file",
-        lambda self: self.name in {"ron_native_10m.pt", "ron_native_baseline.pt"},
-    )
+    class FakeQwenProvider:
+        model_id = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+        model_path = "fake-model.gguf"
 
-    class BrokenCheckpointProvider:
-        def __init__(self, checkpoint):
-            raise RuntimeError("invalid checkpoint")
+        def generate(self, request):
+            return ModelResponse(content="رد من النموذج", model=self.model_id, metadata={})
 
-    monkeypatch.setattr(native_provider, "NativeCheckpointProvider", BrokenCheckpointProvider)
+    monkeypatch.setattr(llm_provider, "QwenChatProvider", FakeQwenProvider)
     core = RonCore()
-    assert isinstance(core.provider, LocalTeachingProvider)
-    assert core.provider_startup_warnings == [
-        "ron_native_10m.pt:RuntimeError",
-        "ron_native_baseline.pt:RuntimeError",
-    ]
+    assert isinstance(core.provider, FakeQwenProvider)
+    response = core.respond("اشرح لي الذكاء الاصطناعي")
+    assert response.content == "رد من النموذج"
 
 
-def test_core_tries_baseline_after_ron_10m_checkpoint_load_fails(monkeypatch):
-    from pathlib import Path
-    import ron.native_provider as native_provider
+def test_core_does_not_select_old_character_checkpoint_by_default(monkeypatch):
+    import ron.llm_provider as llm_provider
 
-    monkeypatch.setattr(
-        Path,
-        "is_file",
-        lambda self: self.name in {"ron_native_10m.pt", "ron_native_baseline.pt"},
-    )
+    class FakeQwenProvider:
+        model_id = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+        model_path = "fake-model.gguf"
 
-    class SelectiveCheckpointProvider:
-        def __init__(self, checkpoint):
-            if checkpoint.name == "ron_native_10m.pt":
-                raise RuntimeError("bad larger checkpoint")
-            self.checkpoint_path = checkpoint
+        def generate(self, request):
+            return ModelResponse(content="Hello from Qwen.", model=self.model_id, metadata={})
 
-    monkeypatch.setattr(native_provider, "NativeCheckpointProvider", SelectiveCheckpointProvider)
+    monkeypatch.setattr(llm_provider, "QwenChatProvider", FakeQwenProvider)
     core = RonCore()
-    assert core.provider.checkpoint_path.name == "ron_native_baseline.pt"
-    assert core.provider_startup_warnings == ["ron_native_10m.pt:RuntimeError"]
+    assert core.provider.model_id == "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+    assert not hasattr(core.provider, "checkpoint_path")

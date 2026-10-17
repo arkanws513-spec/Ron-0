@@ -6,30 +6,29 @@ from ron.core import RonCore
 from ron.native_provider import NativeCheckpointProvider
 
 
-def test_saved_native_checkpoint_is_used_by_default_core():
-    checkpoint_dir = Path(__file__).resolve().parents[1] / "ron" / "checkpoints"
-    baseline = checkpoint_dir / "ron_native_baseline.pt"
-    promoted_10m = checkpoint_dir / "ron_native_10m.pt"
-    assert baseline.is_file(), "trained Ron baseline checkpoint must be present in the repository"
+def test_default_core_uses_the_new_qwen_provider(monkeypatch):
+    import ron.llm_provider as llm_provider
 
-    # The runtime may select Ron-10M only when that checkpoint is present;
-    # an experimental continuation must never be placed at this live path.
-    expected_checkpoint = promoted_10m if promoted_10m.is_file() else baseline
+    class FakeQwenProvider:
+        model_id = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+        model_path = "fake-model.gguf"
+
+        def generate(self, request):
+            from ron.contracts import ModelResponse
+            return ModelResponse(
+                content="مرحبًا، أنا رون.",
+                model=self.model_id,
+                metadata={"local_weights": True, "external_inference_api": False},
+            )
+
+    monkeypatch.setattr(llm_provider, "QwenChatProvider", FakeQwenProvider)
     core = RonCore()
-    assert isinstance(core.provider, NativeCheckpointProvider)
-    assert core.provider.checkpoint_path == expected_checkpoint
-    assert core.provider.model.training is False
-    assert core.provider.config.vocab_size == len(core.provider.vocab)
-
+    assert isinstance(core.provider, FakeQwenProvider)
     response = core.provider.generate(
         ModelRequest(messages=(Message(role="user", content="مرحبا"),), metadata={})
     )
-    assert response.metadata["native_weights_loaded"] is True
-    assert response.metadata["external_model_used"] is False
-    assert 0 < response.metadata["selected_training_step"] <= response.metadata["training_steps_total"]
-    assert response.metadata["inference_checkpoint"] in {"best_validation", "final_training_state"}
-    assert response.metadata["final_training_step"] >= response.metadata["selected_training_step"]
-    assert response.metadata["training_steps_total"] > 0
+    assert response.metadata["local_weights"] is True
+    assert response.metadata["external_inference_api"] is False
 
 
 def test_native_provider_builds_bounded_prompt_from_recent_dialogue():
