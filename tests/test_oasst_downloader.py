@@ -77,5 +77,5 @@ def test_oasst_arabic_dialogue_is_exported_with_arabic_role_labels():
     arabic = list(iter_conversation_examples(tree, language="ar"))
     assert len(arabic) == 1
     assert arabic[0].startswith("المستخدم: ")
-    assert "\\nرون: " in arabic[0]
+    assert "\nرون: " in arabic[0]
     assert list(iter_conversation_examples(tree, language="en")) == []
