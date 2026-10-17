@@ -32,6 +32,18 @@ def validate_promotion(candidate: Path, report_path: Path, metrics_path: Path) -
         return False, "candidate_hash_does_not_match_evaluated_checkpoint"
     if int(report.get("parameter_count", 0)) < 1_000_000:
         return False, "candidate_below_1m_parameter_minimum"
+    if report.get("evaluation_mode") != "neural_only":
+        return False, "neural_only_generation_evaluation_required"
+    language_metrics = report.get("language_metrics")
+    if not isinstance(language_metrics, dict):
+        return False, "bilingual_quality_metrics_missing"
+    required_language_rate = float(report.get("min_language_pass_rate", 0.80))
+    for language in ("ar", "en"):
+        metric = language_metrics.get(language)
+        if not isinstance(metric, dict) or int(metric.get("case_count", 0)) < 1:
+            return False, f"{language}_evaluation_coverage_missing"
+        if float(metric.get("pass_rate", 0.0)) < required_language_rate:
+            return False, f"{language}_generation_quality_gate_failed"
     return True, "all_promotion_gates_passed"
 
 
