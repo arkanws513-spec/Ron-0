@@ -38,10 +38,20 @@ def classify_language(case: dict[str, Any]) -> str:
     return "ar" if arabic >= latin else "en"
 
 
+def contains_text(actual: str, expected: str) -> bool:
+    """Match ASCII words on token boundaries; retain normalized phrase matching for Arabic."""
+    needle = normalize(expected)
+    if not needle:
+        return False
+    if re.fullmatch(r"[a-z0-9]+", needle):
+        return re.search(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", actual) is not None
+    return needle in actual
+
+
 def assess(answer: str, case: dict[str, Any]) -> dict[str, Any]:
     actual = normalize(answer)
-    missing = [str(item) for item in case.get("contains", []) if normalize(item) not in actual]
-    forbidden = [str(item) for item in case.get("forbidden", []) if normalize(item) in actual]
+    missing = [str(item) for item in case.get("contains", []) if not contains_text(actual, str(item))]
+    forbidden = [str(item) for item in case.get("forbidden", []) if contains_text(actual, str(item))]
     words = actual.split()
     degenerate = not actual or len(actual) < 2 or len(set(words)) <= 1
     if len(words) >= 12 and len(set(zip(words, words[1:], words[2:]))) <= 2:
