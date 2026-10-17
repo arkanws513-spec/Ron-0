@@ -23,7 +23,7 @@ class QwenChatProvider:
     def __init__(self, *, model=None, model_path: str | Path | None = None) -> None:
         self.model_id = os.getenv("RON_MODEL_ID", DEFAULT_REPO)
         self.filename = os.getenv("RON_MODEL_FILE", DEFAULT_FILE)
-        self.max_tokens = min(512, max(32, int(os.getenv("RON_MODEL_MAX_TOKENS", "256"))))
+        self.max_tokens = min(256, max(8, int(os.getenv("RON_MODEL_MAX_TOKENS", "24"))))
         self.context_size = min(8192, max(1024, int(os.getenv("RON_CONTEXT_SIZE", "4096"))))
         self._lock = threading.RLock()
 
@@ -50,10 +50,12 @@ class QwenChatProvider:
             cache_dir=cache_dir or None,
         )
         self.model_path = str(path)
+        threads = max(1, int(os.getenv("RON_CPU_THREADS", str(min(4, os.cpu_count() or 2)))))
         self.model = Llama(
             model_path=self.model_path,
             n_ctx=self.context_size,
-            n_threads=max(1, int(os.getenv("RON_CPU_THREADS", str(min(4, os.cpu_count() or 2))))),
+            n_threads=threads,
+            n_threads_batch=threads,
             n_batch=32,
             n_gpu_layers=0,
             verbose=False,
