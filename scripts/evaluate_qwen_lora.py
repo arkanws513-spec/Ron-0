@@ -72,7 +72,7 @@ def aggregate_question_families(results: list[dict[str, Any]]) -> list[dict[str,
     """Aggregate prompt variants into question families so paraphrases cannot inflate the gate."""
     groups: dict[str, list[dict[str, Any]]] = {}
     for result in results:
-        family_id = re.sub(r"_v\\d+$", "", str(result.get("id", "unnamed")))
+        family_id = re.sub(r"_v\d+$", "", str(result.get("id", "unnamed")))
         groups.setdefault(family_id, []).append(result)
     families = []
     for family_id, variants in sorted(groups.items()):
