@@ -2,8 +2,8 @@
 
 Dataset: OpenAssistant/oasst1, Apache-2.0 according to its Hugging Face dataset card.
 Source: https://huggingface.co/datasets/OpenAssistant/oasst1
-This script filters non-English, deleted, explicitly rejected, and high-risk label-scored
-messages. The resulting corpus still needs review; automated filters are not perfect.
+This script separates English and Arabic examples, excluding other languages, deleted,
+explicitly rejected, and high-risk label-scored messages. Automated filters are imperfect.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ def iter_conversation_examples(tree: dict, language: str = "en"):
         else:
             label = "User" if role == "prompter" else "Ron"
         current = path + [(label, text)]
-        if role == "assistant" and any(item[0] == "User" for item in current):
+        if role == "assistant" and any(item[0] == ("User" if language == "en" else "المستخدم") for item in current):
             rendered = "\n".join(f"{speaker}: {message}" for speaker, message in current[-MAX_TURNS:])
             if len(rendered) >= 80:
                 yield rendered
