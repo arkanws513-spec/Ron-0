@@ -35,7 +35,7 @@ On first launch, the server downloads the default Q4_K_M model (approximately 49
 - `RON_MODEL_REVISION`: defaults to `main`
 - `RON_MODEL_CACHE`: optional Hugging Face cache directory
 - `RON_CONTEXT_SIZE`: defaults to 4096 tokens
-- `RON_MAX_NEW_TOKENS`: defaults to 256
+- `RON_MODEL_MAX_TOKENS`: defaults to 256
 - `RON_CPU_THREADS`: defaults to at most 4
 - `RON_ALLOWED_ORIGIN`: CORS origin; defaults to `*`
 
