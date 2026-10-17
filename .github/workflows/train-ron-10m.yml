@@ -155,7 +155,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --clobber
           echo "Saved trained weights before blind evaluation."
 
-      - name: Blind conversational evaluation
+      - name: Blind bilingual neural-generation evaluation
         id: conversation_eval
         continue-on-error: true
         run: >-
@@ -164,7 +164,9 @@ jobs:
           --cases training/eval_cases.json
           --report artifacts/native-10m/conversational_eval.json
           --min-pass-rate 0.80
+          --min-language-pass-rate 0.80
           --expected-case-count 300
+          --neural-only
       - name: Promote only after all quality gates pass
         id: promote_checkpoint
         if: steps.conversation_eval.outcome == 'success'
