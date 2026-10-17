@@ -225,7 +225,8 @@ def main() -> None:
         tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype)
     model.config.use_cache = False
-    model.gradient_checkpointing_enable()
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    model.enable_input_require_grads()
     lora = LoraConfig(
         r=8,
         lora_alpha=16,
