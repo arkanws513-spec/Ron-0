@@ -86,6 +86,15 @@ def main() -> None:
     cases = json.loads(args.cases.read_text(encoding="utf-8"))
     if not isinstance(cases, list) or len(cases) != args.expected_case_count:
         raise SystemExit(f"Expected exactly {args.expected_case_count} evaluation cases; found {len(cases) if isinstance(cases, list) else 'non-list'}.")
+    case_ids = [str(case.get("id", "")).strip() for case in cases]
+    if any(not case_id for case_id in case_ids) or len(set(case_ids)) != len(case_ids):
+        raise SystemExit("Every evaluation case must have a non-empty unique id.")
+    language_counts = {
+        language: sum(classify_language(case) == language for case in cases)
+        for language in ("ar", "en")
+    }
+    if any(count < 100 for count in language_counts.values()):
+        raise SystemExit(f"Evaluation set must contain at least 100 cases per language; found {language_counts}.")
     if sum(bool(case.get("critical")) for case in cases) < 40:
         raise SystemExit("Evaluation set must include at least 40 critical cases.")
     if not args.adapter.is_dir():
