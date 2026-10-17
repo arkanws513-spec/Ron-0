@@ -111,21 +111,41 @@ def exclude_evaluation_overlap(
 def split_by_language(
     examples: list[dict[str, Any]], seed: int = 42, validation_fraction: float = 0.1
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Deterministic per-language split so both languages appear in validation."""
+    """Split by language and first user prompt to prevent dialogue-prefix leakage."""
     if not 0 < validation_fraction < 0.5:
         raise ValueError("validation_fraction must be between 0 and 0.5")
     rng = random.Random(seed)
     train: list[dict[str, Any]] = []
     validation: list[dict[str, Any]] = []
     for language in ("ar", "en"):
-        group = [item for item in examples if item.get("language") == language]
-        rng.shuffle(group)
-        if len(group) < 2:
-            train.extend(group)
+        examples_for_language = [item for item in examples if item.get("language") == language]
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for item in examples_for_language:
+            first_user = next(
+                (message.get("content", "") for message in item.get("messages", [])
+                 if message.get("role") == "user"),
+                "",
+            )
+            # All assistant-turn prefixes from the same root question stay in one split.
+            key = normalize_prompt(first_user)
+            if not key:
+                key = json.dumps(item.get("messages", []), ensure_ascii=False, sort_keys=True)
+            grouped.setdefault(key, []).append(item)
+        buckets = list(grouped.values())
+        rng.shuffle(buckets)
+        if len(buckets) < 2:
+            train.extend(examples_for_language)
             continue
-        count = max(1, min(len(group) - 1, round(len(group) * validation_fraction)))
-        validation.extend(group[:count])
-        train.extend(group[count:])
+        target = max(1, round(len(examples_for_language) * validation_fraction))
+        validation_count = 0
+        for bucket in buckets[:-1]:
+            if validation_count < target:
+                validation.extend(bucket)
+                validation_count += len(bucket)
+            else:
+                train.extend(bucket)
+        # Always leave at least one independent prompt group for training.
+        train.extend(buckets[-1])
     rng.shuffle(train)
     rng.shuffle(validation)
     return train, validation
