@@ -17,6 +17,16 @@ _PREFERENCE_PATTERNS = (
     re.compile(r"^\s*(?:انا|أنا)\s+(?:احب|أحب)\s+(.+?)\s*$", re.I),
     re.compile(r"^\s*(?:انا|أنا)\s+(?:لا احب|لا أحب)\s+(.+?)\s*$", re.I),
 )
+# Common predicates, locations and function words that follow "أنا" in ordinary
+# statements. These must not be mistaken for a person's name and saved as profile data.
+_NON_NAME_STARTS = {
+    "في", "من", "الى", "على", "مع", "عند", "هنا", "هناك", "بالبيت",
+    "سعيد", "سعيدة", "حزين", "حزينة", "متعب", "متعبة", "جاهز", "جاهزة",
+    "موجود", "موجودة", "مشغول", "مشغولة", "طالب", "طالبة", "موظف", "موظفة",
+    "بخير", "تمام", "كويس", "كويسة", "تعبان", "تعبانة", "مريض", "مريضة",
+    "عايز", "عايزة", "اريد", "أريد", "احب", "لا", "مش", "لست", "كنت",
+    "بقولك", "بسالك", "اسالك", "اسألك", "بسألك", "اقصد", "بتكلم", "اتكلم",
+}
 _AGE_PATTERNS = (
     re.compile(r"^\s*(?:انا|أنا)\s+(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?\s*$", re.I),
     re.compile(r"^\s*(?:عمري|سني)\s+(\d{1,3})\s*(?:عام|سنة|سنين)?\s*$", re.I),
@@ -126,7 +136,11 @@ def extract_facts(text: str) -> list[ExtractedFact]:
     natural_name = re.match(r"^انا\s+(.+?)$", normalized, re.I)
     if natural_name:
         value = natural_name.group(1).strip(" .،,؛;؟؟")
-        if not re.match(r"^(?:عمري|سني|احب|لا احب|بسالك|بسألك|اسالك|اسألك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\b", value):
+        first_word = value.split(maxsplit=1)[0] if value else ""
+        if first_word not in _NON_NAME_STARTS and not re.match(
+            r"^(?:عمري|سني|احب|لا احب|بسالك|بسألك|اسالك|اسألك|عايز|اريد|بقولك|اقصد|مش|ليس|عن)\b",
+            value,
+        ):
             if _valid_name_candidate(value):
                 return [ExtractedFact("user.name", value, "name")]
     return []
