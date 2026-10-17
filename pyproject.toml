@@ -10,12 +10,8 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-model = [
-  "torch>=2.6",
-  "tokenizers>=0.20",
-  "llama-cpp-python>=0.3.16",
-  "huggingface-hub>=0.25",
-]
+model = ["torch>=2.6", "tokenizers>=0.20"]
+inference = ["llama-cpp-python>=0.3.16", "huggingface-hub>=0.25"]
 distill = ["torch>=2.6", "transformers>=4.45", "accelerate>=0.34", "safetensors>=0.4"]
 scalable = ["torch>=2.6", "tokenizers>=0.20"]
 
