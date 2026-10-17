@@ -77,6 +77,12 @@ def test_promotion_accepts_only_a_matching_candidate_that_passed_both_gates(tmp_
         "parameter_count": 11_000_000,
         "case_count": 20,
         "critical_case_count": 8,
+        "evaluation_mode": "neural_only",
+        "min_language_pass_rate": 0.80,
+        "language_metrics": {
+            "ar": {"case_count": 10, "pass_rate": 0.90},
+            "en": {"case_count": 10, "pass_rate": 0.90},
+        },
     }), encoding="utf-8")
     metrics_path.write_text(json.dumps({"validation_loss_improved": True}), encoding="utf-8")
     allowed, reason = validate_promotion(candidate, report_path, metrics_path)
