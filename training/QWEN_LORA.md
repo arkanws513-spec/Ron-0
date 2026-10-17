@@ -37,7 +37,7 @@ python scripts/evaluate_qwen_lora.py \
   --min-pass-rate 0.80 --min-language-pass-rate 0.80
 ```
 
-The gate requires exactly 300 cases with unique IDs and at least 100 cases per language, at least 40 critical cases, at least 80% overall and in each language, and the same minimum on critical cases. This is a necessary filter, not a proof of general intelligence. Review failures and compare the base model and candidate on the same cases before promotion.
+The set contains 300 prompt variants grouped into 100 question families. The gate requires unique case IDs, at least 100 prompts per language, at least 40 critical cases, and at least 80% pass rates both per prompt and per question family; each language and the critical question families must independently meet the same minimum. This prevents three paraphrases of one question from counting as three independent successes. This is a necessary filter, not a proof of general intelligence. Review failures and compare the base model and candidate on the same cases before promotion.
 
 ## Merge and export
 
