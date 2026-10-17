@@ -54,7 +54,7 @@ class QwenChatProvider:
             model_path=self.model_path,
             n_ctx=self.context_size,
             n_threads=max(1, int(os.getenv("RON_CPU_THREADS", str(min(4, os.cpu_count() or 2))))),
-            n_batch=64,
+            n_batch=32,
             n_gpu_layers=0,
             verbose=False,
         )
@@ -102,6 +102,7 @@ class QwenChatProvider:
                 temperature=float(os.getenv("RON_TEMPERATURE", "0.55")),
                 top_p=float(os.getenv("RON_TOP_P", "0.9")),
                 repeat_penalty=float(os.getenv("RON_REPEAT_PENALTY", "1.12")),
+                stop=["<|im_end|>", "<|endoftext|>"],
             )
 
         choices = result.get("choices") or []
