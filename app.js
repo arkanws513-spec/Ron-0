@@ -247,7 +247,7 @@ const nativeReplyLooksUsable=(reply,userText)=>{
  const text=String(reply||"").trim();
  if(text.length<2||text.length>1400)return false;
  const compact=text.replace(/\s+/g,"");
- if(/(.{3,10})\1{2,}/u.test(compact)||(/[\u0600-\u06ff]/.test(text)&&/[A-Za-z]{5,}/.test(text)&&!/[\u0600-\u06ff]/.test(text.slice(0,80)))return false;
+ if(/(.{3,10})\1{2,}/u.test(compact)||(/[\u0600-\u06ff]/.test(text)&&/[A-Za-z]{5,}/.test(text)&&!/[\u0600-\u06ff]/.test(text.slice(0,80))))return false;
  const words=text.split(/\s+/).filter(Boolean);
  const inputWords=String(userText||"").trim().split(/\s+/).filter(Boolean);
  if(inputWords.length>=4&&words.length<3)return false;
