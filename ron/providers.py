@@ -44,13 +44,12 @@ class LocalTeachingProvider:
             metadata=metadata,
         )
 
-@dataclass(frozen=True)
 def _validate_local_endpoint(endpoint: str) -> None:
     """Reject remote endpoints: this adapter is deliberately local-only."""
     try:
         parsed = urlsplit(str(endpoint))
         hostname = parsed.hostname
-        port = parsed.port  # Also validates malformed port syntax.
+        parsed.port  # Validate malformed port syntax even though the port is optional.
     except (TypeError, ValueError) as exc:
         raise ValueError("local model endpoint must be a valid local HTTP URL") from exc
 
@@ -79,6 +78,7 @@ def _validate_local_endpoint(endpoint: str) -> None:
         )
 
 
+@dataclass(frozen=True)
 class LocalHTTPModelProvider:
     """Call a model running locally through an OpenAI-compatible HTTP API.
 
