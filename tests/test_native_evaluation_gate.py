@@ -129,6 +129,12 @@ def test_repository_blind_evaluation_set_has_unique_ids_and_required_coverage():
     assert {"hard300_001_v1", "hard300_001_v2", "hard300_100_v3"} <= ids
     assert len(cases) == 300
     assert sum(bool(case.get("critical")) for case in cases) >= 40
+    from scripts.evaluate_native_checkpoint import classify_language
+    language_counts = {
+        language: sum(classify_language(case) == language for case in cases)
+        for language in ("ar", "en")
+    }
+    assert language_counts == {"ar": 150, "en": 150}
 
 
 def test_promotion_rejects_a_pass_report_with_insufficient_evaluation_coverage(tmp_path):
