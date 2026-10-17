@@ -31,3 +31,36 @@ def test_surprise_report_includes_anti_degeneration_gate():
     assert report["anti_degeneration_gate_threshold"] == 0.8
     assert isinstance(report["anti_degeneration_gate_passed"], bool)
     assert "not evidence of factual correctness" in report["interpretation"]
+
+def test_neural_only_mode_bypasses_rules_and_curated_retrieval(monkeypatch):
+    from types import SimpleNamespace
+    import scripts.surprise_eval as module
+
+    captured = {}
+
+    class FakeProvider:
+        def __init__(self, checkpoint, *, neural_only=False):
+            captured["checkpoint"] = checkpoint
+            captured["neural_only"] = neural_only
+
+        def generate(self, request):
+            return SimpleNamespace(
+                content="رد تجريبي مفهوم.",
+                model="test-native",
+                metadata={
+                    "native_weights_loaded": True,
+                    "external_model_used": False,
+                    "neural_only_generation": True,
+                    "generation_quality_fallback": False,
+                },
+            )
+
+    monkeypatch.setattr(module, "NativeCheckpointProvider", FakeProvider)
+    report = module.evaluate(neural_only=True)
+
+    assert captured["neural_only"] is True
+    assert report["inference_mode"] == "neural_only"
+    assert report["neural_only_requested"] is True
+    assert all(case["neural_only_generation"] for case in report["cases"])
+    assert all(not case["curated_retrieval_used"] for case in report["cases"])
+
